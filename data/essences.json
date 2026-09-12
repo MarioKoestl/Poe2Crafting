@@ -1,0 +1,2575 @@
+[
+ {
+  "name": "Lesser Essence of the Body",
+  "slug": "Lesser_Essence_of_the_Body",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour or Belt: +(30 — 39) to maximum Life",
+   "Jewellery : +(20 — 29) to maximum Life"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt"
+    ],
+    "text": "+(30 - 39) to maximum Life"
+   },
+   {
+    "targets": [
+     "Jewellery"
+    ],
+    "text": "+(20 - 29) to maximum Life"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of the Mind",
+  "slug": "Lesser_Essence_of_the_Mind",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Belt, Boots, Gloves, Helmet or Jewellery : +(25 — 34) to maximum Mana"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Belt",
+     "Boots",
+     "Gloves",
+     "Helmet",
+     "Jewellery"
+    ],
+    "text": "+(25 - 34) to maximum Mana"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Enhancement",
+  "slug": "Lesser_Essence_of_Enhancement",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour : (27 — 42) % increased Armour , Evasion and Energy Shield"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour"
+    ],
+    "text": "(27 - 42) % increased Armour , Evasion and Energy Shield"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Abrasion",
+  "slug": "Lesser_Essence_of_Abrasion",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (4 — 6) to (7 — 11) Physical Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (5 — 8) to (10 — 15) Physical Damage"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (4 - 6) to (7 - 11) Physical Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (5 - 8) to (10 - 15) Physical Damage"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Flames",
+  "slug": "Lesser_Essence_of_Flames",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (4 — 6) to (7 — 10) Fire Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (6 — 9) to (10 — 16) Fire Damage"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (4 - 6) to (7 - 10) Fire Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (6 - 9) to (10 - 16) Fire Damage"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Ice",
+  "slug": "Lesser_Essence_of_Ice",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (3 — 5) to (6 — 9) Cold Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (5 — 8) to (9 — 14) Cold Damage"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (3 - 5) to (6 - 9) Cold Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (5 - 8) to (9 - 14) Cold Damage"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Electricity",
+  "slug": "Lesser_Essence_of_Electricity",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds 1 to (13 — 19) Lightning Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (1 — 2) to (19 — 27) Lightning Damage"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds 1 to (13 - 19) Lightning Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (1 - 2) to (19 - 27) Lightning Damage"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Ruin",
+  "slug": "Lesser_Essence_of_Ruin",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(4 — 7) % to Chaos Resistance"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(4 - 7) % to Chaos Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Battle",
+  "slug": "Lesser_Essence_of_Battle",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Martial Weapon : +(61 — 84) to Accuracy Rating"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Martial Weapon"
+    ],
+    "text": "+(61 - 84) to Accuracy Rating"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Sorcery",
+  "slug": "Lesser_Essence_of_Sorcery",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Focus or Wand : (35 — 44) % increased Spell Damage",
+   "Staff : (69 — 88) % increased Spell Damage"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(35 - 44) % increased Spell Damage"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(69 - 88) % increased Spell Damage"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Haste",
+  "slug": "Lesser_Essence_of_Haste",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Melee Weapon : (11 — 13) % increased Attack Speed",
+   "Bow or Crossbow : (8 — 10) % increased Attack Speed"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Melee Weapon"
+    ],
+    "text": "(11 - 13) % increased Attack Speed"
+   },
+   {
+    "targets": [
+     "Bow",
+     "Crossbow"
+    ],
+    "text": "(8 - 10) % increased Attack Speed"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of the Infinite",
+  "slug": "Lesser_Essence_of_the_Infinite",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Equipment : +(9 — 12) to Strength , Dexterity or Intelligence"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Equipment"
+    ],
+    "text": "+(9 - 12) to Strength , Dexterity or Intelligence"
+   }
+  ]
+ },
+ {
+  "name": "Essence of the Body",
+  "slug": "Essence_of_the_Body",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Belt, Body Armour, Helmet or Shield : +(85 — 99) to maximum Life",
+   "Amulet, Boots, Gloves or Ring: +(70 — 84) to maximum Life"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Belt",
+     "Body Armour",
+     "Helmet",
+     "Shield"
+    ],
+    "text": "+(85 - 99) to maximum Life"
+   },
+   {
+    "targets": [
+     "Amulet",
+     "Boots",
+     "Gloves",
+     "Ring"
+    ],
+    "text": "+(70 - 84) to maximum Life"
+   }
+  ]
+ },
+ {
+  "name": "Essence of the Mind",
+  "slug": "Essence_of_the_Mind",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Belt, Boots, Gloves or Helmet: +(65 — 79) to maximum Mana",
+   "Jewellery : +(80 — 89) to maximum Mana"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Belt",
+     "Boots",
+     "Gloves",
+     "Helmet"
+    ],
+    "text": "+(65 - 79) to maximum Mana"
+   },
+   {
+    "targets": [
+     "Jewellery"
+    ],
+    "text": "+(80 - 89) to maximum Mana"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Enhancement",
+  "slug": "Essence_of_Enhancement",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour : (56 — 67) % increased Armour , Evasion and Energy Shield"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour"
+    ],
+    "text": "(56 - 67) % increased Armour , Evasion and Energy Shield"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Abrasion",
+  "slug": "Essence_of_Abrasion",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (10 — 15) to (18 — 26) Physical Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (14 — 21) to (25 — 37) Physical Damage"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (10 - 15) to (18 - 26) Physical Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (14 - 21) to (25 - 37) Physical Damage"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Flames",
+  "slug": "Essence_of_Flames",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (20 — 24) to (32 — 37) Fire Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (30 — 37) to (45 — 56) Fire Damage"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (20 - 24) to (32 - 37) Fire Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (30 - 37) to (45 - 56) Fire Damage"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Ice",
+  "slug": "Essence_of_Ice",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (17 — 20) to (26 — 32) Cold Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (25 — 30) to (38 — 46) Cold Damage"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (17 - 20) to (26 - 32) Cold Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (25 - 30) to (38 - 46) Cold Damage"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Electricity",
+  "slug": "Essence_of_Electricity",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (1 — 3) to (55 — 60) Lightning Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (1 — 4) to (80 — 88) Lightning Damage"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (1 - 3) to (55 - 60) Lightning Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (1 - 4) to (80 - 88) Lightning Damage"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Ruin",
+  "slug": "Essence_of_Ruin",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(8 — 11) % to Chaos Resistance"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(8 - 11) % to Chaos Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Battle",
+  "slug": "Essence_of_Battle",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Martial Weapon : +(124 — 167) to Accuracy Rating"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Martial Weapon"
+    ],
+    "text": "+(124 - 167) to Accuracy Rating"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Sorcery",
+  "slug": "Essence_of_Sorcery",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Focus or Wand : (55 — 64) % increased Spell Damage",
+   "Staff : (109 — 128) % increased Spell Damage"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(55 - 64) % increased Spell Damage"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(109 - 128) % increased Spell Damage"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Haste",
+  "slug": "Essence_of_Haste",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Melee Weapon : (17 — 19) % increased Attack Speed",
+   "Bow or Crossbow : (11 — 13) % increased Attack Speed"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Melee Weapon"
+    ],
+    "text": "(17 - 19) % increased Attack Speed"
+   },
+   {
+    "targets": [
+     "Bow",
+     "Crossbow"
+    ],
+    "text": "(11 - 13) % increased Attack Speed"
+   }
+  ]
+ },
+ {
+  "name": "Essence of the Infinite",
+  "slug": "Essence_of_the_Infinite",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Equipment : +(17 — 20) to Strength , Dexterity or Intelligence"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Equipment"
+    ],
+    "text": "+(17 - 20) to Strength , Dexterity or Intelligence"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of the Body",
+  "slug": "Greater_Essence_of_the_Body",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Belt, Body Armour, Helmet or Shield : +(100 — 119) to maximum Life",
+   "Amulet, Boots or Gloves: +(85 — 99) to maximum Life"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Belt",
+     "Body Armour",
+     "Helmet",
+     "Shield"
+    ],
+    "text": "+(100 - 119) to maximum Life"
+   },
+   {
+    "targets": [
+     "Amulet",
+     "Boots",
+     "Gloves"
+    ],
+    "text": "+(85 - 99) to maximum Life"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of the Mind",
+  "slug": "Greater_Essence_of_the_Mind",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Belt, Boots, Gloves or Helmet: +(80 — 89) to maximum Mana",
+   "Jewellery : +(90 — 104) to maximum Mana"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Belt",
+     "Boots",
+     "Gloves",
+     "Helmet"
+    ],
+    "text": "+(80 - 89) to maximum Mana"
+   },
+   {
+    "targets": [
+     "Jewellery"
+    ],
+    "text": "+(90 - 104) to maximum Mana"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Enhancement",
+  "slug": "Greater_Essence_of_Enhancement",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour : (68 — 79) % increased Armour , Evasion and Energy Shield"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour"
+    ],
+    "text": "(68 - 79) % increased Armour , Evasion and Energy Shield"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Abrasion",
+  "slug": "Greater_Essence_of_Abrasion",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (16 — 24) to (28 — 42) Physical Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (23 — 35) to (39 — 59) Physical Damage"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (16 - 24) to (28 - 42) Physical Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (23 - 35) to (39 - 59) Physical Damage"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Flames",
+  "slug": "Greater_Essence_of_Flames",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (35 — 44) to (56 — 71) Fire Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (56 — 70) to (84 — 107) Fire Damage"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (35 - 44) to (56 - 71) Fire Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (56 - 70) to (84 - 107) Fire Damage"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Ice",
+  "slug": "Greater_Essence_of_Ice",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (31 — 38) to (47 — 59) Cold Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (46 — 57) to (70 — 88) Cold Damage"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (31 - 38) to (47 - 59) Cold Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (46 - 57) to (70 - 88) Cold Damage"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Electricity",
+  "slug": "Greater_Essence_of_Electricity",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Adds (1 — 6) to (85 — 107) Lightning Damage",
+   "Two Handed Melee Weapon or Crossbow : Adds (1 — 8) to (128 — 162) Lightning Damage"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Adds (1 - 6) to (85 - 107) Lightning Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Adds (1 - 8) to (128 - 162) Lightning Damage"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Ruin",
+  "slug": "Greater_Essence_of_Ruin",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(16 — 19) % to Chaos Resistance"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(16 - 19) % to Chaos Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Battle",
+  "slug": "Greater_Essence_of_Battle",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Martial Weapon , Gloves or Quiver : +(237 — 346) to Accuracy Rating"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Martial Weapon",
+     "Gloves",
+     "Quiver"
+    ],
+    "text": "+(237 - 346) to Accuracy Rating"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Sorcery",
+  "slug": "Greater_Essence_of_Sorcery",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Focus or Wand : (75 — 89) % increased Spell Damage",
+   "Staff : (149 — 188) % increased Spell Damage"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(75 - 89) % increased Spell Damage"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(149 - 188) % increased Spell Damage"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Haste",
+  "slug": "Greater_Essence_of_Haste",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Melee Weapon : (23 — 25) % increased Attack Speed",
+   "Bow or Crossbow : (14 — 16) % increased Attack Speed"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Melee Weapon"
+    ],
+    "text": "(23 - 25) % increased Attack Speed"
+   },
+   {
+    "targets": [
+     "Bow",
+     "Crossbow"
+    ],
+    "text": "(14 - 16) % increased Attack Speed"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of the Infinite",
+  "slug": "Greater_Essence_of_the_Infinite",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Equipment : +(25 — 27) to Strength , Dexterity or Intelligence"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Equipment"
+    ],
+    "text": "+(25 - 27) to Strength , Dexterity or Intelligence"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of the Body",
+  "slug": "Perfect_Essence_of_the_Body",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Body Armour: (8 — 10) % increased maximum Life"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Body Armour"
+    ],
+    "text": "(8 - 10) % increased maximum Life"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of the Mind",
+  "slug": "Perfect_Essence_of_the_Mind",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Ring: (4 — 6) % increased maximum Mana"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Ring"
+    ],
+    "text": "(4 - 6) % increased maximum Mana"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Enhancement",
+  "slug": "Perfect_Essence_of_Enhancement",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Amulet: (20 — 30) % increased Global Armour , Evasion and Energy Shield"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Amulet"
+    ],
+    "text": "(20 - 30) % increased Global Armour , Evasion and Energy Shield"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Abrasion",
+  "slug": "Perfect_Essence_of_Abrasion",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Gain (15 — 20) % of Damage as Extra Physical Damage",
+   "Two Handed Melee Weapon or Crossbow : Gain (25 — 33) % of Damage as Extra Physical Damage"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Gain (15 - 20) % of Damage as Extra Physical Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Gain (25 - 33) % of Damage as Extra Physical Damage"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Flames",
+  "slug": "Perfect_Essence_of_Flames",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Gain (15 — 20) % of Damage as Extra Fire Damage",
+   "Two Handed Melee Weapon or Crossbow : Gain (25 — 33) % of Damage as Extra Fire Damage"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Gain (15 - 20) % of Damage as Extra Fire Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Gain (25 - 33) % of Damage as Extra Fire Damage"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Ice",
+  "slug": "Perfect_Essence_of_Ice",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Gain (15 — 20) % of Damage as Extra Cold Damage",
+   "Two Handed Melee Weapon or Crossbow : Gain (25 — 33) % of Damage as Extra Cold Damage"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Gain (15 - 20) % of Damage as Extra Cold Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Gain (25 - 33) % of Damage as Extra Cold Damage"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Electricity",
+  "slug": "Perfect_Essence_of_Electricity",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "One Handed Melee Weapon or Bow : Gain (15 — 20) % of Damage as Extra Lightning Damage",
+   "Two Handed Melee Weapon or Crossbow : Gain (25 — 33) % of Damage as Extra Lightning Damage"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "Gain (15 - 20) % of Damage as Extra Lightning Damage"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "Gain (25 - 33) % of Damage as Extra Lightning Damage"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Ruin",
+  "slug": "Perfect_Essence_of_Ruin",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Body Armour: (10 — 15) % of Physical Damage from Hits taken as Chaos Damage"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Body Armour"
+    ],
+    "text": "(10 - 15) % of Physical Damage from Hits taken as Chaos Damage"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Battle",
+  "slug": "Perfect_Essence_of_Battle",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "One Handed Melee Weapon or Bow : +2 to Level of all Attack Skills",
+   "Two Handed Melee Weapon or Crossbow : +3 to Level of all Attack Skills"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "One Handed Melee Weapon",
+     "Bow"
+    ],
+    "text": "+2 to Level of all Attack Skills"
+   },
+   {
+    "targets": [
+     "Two Handed Melee Weapon",
+     "Crossbow"
+    ],
+    "text": "+3 to Level of all Attack Skills"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Sorcery",
+  "slug": "Perfect_Essence_of_Sorcery",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Wand : +3 to Level of all Spell Skills",
+   "Staff : +5 to Level of all Spell Skills"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Wand"
+    ],
+    "text": "+3 to Level of all Spell Skills"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "+5 to Level of all Spell Skills"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Haste",
+  "slug": "Perfect_Essence_of_Haste",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Martial Weapon : (20 — 25) % chance to gain Onslaught on Killing Hits with this Weapon"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Martial Weapon"
+    ],
+    "text": "(20 - 25) % chance to gain Onslaught on Killing Hits with this Weapon"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of the Infinite",
+  "slug": "Perfect_Essence_of_the_Infinite",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Amulet: (7 — 10) % increased Strength , Dexterity or Intelligence"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Amulet"
+    ],
+    "text": "(7 - 10) % increased Strength , Dexterity or Intelligence"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Seeking",
+  "slug": "Lesser_Essence_of_Seeking",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Martial Weapon : +(1.51 — 2.1) % to Critical Hit Chance",
+   "Focus or Wand : (34 — 39) % increased Critical Hit Chance for Spells",
+   "Staff : (50 — 59) % increased Critical Hit Chance for Spells"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Martial Weapon"
+    ],
+    "text": "+(1.51 - 2.1) % to Critical Hit Chance"
+   },
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(34 - 39) % increased Critical Hit Chance for Spells"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(50 - 59) % increased Critical Hit Chance for Spells"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Seeking",
+  "slug": "Essence_of_Seeking",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Martial Weapon : +(2.11 — 2.7) % to Critical Hit Chance",
+   "Focus or Wand : (40 — 46) % increased Critical Hit Chance for Spells",
+   "Staff : (60 — 69) % increased Critical Hit Chance for Spells"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Martial Weapon"
+    ],
+    "text": "+(2.11 - 2.7) % to Critical Hit Chance"
+   },
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(40 - 46) % increased Critical Hit Chance for Spells"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(60 - 69) % increased Critical Hit Chance for Spells"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Seeking",
+  "slug": "Greater_Essence_of_Seeking",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Martial Weapon : +(3.11 — 3.8) % to Critical Hit Chance",
+   "Focus or Wand : (47 — 53) % increased Critical Hit Chance for Spells",
+   "Staff : (70 — 79) % increased Critical Hit Chance for Spells"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Martial Weapon"
+    ],
+    "text": "+(3.11 - 3.8) % to Critical Hit Chance"
+   },
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(47 - 53) % increased Critical Hit Chance for Spells"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(70 - 79) % increased Critical Hit Chance for Spells"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Seeking",
+  "slug": "Perfect_Essence_of_Seeking",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Body Armour: Hits against you have (40 — 50) % reduced Critical Damage Bonus"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Body Armour"
+    ],
+    "text": "Hits against you have (40 - 50) % reduced Critical Damage Bonus"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Hysteria",
+  "slug": "Essence_of_Hysteria",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Helmet: +1 to Level of all Minion Skills",
+   "Body Armour: (64 — 97) to (98 — 145) Physical Thorns damage",
+   "Gloves: (25 — 29) % increased Critical Damage Bonus",
+   "Boots: 30 % increased Movement Speed",
+   "Ring: (50 — 59) % increased Mana Regeneration Rate",
+   "Amulet: (19 — 21) % of Damage taken Recouped as Life",
+   "Belt: +(254 — 304) to Stun Threshold",
+   "Shield : (20 — 24) % increased Block chance",
+   "Quiver : (43 — 50) % increased Damage with Bow Skills",
+   "Focus : (20 — 23) % increased Energy Shield Recharge Rate"
+  ],
+  "tier": "Corrupted",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Helmet"
+    ],
+    "text": "+1 to Level of all Minion Skills"
+   },
+   {
+    "targets": [
+     "Body Armour"
+    ],
+    "text": "(64 - 97) to (98 - 145) Physical Thorns damage"
+   },
+   {
+    "targets": [
+     "Gloves"
+    ],
+    "text": "(25 - 29) % increased Critical Damage Bonus"
+   },
+   {
+    "targets": [
+     "Boots"
+    ],
+    "text": "30 % increased Movement Speed"
+   },
+   {
+    "targets": [
+     "Ring"
+    ],
+    "text": "(50 - 59) % increased Mana Regeneration Rate"
+   },
+   {
+    "targets": [
+     "Amulet"
+    ],
+    "text": "(19 - 21) % of Damage taken Recouped as Life"
+   },
+   {
+    "targets": [
+     "Belt"
+    ],
+    "text": "+(254 - 304) to Stun Threshold"
+   },
+   {
+    "targets": [
+     "Shield"
+    ],
+    "text": "(20 - 24) % increased Block chance"
+   },
+   {
+    "targets": [
+     "Quiver"
+    ],
+    "text": "(43 - 50) % increased Damage with Bow Skills"
+   },
+   {
+    "targets": [
+     "Focus"
+    ],
+    "text": "(20 - 23) % increased Energy Shield Recharge Rate"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Delirium",
+  "slug": "Essence_of_Delirium",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Body Armour: Allocates a random Notable Passive Skill"
+  ],
+  "tier": "Corrupted",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Body Armour"
+    ],
+    "text": "Allocates a random Notable Passive Skill"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Horror",
+  "slug": "Essence_of_Horror",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Gloves or Boots: 60 % increased effect of Socketed Augment Items"
+  ],
+  "tier": "Corrupted",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Gloves",
+     "Boots"
+    ],
+    "text": "60 % increased effect of Socketed Augment Items"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Insanity",
+  "slug": "Essence_of_Insanity",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Belt: On Corruption, Item gains two Enchantments"
+  ],
+  "tier": "Corrupted",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Belt"
+    ],
+    "text": "On Corruption, Item gains two Enchantments"
+   }
+  ]
+ },
+ {
+  "name": "Essence of the Abyss",
+  "slug": "Essence_of_the_Abyss",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Equipment : Mark of the Abyssal Lord"
+  ],
+  "tier": "Corrupted",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Equipment"
+    ],
+    "text": "Mark of the Abyssal Lord"
+   }
+  ]
+ },
+ {
+  "name": "Essence of the Breach",
+  "slug": "Essence_of_the_Breach",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Jewellery : +20 % to Maximum Quality"
+  ],
+  "tier": "Corrupted",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Jewellery"
+    ],
+    "text": "+20 % to Maximum Quality"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Insulation",
+  "slug": "Lesser_Essence_of_Insulation",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(11 — 15) % to Fire Resistance"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(11 - 15) % to Fire Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Insulation",
+  "slug": "Essence_of_Insulation",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(21 — 25) % to Fire Resistance"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(21 - 25) % to Fire Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Insulation",
+  "slug": "Greater_Essence_of_Insulation",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(31 — 35) % to Fire Resistance"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(31 - 35) % to Fire Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Insulation",
+  "slug": "Perfect_Essence_of_Insulation",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Belt: (26 — 30) % of Fire Damage taken Recouped as Life"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Belt"
+    ],
+    "text": "(26 - 30) % of Fire Damage taken Recouped as Life"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Thawing",
+  "slug": "Lesser_Essence_of_Thawing",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(11 — 15) % to Cold Resistance"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(11 - 15) % to Cold Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Thawing",
+  "slug": "Essence_of_Thawing",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(21 — 25) % to Cold Resistance"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(21 - 25) % to Cold Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Thawing",
+  "slug": "Greater_Essence_of_Thawing",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(31 — 35) % to Cold Resistance"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(31 - 35) % to Cold Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Thawing",
+  "slug": "Perfect_Essence_of_Thawing",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Helmet: (26 — 30) % of Cold Damage taken Recouped as Life"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Helmet"
+    ],
+    "text": "(26 - 30) % of Cold Damage taken Recouped as Life"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Grounding",
+  "slug": "Lesser_Essence_of_Grounding",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(11 — 15) % to Lightning Resistance"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(11 - 15) % to Lightning Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Grounding",
+  "slug": "Essence_of_Grounding",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(21 — 25) % to Lightning Resistance"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(21 - 25) % to Lightning Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Grounding",
+  "slug": "Greater_Essence_of_Grounding",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Armour , Belt or Jewellery : +(31 — 35) % to Lightning Resistance"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Armour",
+     "Belt",
+     "Jewellery"
+    ],
+    "text": "+(31 - 35) % to Lightning Resistance"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Grounding",
+  "slug": "Perfect_Essence_of_Grounding",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Gloves: (26 — 30) % of Lightning Damage taken Recouped as Life"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Gloves"
+    ],
+    "text": "(26 - 30) % of Lightning Damage taken Recouped as Life"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Alacrity",
+  "slug": "Lesser_Essence_of_Alacrity",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Focus or Wand : (13 — 16) % increased Cast Speed",
+   "Staff : (20 — 25) % increased Cast Speed"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(13 - 16) % increased Cast Speed"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(20 - 25) % increased Cast Speed"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Alacrity",
+  "slug": "Essence_of_Alacrity",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Focus or Wand : (17 — 20) % increased Cast Speed",
+   "Staff : (26 — 31) % increased Cast Speed"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(17 - 20) % increased Cast Speed"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(26 - 31) % increased Cast Speed"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Alacrity",
+  "slug": "Greater_Essence_of_Alacrity",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Focus or Wand : (25 — 28) % increased Cast Speed",
+   "Staff : (38 — 43) % increased Cast Speed"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(25 - 28) % increased Cast Speed"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(38 - 43) % increased Cast Speed"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Alacrity",
+  "slug": "Perfect_Essence_of_Alacrity",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Focus or Wand : (18 — 20) % increased Mana Cost Efficiency",
+   "Staff : (28 — 32) % increased Mana Cost Efficiency"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(18 - 20) % increased Mana Cost Efficiency"
+   },
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(28 - 32) % increased Mana Cost Efficiency"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Opulence",
+  "slug": "Lesser_Essence_of_Opulence",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Boots, Gloves, Helmet or Jewellery : (6 — 10) % increased Rarity of Items found"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Boots",
+     "Gloves",
+     "Helmet",
+     "Jewellery"
+    ],
+    "text": "(6 - 10) % increased Rarity of Items found"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Opulence",
+  "slug": "Essence_of_Opulence",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Boots, Gloves, Helmet or Jewellery : (11 — 14) % increased Rarity of Items found"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Boots",
+     "Gloves",
+     "Helmet",
+     "Jewellery"
+    ],
+    "text": "(11 - 14) % increased Rarity of Items found"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Opulence",
+  "slug": "Greater_Essence_of_Opulence",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Boots, Gloves, Helmet or Jewellery : (15 — 18) % increased Rarity of Items found"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Boots",
+     "Gloves",
+     "Helmet",
+     "Jewellery"
+    ],
+    "text": "(15 - 18) % increased Rarity of Items found"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Opulence",
+  "slug": "Perfect_Essence_of_Opulence",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Gloves: (10 — 15) % increased Quantity of Gold Dropped by Slain Enemies"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Gloves"
+    ],
+    "text": "(10 - 15) % increased Quantity of Gold Dropped by Slain Enemies"
+   }
+  ]
+ },
+ {
+  "name": "Lesser Essence of Command",
+  "slug": "Lesser_Essence_of_Command",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Sceptre : Allies in your Presence deal (35 — 44) % increased Damage"
+  ],
+  "tier": "Lesser",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Sceptre"
+    ],
+    "text": "Allies in your Presence deal (35 - 44) % increased Damage"
+   }
+  ]
+ },
+ {
+  "name": "Essence of Command",
+  "slug": "Essence_of_Command",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Sceptre : Allies in your Presence deal (55 — 64) % increased Damage"
+  ],
+  "tier": "Normal",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Sceptre"
+    ],
+    "text": "Allies in your Presence deal (55 - 64) % increased Damage"
+   }
+  ]
+ },
+ {
+  "name": "Greater Essence of Command",
+  "slug": "Greater_Essence_of_Command",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding a guaranteed modifier",
+   "Sceptre : Allies in your Presence deal (75 — 89) % increased Damage"
+  ],
+  "tier": "Greater",
+  "removesRandomModifier": false,
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Sceptre"
+    ],
+    "text": "Allies in your Presence deal (75 - 89) % increased Damage"
+   }
+  ]
+ },
+ {
+  "name": "Perfect Essence of Command",
+  "slug": "Perfect_Essence_of_Command",
+  "section": "Essence",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Sceptre : Aura Skills have (15 — 20) % increased Magnitudes"
+  ],
+  "tier": "Perfect",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Sceptre"
+    ],
+    "text": "Aura Skills have (15 - 20) % increased Magnitudes"
+   }
+  ]
+ }
+]

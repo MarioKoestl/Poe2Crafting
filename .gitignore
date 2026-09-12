@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+*.user
+TestResults/
+
+# large raw research dumps (reproducible from poe2db / PoB)
+research/poe2db/*.json
+research/*.zip

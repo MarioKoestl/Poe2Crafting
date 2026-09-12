@@ -1,0 +1,1838 @@
+[
+ {
+  "name": "Blacksmith's Whetstone",
+  "slug": "Blacksmiths_Whetstone",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Improves the quality of a martial weapon"
+  ],
+  "op": "quality",
+  "qualityTarget": "martial_weapon"
+ },
+ {
+  "name": "Arcanist's Etcher",
+  "slug": "Arcanists_Etcher",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Improves the quality of a wand, staff or sceptre"
+  ],
+  "op": "quality",
+  "qualityTarget": "caster_weapon"
+ },
+ {
+  "name": "Scroll of Wisdom",
+  "slug": "Scroll_of_Wisdom",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 40",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Identifies an item"
+  ],
+  "op": "identify"
+ },
+ {
+  "name": "Chaos Orb",
+  "slug": "Chaos_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new random modifier"
+  ],
+  "op": "chaos",
+  "rarityIn": [
+   "Rare"
+  ],
+  "removes": 1,
+  "adds": 1
+ },
+ {
+  "name": "Greater Chaos Orb",
+  "slug": "Greater_Chaos_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": 35,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new random modifier"
+  ],
+  "op": "chaos",
+  "rarityIn": [
+   "Rare"
+  ],
+  "removes": 1,
+  "adds": 1
+ },
+ {
+  "name": "Perfect Chaos Orb",
+  "slug": "Perfect_Chaos_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": 50,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new random modifier"
+  ],
+  "op": "chaos",
+  "rarityIn": [
+   "Rare"
+  ],
+  "removes": 1,
+  "adds": 1
+ },
+ {
+  "name": "Armourer's Scrap",
+  "slug": "Armourers_Scrap",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Improves the quality of an armour"
+  ],
+  "op": "quality",
+  "qualityTarget": "armour"
+ },
+ {
+  "name": "Mirror of Kalandra",
+  "slug": "Mirror_of_Kalandra",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Creates a Mirrored copy of an item"
+  ],
+  "op": "mirror",
+  "rarityIn": [
+   "Normal",
+   "Magic",
+   "Rare"
+  ]
+ },
+ {
+  "name": "Hinekora's Lock",
+  "slug": "Hinekoras_Lock",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Allows an item to foresee the result of the next Currency item used on it Modifying the item in any way removes the ability to foresee"
+  ],
+  "op": "lock",
+  "rarityIn": [
+   "Normal",
+   "Magic",
+   "Rare",
+   "Unique"
+  ]
+ },
+ {
+  "name": "Orb of Alchemy",
+  "slug": "Orb_of_Alchemy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Normal or Magic item to a Rare item with 4 random modifiers"
+  ],
+  "op": "alchemy",
+  "rarityIn": [
+   "Normal",
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "adds": 4
+ },
+ {
+  "name": "Orb of Chance",
+  "slug": "Orb_of_Chance",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Unpredictably either upgrades a Normal item to Unique rarity or destroys it"
+  ],
+  "op": "chance",
+  "rarityIn": [
+   "Normal"
+  ]
+ },
+ {
+  "name": "Orb of Transmutation",
+  "slug": "Orb_of_Transmutation",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 40",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Normal item to a Magic item with 1 modifier"
+  ],
+  "op": "transmute",
+  "rarityIn": [
+   "Normal"
+  ],
+  "rarityOut": "Magic",
+  "adds": 1
+ },
+ {
+  "name": "Greater Orb of Transmutation",
+  "slug": "Greater_Orb_of_Transmutation",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 40",
+  "minModLevel": 44,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Normal item to a Magic item with 1 modifier"
+  ],
+  "op": "transmute",
+  "rarityIn": [
+   "Normal"
+  ],
+  "rarityOut": "Magic",
+  "adds": 1
+ },
+ {
+  "name": "Perfect Orb of Transmutation",
+  "slug": "Perfect_Orb_of_Transmutation",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 40",
+  "minModLevel": 70,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Normal item to a Magic item with 1 modifier"
+  ],
+  "op": "transmute",
+  "rarityIn": [
+   "Normal"
+  ],
+  "rarityOut": "Magic",
+  "adds": 1
+ },
+ {
+  "name": "Exalted Orb",
+  "slug": "Exalted_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Augments a Rare item with a new random modifier"
+  ],
+  "op": "exalt",
+  "rarityIn": [
+   "Rare"
+  ],
+  "adds": 1
+ },
+ {
+  "name": "Greater Exalted Orb",
+  "slug": "Greater_Exalted_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": 35,
+  "maxItemLevel": null,
+  "description": [
+   "Augments a Rare item with a new random modifier"
+  ],
+  "op": "exalt",
+  "rarityIn": [
+   "Rare"
+  ],
+  "adds": 1
+ },
+ {
+  "name": "Perfect Exalted Orb",
+  "slug": "Perfect_Exalted_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": 50,
+  "maxItemLevel": null,
+  "description": [
+   "Augments a Rare item with a new random modifier"
+  ],
+  "op": "exalt",
+  "rarityIn": [
+   "Rare"
+  ],
+  "adds": 1
+ },
+ {
+  "name": "Regal Orb",
+  "slug": "Regal_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding 1 modifier"
+  ],
+  "op": "regal",
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "adds": 1
+ },
+ {
+  "name": "Greater Regal Orb",
+  "slug": "Greater_Regal_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": 35,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding 1 modifier"
+  ],
+  "op": "regal",
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "adds": 1
+ },
+ {
+  "name": "Perfect Regal Orb",
+  "slug": "Perfect_Regal_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": 50,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Magic item to a Rare item, adding 1 modifier"
+  ],
+  "op": "regal",
+  "rarityIn": [
+   "Magic"
+  ],
+  "rarityOut": "Rare",
+  "adds": 1
+ },
+ {
+  "name": "Orb of Augmentation",
+  "slug": "Orb_of_Augmentation",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 30",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Augments a Magic item with a new random modifier"
+  ],
+  "op": "augment",
+  "rarityIn": [
+   "Magic"
+  ],
+  "adds": 1
+ },
+ {
+  "name": "Greater Orb of Augmentation",
+  "slug": "Greater_Orb_of_Augmentation",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 30",
+  "minModLevel": 44,
+  "maxItemLevel": null,
+  "description": [
+   "Augments a Magic item with a new random modifier"
+  ],
+  "op": "augment",
+  "rarityIn": [
+   "Magic"
+  ],
+  "adds": 1
+ },
+ {
+  "name": "Perfect Orb of Augmentation",
+  "slug": "Perfect_Orb_of_Augmentation",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 30",
+  "minModLevel": 70,
+  "maxItemLevel": null,
+  "description": [
+   "Augments a Magic item with a new random modifier"
+  ],
+  "op": "augment",
+  "rarityIn": [
+   "Magic"
+  ],
+  "adds": 1
+ },
+ {
+  "name": "Glassblower's Bauble",
+  "slug": "Glassblowers_Bauble",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Improves the quality of a flask"
+  ],
+  "op": "quality",
+  "qualityTarget": "flask"
+ },
+ {
+  "name": "Gemcutter's Prism",
+  "slug": "Gemcutters_Prism",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Improves the quality of a Skill Gem"
+  ]
+ },
+ {
+  "name": "Lesser Jeweller's Orb",
+  "slug": "Lesser_Jewellers_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Sets a Skill Gem to have 3 Support Gem Sockets"
+  ]
+ },
+ {
+  "name": "Greater Jeweller's Orb",
+  "slug": "Greater_Jewellers_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Sets a Skill Gem to have 4 Support Gem Sockets"
+  ]
+ },
+ {
+  "name": "Perfect Jeweller's Orb",
+  "slug": "Perfect_Jewellers_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Sets a Skill Gem to have 5 Support Gem Sockets"
+  ]
+ },
+ {
+  "name": "Artificer's Orb",
+  "slug": "Artificers_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds an Augment Socket to a Martial Weapon , wand, staff or Armour"
+  ],
+  "op": "socket"
+ },
+ {
+  "name": "Divine Orb",
+  "slug": "Divine_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Randomises the numeric values of modifiers on an item"
+  ],
+  "op": "divine",
+  "rarityIn": [
+   "Magic",
+   "Rare",
+   "Unique"
+  ]
+ },
+ {
+  "name": "Transmutation Shard",
+  "slug": "Transmutation_Shard",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Chance Shard",
+  "slug": "Chance_Shard",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Albino Rhoa Feather",
+  "slug": "Albino_Rhoa_Feather",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Vaal Orb",
+  "slug": "Vaal_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Modifies an item unpredictably and Corrupts it"
+  ],
+  "op": "vaal",
+  "rarityIn": [
+   "Normal",
+   "Magic",
+   "Rare",
+   "Unique"
+  ]
+ },
+ {
+  "name": "Architect's Orb",
+  "slug": "Architects_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Modifies a Corrupted Equipment or Jewel item unpredictably or destroys it"
+  ],
+  "op": "architect",
+  "rarityIn": [
+   "Normal",
+   "Magic",
+   "Rare",
+   "Unique"
+  ],
+  "requiresCorrupted": true
+ },
+ {
+  "name": "Crystallised Corruption",
+  "slug": "Crystallised_Corruption",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Modifies a Corrupted Skill Gem unpredictably or destroys it"
+  ]
+ },
+ {
+  "name": "Core Destabiliser",
+  "slug": "Core_Destabiliser",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Modifies a Soul Core unpredictably, with a chance to destroy it"
+  ]
+ },
+ {
+  "name": "Ancient Infuser",
+  "slug": "Ancient_Infuser",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Modifies a Tablet unpredictably and Corrupts it"
+  ]
+ },
+ {
+  "name": "Vaal Cultivation Orb",
+  "slug": "Vaal_Cultivation_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Replaces up to 2 modifiers on a Corrupted Vaal Unique Replaces other Uniques with a Corrupted Unique of the same Item Class"
+  ]
+ },
+ {
+  "name": "Yaomac's Orb of Sacrifice",
+  "slug": "Yaomacs_Orb_of_Sacrifice",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Corruption Enchantment on a Rare Weapon or Quiver and removes a random Modifier"
+  ],
+  "op": "sacrifice",
+  "rarityIn": [
+   "Rare"
+  ],
+  "requiresCorrupted": true,
+  "target": "weapon_or_quiver"
+ },
+ {
+  "name": "Kopec's Orb of Sacrifice",
+  "slug": "Kopecs_Orb_of_Sacrifice",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Corruption Enchantment on a Rare Armour and removes a random Modifier"
+  ],
+  "op": "sacrifice",
+  "rarityIn": [
+   "Rare"
+  ],
+  "requiresCorrupted": true,
+  "target": "armour"
+ },
+ {
+  "name": "Kamasa's Orb of Sacrifice",
+  "slug": "Kamasas_Orb_of_Sacrifice",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Corruption Enchantment on a Rare Amulet, Ring or Belt and removes a random Modifier"
+  ],
+  "op": "sacrifice",
+  "rarityIn": [
+   "Rare"
+  ],
+  "requiresCorrupted": true,
+  "target": "jewellery"
+ },
+ {
+  "name": "Yugul's Orb of Sacrifice",
+  "slug": "Yuguls_Orb_of_Sacrifice",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Corruption Enchantment on a Rare Jewel and removes a random Modifier"
+  ],
+  "op": "sacrifice",
+  "rarityIn": [
+   "Rare"
+  ],
+  "requiresCorrupted": true,
+  "target": "jewel"
+ },
+ {
+  "name": "Vaal Armourer's Infuser",
+  "slug": "Vaal_Armourers_Infuser",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Improves the quality of an Armour , exceeding maximum quality by up to 10% with a chance of Corrupting it"
+  ],
+  "op": "vaal_quality",
+  "qualityTarget": "armour"
+ },
+ {
+  "name": "Vaal Blacksmith's Infuser",
+  "slug": "Vaal_Blacksmiths_Infuser",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Improves the quality of a Martial Weapon , exceeding maximum quality by up to 10% with a chance of Corrupting it"
+  ],
+  "op": "vaal_quality",
+  "qualityTarget": "martial_weapon"
+ },
+ {
+  "name": "Vaal Arcanist's Infuser",
+  "slug": "Vaal_Arcanists_Infuser",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Improves the quality of a wand, staff or sceptre, exceeding maximum quality by up to 10% with a chance of Corrupting it"
+  ],
+  "op": "vaal_quality",
+  "qualityTarget": "caster_weapon"
+ },
+ {
+  "name": "Vaal Catalysing Infuser",
+  "slug": "Vaal_Catalysing_Infuser",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Improves the quality of a ring or amulet, exceeding maximum quality by up to 10% with a chance of Corrupting it"
+  ],
+  "op": "vaal_quality",
+  "qualityTarget": "jewellery"
+ },
+ {
+  "name": "Orb of Extraction",
+  "slug": "Orb_of_Extraction",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Destroys an Equipment item, returning any non Socket-Bound Augments socketed in it"
+  ],
+  "op": "extract"
+ },
+ {
+  "name": "Orb of Annulment",
+  "slug": "Orb_of_Annulment",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier from an item"
+  ],
+  "op": "annul",
+  "rarityIn": [
+   "Magic",
+   "Rare"
+  ],
+  "removes": 1
+ },
+ {
+  "name": "Fracturing Orb",
+  "slug": "Fracturing_Orb",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Fracture a random modifier on a rare item with at least 4 modifiers, locking it in place."
+  ],
+  "op": "fracture",
+  "rarityIn": [
+   "Rare"
+  ],
+  "minMods": 4
+ },
+ {
+  "name": "Regal Shard",
+  "slug": "Regal_Shard",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Artificer's Shard",
+  "slug": "Artificers_Shard",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Diluted Liquid Ire",
+  "slug": "Diluted_Liquid_Ire",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: (10 — 20) % increased Armour",
+   "Sapphire Prefix: (10 — 20) % increased maximum Energy Shield",
+   "Emerald Prefix: (10 — 20) % increased Evasion Rating"
+  ]
+ },
+ {
+  "name": "Diluted Liquid Guilt",
+  "slug": "Diluted_Liquid_Guilt",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: (5 — 15) % increased Fire Damage",
+   "Sapphire Prefix: (5 — 15) % increased Cold Damage",
+   "Emerald Prefix: (5 — 15) % increased Lightning Damage"
+  ]
+ },
+ {
+  "name": "Diluted Liquid Greed",
+  "slug": "Diluted_Liquid_Greed",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: (5 — 15) % increased Global Physical Damage",
+   "Sapphire Prefix: (7 — 13) % increased Chaos Damage",
+   "Emerald Prefix: (5 — 15) % increased Elemental Damage"
+  ]
+ },
+ {
+  "name": "Liquid Paranoia",
+  "slug": "Liquid_Paranoia",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: (5 — 15) % increased Attack Damage",
+   "Sapphire Suffix: (2 — 4) % increased Cast Speed",
+   "Emerald Suffix: (2 — 4) % increased Attack Speed"
+  ]
+ },
+ {
+  "name": "Liquid Envy",
+  "slug": "Liquid_Envy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: (4 — 6) % of Skill Mana Costs Converted to Life Costs",
+   "Sapphire Prefix: (5 — 15) % increased Spell Damage",
+   "Emerald Suffix: (3 — 5) % increased Cooldown Recovery Rate"
+  ]
+ },
+ {
+  "name": "Liquid Disgust",
+  "slug": "Liquid_Disgust",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: (5 — 10) % increased Life Regeneration rate",
+   "Sapphire Suffix: Recover (1 — 2) % of maximum Mana on Kill",
+   "Emerald Suffix: Recover (1 — 2) % of maximum Life on Kill"
+  ]
+ },
+ {
+  "name": "Liquid Despair",
+  "slug": "Liquid_Despair",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: Gain 1 Rage on Melee Hit",
+   "Sapphire Suffix: (5 — 15) % increased Critical Hit Chance for Spells",
+   "Emerald Suffix: (6 — 16) % increased Critical Hit Chance for Attacks"
+  ]
+ },
+ {
+  "name": "Concentrated Liquid Fear",
+  "slug": "Concentrated_Liquid_Fear",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: (10 — 20) % increased Warcry Speed",
+   "Sapphire Suffix: (10 — 20) % increased Critical Spell Damage Bonus",
+   "Emerald Suffix: (10 — 20) % increased Critical Damage Bonus for Attack Damage"
+  ]
+ },
+ {
+  "name": "Concentrated Liquid Suffering",
+  "slug": "Concentrated_Liquid_Suffering",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: +(1 — 2) to Maximum Rage",
+   "Sapphire Prefix: (4 — 6) % increased Area of Effect",
+   "Emerald Suffix: (1 — 2) % increased Movement Speed"
+  ]
+ },
+ {
+  "name": "Concentrated Liquid Isolation",
+  "slug": "Concentrated_Liquid_Isolation",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: +1 % to Maximum Fire Resistance",
+   "Sapphire Suffix: +1 % to Maximum Cold Resistance",
+   "Emerald Suffix: +1 % to Maximum Lightning Resistance",
+   "Diamond Suffix: +1 % to Maximum Chaos Resistance"
+  ]
+ },
+ {
+  "name": "Ancient Diluted Liquid Ire",
+  "slug": "Ancient_Diluted_Liquid_Ire",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: Small Passive Skills in Radius also grant (2 — 3) % increased Armour",
+   "Sapphire Prefix: Small Passive Skills in Radius also grant (2 — 3) % increased maximum Energy Shield",
+   "Emerald Prefix: Small Passive Skills in Radius also grant (2 — 3) % increased Evasion Rating"
+  ]
+ },
+ {
+  "name": "Ancient Diluted Liquid Guilt",
+  "slug": "Ancient_Diluted_Liquid_Guilt",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: Small Passive Skills in Radius also grant (1 — 2) % increased Fire Damage",
+   "Sapphire Prefix: Small Passive Skills in Radius also grant (1 — 2) % increased Cold Damage",
+   "Emerald Prefix: Small Passive Skills in Radius also grant (1 — 2) % increased Lightning Damage"
+  ]
+ },
+ {
+  "name": "Ancient Diluted Liquid Greed",
+  "slug": "Ancient_Diluted_Liquid_Greed",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: Small Passive Skills in Radius also grant (1 — 2) % increased Global Physical Damage",
+   "Sapphire Prefix: Small Passive Skills in Radius also grant (1 — 2) % increased Chaos Damage",
+   "Emerald Prefix: Small Passive Skills in Radius also grant (1 — 2) % increased Elemental Damage"
+  ]
+ },
+ {
+  "name": "Ancient Liquid Paranoia",
+  "slug": "Ancient_Liquid_Paranoia",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: Small Passive Skills in Radius also grant (1 — 2) % increased Attack Damage",
+   "Sapphire Suffix: Notable Passive Skills in Radius also grant (1 — 2) % increased Cast Speed",
+   "Emerald Suffix: Notable Passive Skills in Radius also grant (1 — 2) % increased Attack Speed"
+  ]
+ },
+ {
+  "name": "Ancient Liquid Envy",
+  "slug": "Ancient_Liquid_Envy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: Notable Passive Skills in Radius also grant (2 — 3) % of Skill Mana Costs Converted to Life Costs",
+   "Sapphire Prefix: Small Passive Skills in Radius also grant (1 — 2) % increased Spell Damage",
+   "Emerald Suffix: Notable Passive Skills in Radius also grant (1 — 3) % increased Cooldown Recovery Rate"
+  ]
+ },
+ {
+  "name": "Ancient Liquid Disgust",
+  "slug": "Ancient_Liquid_Disgust",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: Notable Passive Skills in Radius also grant (3 — 5) % increased Life Regeneration rate",
+   "Sapphire Suffix: Notable Passive Skills in Radius also grant Recover 1 % of maximum Mana on Kill",
+   "Emerald Suffix: Notable Passive Skills in Radius also grant Recover 1 % of maximum Life on Kill"
+  ]
+ },
+ {
+  "name": "Ancient Liquid Despair",
+  "slug": "Ancient_Liquid_Despair",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: Notable Passive Skills in Radius also grant Gain 1 Rage on Melee Hit",
+   "Sapphire Suffix: Notable Passive Skills in Radius also grant (3 — 7) % increased Critical Hit Chance for Spells",
+   "Emerald Suffix: Notable Passive Skills in Radius also grant (3 — 7) % increased Critical Hit Chance for Attacks"
+  ]
+ },
+ {
+  "name": "Ancient Concentrated Liquid Fear",
+  "slug": "Ancient_Concentrated_Liquid_Fear",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: Small Passive Skills in Radius also grant (2 — 3) % increased Warcry Speed",
+   "Sapphire Suffix: Notable Passive Skills in Radius also grant (5 — 10) % increased Critical Spell Damage Bonus",
+   "Emerald Suffix: Notable Passive Skills in Radius also grant (5 — 10) % increased Critical Damage Bonus for Attack Damage"
+  ]
+ },
+ {
+  "name": "Ancient Concentrated Liquid Suffering",
+  "slug": "Ancient_Concentrated_Liquid_Suffering",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: Notable Passive Skills in Radius also grant +1 to Maximum Rage",
+   "Sapphire Prefix: Notable Passive Skills in Radius also grant (2 — 3) % increased Area of Effect",
+   "Emerald Suffix: Notable Passive Skills in Radius also grant 1 % increased Movement Speed"
+  ]
+ },
+ {
+  "name": "Ancient Concentrated Liquid Isolation",
+  "slug": "Ancient_Concentrated_Liquid_Isolation",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: Increases and Reductions to Cold and Lightning Damage in Radius are transformed to apply to Fire Damage",
+   "Sapphire Prefix: Increases and Reductions to Fire and Lightning Damage in Radius are transformed to apply to Cold Damage",
+   "Emerald Prefix: Increases and Reductions to Cold and Fire Damage in Radius are transformed to apply to Lightning Damage"
+  ]
+ },
+ {
+  "name": "Potent Liquid Melancholy",
+  "slug": "Potent_Liquid_Melancholy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: Debilitate Enemies on Hit while you have an Emerald and a Sapphire socketed in your tree",
+   "Sapphire Suffix: Inflict Elemental Exposure on Hit while you have a Ruby and an Emerald socketed in your tree",
+   "Emerald Suffix: Blind Enemies on Hit while you have a Ruby and a Sapphire socketed in your tree"
+  ]
+ },
+ {
+  "name": "Potent Liquid Ferocity",
+  "slug": "Potent_Liquid_Ferocity",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: (40 — 60) % increased Effect of Suffixes",
+   "Ruby Suffix: (40 — 60) % increased Effect of Prefixes",
+   "Sapphire Prefix: (40 — 60) % increased Effect of Suffixes",
+   "Sapphire Suffix: (40 — 60) % increased Effect of Prefixes",
+   "Emerald Prefix: (40 — 60) % increased Effect of Suffixes",
+   "Emerald Suffix: (40 — 60) % increased Effect of Prefixes",
+   "Diamond Prefix: (40 — 60) % increased Effect of Suffixes",
+   "Diamond Suffix: (40 — 60) % increased Effect of Prefixes"
+  ]
+ },
+ {
+  "name": "Potent Liquid Contempt",
+  "slug": "Potent_Liquid_Contempt",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: +1 Suffix Modifier allowed",
+   "Ruby Suffix: +1 Prefix Modifier allowed",
+   "Sapphire Prefix: +1 Suffix Modifier allowed",
+   "Sapphire Suffix: +1 Prefix Modifier allowed",
+   "Emerald Prefix: +1 Suffix Modifier allowed",
+   "Emerald Suffix: +1 Prefix Modifier allowed",
+   "Diamond Prefix: +1 Suffix Modifier allowed",
+   "Diamond Suffix: +1 Prefix Modifier allowed"
+  ]
+ },
+ {
+  "name": "Ancient Potent Liquid Melancholy",
+  "slug": "Ancient_Potent_Liquid_Melancholy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: Upgrades Radius to Very Large local jewel effect base radius [500]",
+   "Sapphire Prefix: Upgrades Radius to Very Large local jewel effect base radius [500]",
+   "Emerald Prefix: Upgrades Radius to Very Large local jewel effect base radius [500]",
+   "Diamond Prefix: Upgrades Radius to Very Large local jewel effect base radius [500]"
+  ]
+ },
+ {
+  "name": "Ancient Potent Liquid Ferocity",
+  "slug": "Ancient_Potent_Liquid_Ferocity",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Suffix: Notable Passive Skills in Radius also grant +(5 — 7) % to Fire Resistance",
+   "Sapphire Suffix: Notable Passive Skills in Radius also grant +(5 — 7) % to Cold Resistance",
+   "Emerald Suffix: Notable Passive Skills in Radius also grant +(5 — 7) % to Lightning Resistance",
+   "Diamond Suffix: Notable Passive Skills in Radius also grant +(4 — 5) % to Chaos Resistance"
+  ]
+ },
+ {
+  "name": "Ancient Potent Liquid Contempt",
+  "slug": "Ancient_Potent_Liquid_Contempt",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier",
+   "Ruby Prefix: +1 Suffix Modifier allowed",
+   "Ruby Suffix: +1 Prefix Modifier allowed",
+   "Sapphire Prefix: +1 Suffix Modifier allowed",
+   "Sapphire Suffix: +1 Prefix Modifier allowed",
+   "Emerald Prefix: +1 Suffix Modifier allowed",
+   "Emerald Suffix: +1 Prefix Modifier allowed",
+   "Diamond Prefix: +1 Suffix Modifier allowed",
+   "Diamond Suffix: +1 Prefix Modifier allowed"
+  ]
+ },
+ {
+  "name": "Rogue's Marker",
+  "slug": "Rogues_Marker",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 50000",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Creates a portal to the Rogue Harbour from a Town or Hideout Used as Currency for services in the Rogue Harbour"
+  ]
+ },
+ {
+  "name": "Exotic Coinage",
+  "slug": "Exotic_Coinage",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Broken Circle Artifact",
+  "slug": "Broken_Circle_Artifact",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Black Scythe Artifact",
+  "slug": "Black_Scythe_Artifact",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Order Artifact",
+  "slug": "Order_Artifact",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Sun Artifact",
+  "slug": "Sun_Artifact",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Gold",
+  "slug": "Gold",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10000",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Can be spent at Vendors."
+  ]
+ },
+ {
+  "name": "Shattered Triskelion",
+  "slug": "Shattered_Triskelion",
+  "section": "Stackable Currency Item",
+  "stackSize": null,
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Gnawed Jawbone",
+  "slug": "Gnawed_Jawbone",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": 64,
+  "description": [
+   "Desecrates a Rare Weapon or Quiver"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "weapon_or_quiver"
+ },
+ {
+  "name": "Preserved Jawbone",
+  "slug": "Preserved_Jawbone",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Desecrates a Rare Weapon or Quiver"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "weapon_or_quiver"
+ },
+ {
+  "name": "Ancient Jawbone",
+  "slug": "Ancient_Jawbone",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": 40,
+  "maxItemLevel": null,
+  "description": [
+   "Desecrates a Rare Weapon or Quiver"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "weapon_or_quiver"
+ },
+ {
+  "name": "Gnawed Rib",
+  "slug": "Gnawed_Rib",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": 64,
+  "description": [
+   "Desecrates a Rare Armour"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "armour"
+ },
+ {
+  "name": "Preserved Rib",
+  "slug": "Preserved_Rib",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Desecrates a Rare Armour"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "armour"
+ },
+ {
+  "name": "Ancient Rib",
+  "slug": "Ancient_Rib",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": 40,
+  "maxItemLevel": null,
+  "description": [
+   "Desecrates a Rare Armour"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "armour"
+ },
+ {
+  "name": "Gnawed Collarbone",
+  "slug": "Gnawed_Collarbone",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": 64,
+  "description": [
+   "Desecrates a Rare Amulet, Ring or Belt"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "jewellery"
+ },
+ {
+  "name": "Preserved Collarbone",
+  "slug": "Preserved_Collarbone",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Desecrates a Rare Amulet, Ring or Belt"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "jewellery"
+ },
+ {
+  "name": "Ancient Collarbone",
+  "slug": "Ancient_Collarbone",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": 40,
+  "maxItemLevel": null,
+  "description": [
+   "Desecrates a Rare Amulet, Ring or Belt"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "jewellery"
+ },
+ {
+  "name": "Preserved Cranium",
+  "slug": "Preserved_Cranium",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Desecrates a Rare Jewel"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "jewel"
+ },
+ {
+  "name": "Preserved Vertebrae",
+  "slug": "Preserved_Vertebrae",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Desecrates a Rare Waystone"
+  ]
+ },
+ {
+  "name": "Altered Collarbone",
+  "slug": "Altered_Collarbone",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Desecrates a Rare Amulet, Ring or Belt with a chance for otherworldly modifiers"
+  ],
+  "op": "desecrate",
+  "rarityIn": [
+   "Rare"
+  ],
+  "target": "jewellery",
+  "otherworldly": true
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 1)",
+  "slug": "Thaumaturgic_Flux_%28Level_1%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Sets a Kalguuran Skill Gem to level 1"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 5)",
+  "slug": "Thaumaturgic_Flux_%28Level_5%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 5"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 6)",
+  "slug": "Thaumaturgic_Flux_%28Level_6%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 6"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 7)",
+  "slug": "Thaumaturgic_Flux_%28Level_7%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 7"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 8)",
+  "slug": "Thaumaturgic_Flux_%28Level_8%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 8"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 9)",
+  "slug": "Thaumaturgic_Flux_%28Level_9%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 9"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 10)",
+  "slug": "Thaumaturgic_Flux_%28Level_10%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 10"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 11)",
+  "slug": "Thaumaturgic_Flux_%28Level_11%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 11"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 12)",
+  "slug": "Thaumaturgic_Flux_%28Level_12%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 12"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 13)",
+  "slug": "Thaumaturgic_Flux_%28Level_13%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 13"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 14)",
+  "slug": "Thaumaturgic_Flux_%28Level_14%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 14"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 15)",
+  "slug": "Thaumaturgic_Flux_%28Level_15%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 15"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 16)",
+  "slug": "Thaumaturgic_Flux_%28Level_16%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 16"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 17)",
+  "slug": "Thaumaturgic_Flux_%28Level_17%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 17"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 18)",
+  "slug": "Thaumaturgic_Flux_%28Level_18%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 18"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 19)",
+  "slug": "Thaumaturgic_Flux_%28Level_19%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 19"
+  ]
+ },
+ {
+  "name": "Thaumaturgic Flux (Level 20)",
+  "slug": "Thaumaturgic_Flux_%28Level_20%29",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades a Kalguuran Skill Gem to level 20"
+  ]
+ },
+ {
+  "name": "Red Packet",
+  "slug": "Red_Packet",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 99",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Grants an Event Point."
+  ]
+ },
+ {
+  "name": "Verisium",
+  "slug": "Verisium",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 1000",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Exceptional Verisium",
+  "slug": "Exceptional_Verisium",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 50",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Mutated Verisium",
+  "slug": "Mutated_Verisium",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 50",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Corrupted Verisium",
+  "slug": "Corrupted_Verisium",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 50",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Founders Verisium",
+  "slug": "Founders_Verisium",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 50",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Medved's Crest of the Circle",
+  "slug": "Medveds_Crest_of_the_Circle",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Vorana's Crest of the Scythe",
+  "slug": "Voranas_Crest_of_the_Scythe",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Uhtred's Crest of the Chalice",
+  "slug": "Uhtreds_Crest_of_the_Chalice",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Olroth's Crest of the Sun",
+  "slug": "Olroths_Crest_of_the_Sun",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Venerable Starlit Ore",
+  "slug": "Venerable_Starlit_Ore",
+  "section": "Stackable Currency Item",
+  "stackSize": null,
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Revered Starlit Ore",
+  "slug": "Revered_Starlit_Ore",
+  "section": "Stackable Currency Item",
+  "stackSize": null,
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Veridical Starlit Ore",
+  "slug": "Veridical_Starlit_Ore",
+  "section": "Stackable Currency Item",
+  "stackSize": null,
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Warding Starlit Ore",
+  "slug": "Warding_Starlit_Ore",
+  "section": "Stackable Currency Item",
+  "stackSize": null,
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Starlit Ore",
+  "slug": "Starlit_Ore",
+  "section": "Stackable Currency Item",
+  "stackSize": null,
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Blazing Flux",
+  "slug": "Blazing_Flux",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Transforms all Cold and Lightning Resistance modifiers on an item to equivalent Fire Resistance modifiers"
+  ],
+  "op": "flux",
+  "element": "Fire"
+ },
+ {
+  "name": "Chilling Flux",
+  "slug": "Chilling_Flux",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Transforms all Fire and Lightning Resistance modifiers on an item to equivalent Cold Resistance modifiers"
+  ],
+  "op": "flux",
+  "element": "Cold"
+ },
+ {
+  "name": "Crackling Flux",
+  "slug": "Crackling_Flux",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Transforms all Fire and Cold Resistance modifiers on an item to equivalent Lightning Resistance modifiers"
+  ],
+  "op": "flux",
+  "element": "Lightning"
+ },
+ {
+  "name": "Void Flux",
+  "slug": "Void_Flux",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Transforms all Fire , Cold and Lightning Resistance modifiers on an item to equivalent Chaos resistance modifiers"
+  ],
+  "op": "flux",
+  "element": "Chaos"
+ },
+ {
+  "name": "Liquid Verisium",
+  "slug": "Liquid_Verisium",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 20",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Immediately start a Runic Remnant Encounter with a random Runic Inscription"
+  ]
+ },
+ {
+  "name": "Perfect Flux",
+  "slug": "Perfect_Flux",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Upgrades the Skills on an item to Level 20"
+  ]
+ },
+ {
+  "name": "Cryptic Key",
+  "slug": "Cryptic_Key",
+  "section": "Stackable Currency Item",
+  "stackSize": null,
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Opens an unopened Strongbox allowing it to be opened an additional time"
+  ]
+ },
+ {
+  "name": "Breach Splinter",
+  "slug": "Breach_Splinter",
+  "section": "Splinter Item",
+  "stackSize": "1 / 300",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Simulacrum Splinter",
+  "slug": "Simulacrum_Splinter",
+  "section": "Splinter Item",
+  "stackSize": "1 / 300",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Petition Splinter",
+  "slug": "Petition_Splinter",
+  "section": "Splinter Item",
+  "stackSize": "1 / 300",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ },
+ {
+  "name": "Runic Splinter",
+  "slug": "Runic_Splinter",
+  "section": "Splinter Item",
+  "stackSize": "1 / 300",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": []
+ }
+]

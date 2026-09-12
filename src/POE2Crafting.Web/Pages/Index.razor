@@ -1,0 +1,221 @@
+@page "/"
+@inject CraftingSession Session
+@inject GameData Data
+
+<div class="crafting-page">
+    @* ---- LEFT: Item Panel ---- *@
+    <section class="item-panel">
+        <div class="panel-header">
+            <h2>Item</h2>
+            <div class="item-actions">
+                <button class="btn btn-sm" @onclick="ShowImport" disabled="@_composing">Import (Ctrl+Alt+C)</button>
+                <button class="btn btn-sm @(_composing ? "btn-active" : "")" @onclick="ToggleCompose">
+                    @(_composing ? "Back to Item" : "Compose New")
+                </button>
+                <button class="btn btn-sm" @onclick="ShowSaveLoad" disabled="@_composing">Save / Load</button>
+            </div>
+        </div>
+
+        @if (Session.LastError != null)
+        {
+            <div class="error-banner">@Session.LastError</div>
+        }
+
+        @if (_composing)
+        {
+            <ItemComposer OnComposed="OnComposed" OnCancelled="OnComposeCancelled" />
+        }
+        else
+        {
+            @if (Session.CurrentItem != null)
+            {
+                <ItemDisplay Item="Session.CurrentItem" />
+            }
+            else
+            {
+                <div class="empty-state">
+                    <p>No item loaded. Import an item from the game (Ctrl+Alt+C text) or compose a new one with modifiers.</p>
+                </div>
+            }
+
+            @* History *@
+            @if (Session.History.Count > 0)
+            {
+                <div class="history-section">
+                    <h3>Crafting History <button class="btn btn-xs" @onclick="Undo" disabled="@(Session.History.Count <= 1)">Undo</button></h3>
+                    <div class="history-list">
+                        @foreach (var entry in Session.History.AsEnumerable().Reverse())
+                        {
+                            <div class="history-entry">
+                                <span class="history-action">@entry.Action</span>
+                                <span class="history-summary">@entry.Summary</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </section>
+
+    @* ---- RIGHT: Mode Tabs + Panels ---- *@
+    <section class="crafting-panel">
+        <div class="mode-tabs">
+            <button class="mode-tab @(_mode == Mode.Simulator ? "active" : "")" @onclick="() => _mode = Mode.Simulator">
+                Simulator
+            </button>
+            <button class="mode-tab @(_mode == Mode.Planner ? "active" : "")" @onclick="() => _mode = Mode.Planner">
+                Crafting Planner
+            </button>
+        </div>
+
+        @if (_mode == Mode.Simulator)
+        {
+            @if (Session.CurrentItem != null)
+            {
+                <CurrencySelector OnCurrencySelected="OnCurrencySelected" />
+
+                @if (_selectedAction != null)
+                {
+                    <PreviewPanel Action="_selectedAction" OnExecute="OnExecute" OnChoose="OnChoose" />
+                }
+            }
+            else
+            {
+                <div class="empty-state">
+                    <p>Load an item to see available currencies.</p>
+                </div>
+            }
+        }
+        else @* Planner Mode *@
+        {
+            <ItemBuilder OnPathsFound="OnPathsFound" />
+            <PlannerPanel @ref="_plannerPanel" />
+        }
+    </section>
+</div>
+
+@* ---- Modals ---- *@
+@if (_showImport)
+{
+    <div class="modal-backdrop" @onclick="CloseModals">
+        <div class="modal" @onclick:stopPropagation>
+            <h3>Import Item</h3>
+            <p>Paste the in-game Ctrl+Alt+C text:</p>
+            <textarea @bind="_importText" @bind:event="oninput" rows="20" placeholder="Item Class: Staves&#10;Rarity: Rare&#10;..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-primary" @onclick="DoImport">Import</button>
+                <button class="btn" @onclick="CloseModals">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showSaveLoad)
+{
+    <div class="modal-backdrop" @onclick="CloseModals">
+        <div class="modal modal-wide" @onclick:stopPropagation>
+            <h3>Save / Load Project</h3>
+            <div class="save-section">
+                <h4>Save Current</h4>
+                <input type="text" @bind="Session.ProjectName" placeholder="Project name" />
+                <button class="btn btn-primary" @onclick="DoSave">Download Project JSON</button>
+            </div>
+            <div class="load-section">
+                <h4>Load Project</h4>
+                <InputFile OnChange="DoLoad" accept=".json" />
+            </div>
+            <div class="modal-actions">
+                <button class="btn" @onclick="CloseModals">Close</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private enum Mode { Simulator, Planner }
+
+    private Mode _mode = Mode.Simulator;
+    private bool _showImport, _showSaveLoad;
+    private bool _composing;
+    private string _importText = "";
+    private CraftAction? _selectedAction;
+    private PlannerPanel? _plannerPanel;
+
+    private void ShowImport() { CloseModals(); _showImport = true; }
+    private void ShowSaveLoad() { CloseModals(); _showSaveLoad = true; }
+    private void CloseModals() { _showImport = false; _showSaveLoad = false; }
+
+    private void ToggleCompose()
+    {
+        _composing = !_composing;
+        if (_composing) CloseModals();
+    }
+
+    private void OnComposed()
+    {
+        _composing = false;
+        _selectedAction = null;
+    }
+
+    private void OnComposeCancelled()
+    {
+        _composing = false;
+    }
+
+    private void DoImport()
+    {
+        if (string.IsNullOrWhiteSpace(_importText)) return;
+        Session.ImportItem(_importText);
+        if (Session.LastError == null) { _importText = ""; CloseModals(); _selectedAction = null; }
+    }
+
+    private void OnCurrencySelected(CraftAction action) => _selectedAction = action;
+
+    private void OnExecute()
+    {
+        if (_selectedAction == null) return;
+        Session.Execute(_selectedAction);
+        StateHasChanged();
+    }
+
+    private void OnChoose(ManualChoice choice)
+    {
+        if (_selectedAction == null) return;
+        Session.Execute(_selectedAction, choice);
+        StateHasChanged();
+    }
+
+    private void Undo()
+    {
+        Session.Undo();
+        _selectedAction = null;
+    }
+
+    private void OnPathsFound(ItemBuilder.PlannerResult result)
+    {
+        _plannerPanel?.ShowResults(result);
+    }
+
+    [Inject] IJSRuntime JS { get; set; } = null!;
+
+    private async Task DoSave()
+    {
+        var project = Session.ToProject();
+        var json = System.Text.Json.JsonSerializer.Serialize(project, GameData.JsonOptions);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+        var base64 = Convert.ToBase64String(bytes);
+        var fileName = $"{(Session.ProjectName ?? "project").Replace(" ", "_")}.json";
+        await JS.InvokeVoidAsync("downloadFile", fileName, base64);
+    }
+
+    private async Task DoLoad(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            var project = await System.Text.Json.JsonSerializer.DeserializeAsync<CraftingProject>(stream, GameData.JsonOptions);
+            if (project != null) { Session.LoadProject(project); CloseModals(); _selectedAction = null; }
+        }
+        catch (Exception ex) { Session.ImportItem(""); /* triggers error */ }
+    }
+}

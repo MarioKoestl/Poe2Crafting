@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(dotnet build *)",
+      "PowerShell(dotnet test *)",
+      "PowerShell($m = Get-Content data\\\\mods.json -Raw | ConvertFrom-Json; $m | Group-Object Category | Select Name,Count | Format-Table; $m | ? { $_.name -eq 'Glyphic' } | select id,category,gen,family,level,text,@{n='w';e={$_.weights | ConvertTo-Json -Compress}} | Format-List; $m | ? { $_.category -eq 'essence' } | select -First 3 | ConvertTo-Json -Depth 5; $m | ? { $_.category -eq 'perfect_essence' } | select -First 2 | ConvertTo-Json -Depth 5)",
+      "PowerShell($e = Get-Content data\\\\essences.json -Raw | ConvertFrom-Json; $e.Count; $e | select -First 2 | ConvertTo-Json -Depth 5; $e | Group-Object tier | select Name,Count | ft; $a = Get-Content data\\\\alloys.json -Raw | ConvertFrom-Json; $a.Count; $a | select -First 1 | ConvertTo-Json -Depth 5; $m = Get-Content data\\\\mods.json -Raw | ConvertFrom-Json; $ess = $m | ? { $_.category -in 'essence','perfect_essence' }; \"essence mods with >1 page: \" + \\($ess | ? { \\($_.weights.PSObject.Properties | measure\\).Count -gt 1 } | measure\\).Count; \"distinct essence names in mods: \" + \\($ess.name | sort -Unique | measure\\).Count; \"essence names not in mods: \"; \\($e.name + $a.name\\) | ? { $_ -notin $ess.name })",
+      "PowerShell($c = Get-Content data\\\\currencies.json -Raw | ConvertFrom-Json; $c | ? op | select name,op,minModLevel,maxItemLevel,@{n='rin';e={$_.rarityIn -join '/'}},target | ft -AutoSize | Out-String -Width 250; $o = Get-Content data\\\\omens.json -Raw | ConvertFrom-Json; $o | ? crafting | select name,targetCurrency,effect | ft -AutoSize | Out-String -Width 250; \\(Get-Content data\\\\item_classes.json -Raw | ConvertFrom-Json\\) | select name,slot,group,@{n='p';e={$_.modPages -join ','}} | ft -AutoSize | Out-String -Width 250)",
+      "PowerShell(git *)"
+    ]
+  }
+}

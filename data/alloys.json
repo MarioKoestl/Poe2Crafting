@@ -1,0 +1,591 @@
+[
+ {
+  "name": "Runic Alloy",
+  "slug": "Runic_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Ring: +(37 — 49) to maximum Runic Ward",
+   "Amulet: (6 — 10) % increased maximum Runic Ward",
+   "Belt: (15 — 20) % increased Runic Ward Regeneration Rate"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Ring"
+    ],
+    "text": "+(37 - 49) to maximum Runic Ward"
+   },
+   {
+    "targets": [
+     "Amulet"
+    ],
+    "text": "(6 - 10) % increased maximum Runic Ward"
+   },
+   {
+    "targets": [
+     "Belt"
+    ],
+    "text": "(15 - 20) % increased Runic Ward Regeneration Rate"
+   }
+  ]
+ },
+ {
+  "name": "Adaptive Alloy",
+  "slug": "Adaptive_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Staff : Gain (42 — 52) % of Damage as Extra Fire Damage while you are missing Runic Ward",
+   "Wand : Gain (21 — 26) % of Damage as Extra Fire Damage while you are missing Runic Ward",
+   "Sceptre : (30 — 50) % Surpassing Chance to gain a Puppet Master stack whenever you use a Command Skill",
+   "Gloves: (10 — 15) % increased Attack Speed while missing Runic Ward"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "Gain (42 - 52) % of Damage as Extra Fire Damage while you are missing Runic Ward"
+   },
+   {
+    "targets": [
+     "Wand"
+    ],
+    "text": "Gain (21 - 26) % of Damage as Extra Fire Damage while you are missing Runic Ward"
+   },
+   {
+    "targets": [
+     "Sceptre"
+    ],
+    "text": "(30 - 50) % Surpassing Chance to gain a Puppet Master stack whenever you use a Command Skill"
+   },
+   {
+    "targets": [
+     "Gloves"
+    ],
+    "text": "(10 - 15) % increased Attack Speed while missing Runic Ward"
+   }
+  ]
+ },
+ {
+  "name": "Protective Alloy",
+  "slug": "Protective_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Belt: Recover (32 — 45) Runic Ward when a Charm is used",
+   "Weapons: +(51 — 74) to maximum Runic Ward",
+   "Shield : Recover (10 — 15) Runic Ward when you Block"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Belt"
+    ],
+    "text": "Recover (32 - 45) Runic Ward when a Charm is used"
+   },
+   {
+    "targets": [
+     "Weapons"
+    ],
+    "text": "+(51 - 74) to maximum Runic Ward"
+   },
+   {
+    "targets": [
+     "Shield"
+    ],
+    "text": "Recover (10 - 15) Runic Ward when you Block"
+   }
+  ]
+ },
+ {
+  "name": "Expansive Alloy",
+  "slug": "Expansive_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Gloves: Remnants can be collected from (35 — 50) % further away",
+   "Body Armour: (35 — 50) % increased Presence Area of Effect",
+   "Helmet: (18 — 29) % increased Mana Cost Efficiency",
+   "Boots: Temporary Minion Skills have +(1 — 2) to Limit of Minions summoned"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Gloves"
+    ],
+    "text": "Remnants can be collected from (35 - 50) % further away"
+   },
+   {
+    "targets": [
+     "Body Armour"
+    ],
+    "text": "(35 - 50) % increased Presence Area of Effect"
+   },
+   {
+    "targets": [
+     "Helmet"
+    ],
+    "text": "(18 - 29) % increased Mana Cost Efficiency"
+   },
+   {
+    "targets": [
+     "Boots"
+    ],
+    "text": "Temporary Minion Skills have +(1 - 2) to Limit of Minions summoned"
+   }
+  ]
+ },
+ {
+  "name": "Swift Alloy",
+  "slug": "Swift_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Gloves: (9 — 12) % increased Cast Speed",
+   "Ring: (7 — 9) % increased Attack Speed",
+   "Belt: Flasks gain (0.75 — 1) charges per Second",
+   "Shield or Focus : (30 — 49) % increased Totem Placement speed"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Gloves"
+    ],
+    "text": "(9 - 12) % increased Cast Speed"
+   },
+   {
+    "targets": [
+     "Ring"
+    ],
+    "text": "(7 - 9) % increased Attack Speed"
+   },
+   {
+    "targets": [
+     "Belt"
+    ],
+    "text": "Flasks gain (0.75 - 1) charges per Second"
+   },
+   {
+    "targets": [
+     "Shield",
+     "Focus"
+    ],
+    "text": "(30 - 49) % increased Totem Placement speed"
+   }
+  ]
+ },
+ {
+  "name": "Cyclonic Alloy",
+  "slug": "Cyclonic_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Body Armour: (15 — 30) % reduced Slowing Potency of Debuffs on You",
+   "Boots: (15 — 19) % increased Skill Effect Duration",
+   "Gloves: (20 — 25) % increased Duration of Damaging Ailments on Enemies",
+   "Helmet: (35 — 42) % increased Archon Buff duration"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Body Armour"
+    ],
+    "text": "(15 - 30) % reduced Slowing Potency of Debuffs on You"
+   },
+   {
+    "targets": [
+     "Boots"
+    ],
+    "text": "(15 - 19) % increased Skill Effect Duration"
+   },
+   {
+    "targets": [
+     "Gloves"
+    ],
+    "text": "(20 - 25) % increased Duration of Damaging Ailments on Enemies"
+   },
+   {
+    "targets": [
+     "Helmet"
+    ],
+    "text": "(35 - 42) % increased Archon Buff duration"
+   }
+  ]
+ },
+ {
+  "name": "Prismatic Alloy",
+  "slug": "Prismatic_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Gloves: Damage Penetrates (9 — 15) % Elemental Resistances",
+   "Martial Weapon : (20 — 30) % increased Magnitude of Ailments you inflict",
+   "Focus , Staff or Wand : (40 — 50) % increased Exposure Effect",
+   "Sceptre : Minions have (40 — 49) % increased Magnitude of Damaging Ailments"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Gloves"
+    ],
+    "text": "Damage Penetrates (9 - 15) % Elemental Resistances"
+   },
+   {
+    "targets": [
+     "Martial Weapon"
+    ],
+    "text": "(20 - 30) % increased Magnitude of Ailments you inflict"
+   },
+   {
+    "targets": [
+     "Focus",
+     "Staff",
+     "Wand"
+    ],
+    "text": "(40 - 50) % increased Exposure Effect"
+   },
+   {
+    "targets": [
+     "Sceptre"
+    ],
+    "text": "Minions have (40 - 49) % increased Magnitude of Damaging Ailments"
+   }
+  ]
+ },
+ {
+  "name": "Mystic Alloy",
+  "slug": "Mystic_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Helmet: Spell Skills have (10 — 15) % increased Area of Effect",
+   "Gloves: (10 — 15) % increased Area of Effect for Attacks",
+   "Boots: +(10 — 15) to Spirit",
+   "Quiver : (25 — 35) % chance to Chain an additional time",
+   "Caster Weapon : +1 to maximum number of Elemental Infusions"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Helmet"
+    ],
+    "text": "Spell Skills have (10 - 15) % increased Area of Effect"
+   },
+   {
+    "targets": [
+     "Gloves"
+    ],
+    "text": "(10 - 15) % increased Area of Effect for Attacks"
+   },
+   {
+    "targets": [
+     "Boots"
+    ],
+    "text": "+(10 - 15) to Spirit"
+   },
+   {
+    "targets": [
+     "Quiver"
+    ],
+    "text": "(25 - 35) % chance to Chain an additional time"
+   },
+   {
+    "targets": [
+     "Caster Weapon"
+    ],
+    "text": "+1 to maximum number of Elemental Infusions"
+   }
+  ]
+ },
+ {
+  "name": "Sovereign Alloy",
+  "slug": "Sovereign_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Weapons: (20 — 30) % increased effect of Socketed Augment Items",
+   "Armour : (24 — 30) % increased Runic Ward",
+   "Jewellery or Belt: (20 — 30) % increased Explicit Resistance Modifier magnitudes"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Weapons"
+    ],
+    "text": "(20 - 30) % increased effect of Socketed Augment Items"
+   },
+   {
+    "targets": [
+     "Armour"
+    ],
+    "text": "(24 - 30) % increased Runic Ward"
+   },
+   {
+    "targets": [
+     "Jewellery",
+     "Belt"
+    ],
+    "text": "(20 - 30) % increased Explicit Resistance Modifier magnitudes"
+   }
+  ]
+ },
+ {
+  "name": "Celestial Alloy",
+  "slug": "Celestial_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Staff or Wand : +(142 — 188) to maximum Mana +1 to Level of all Spell Skills",
+   "Martial Weapon : +(327 — 427) to Accuracy Rating (5 — 8) % increased Attack Speed"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Staff",
+     "Wand"
+    ],
+    "text": "+(142 - 188) to maximum Mana +1 to Level of all Spell Skills"
+   },
+   {
+    "targets": [
+     "Martial Weapon"
+    ],
+    "text": "+(327 - 427) to Accuracy Rating (5 - 8) % increased Attack Speed"
+   }
+  ]
+ },
+ {
+  "name": "Transcendent Alloy",
+  "slug": "Transcendent_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Staff : (39 — 47) % increased Cast Speed Gain (11 — 16) % of Elemental Damage as Extra Cold Damage",
+   "Focus or Wand : (26 — 31) % increased Cast Speed Gain (7 — 11) % of Elemental Damage as Extra Cold Damage",
+   "Martial Weapon : (15 — 20) % increased Physical Damage +(7 — 10) to all Attributes"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(39 - 47) % increased Cast Speed Gain (11 - 16) % of Elemental Damage as Extra Cold Damage"
+   },
+   {
+    "targets": [
+     "Focus",
+     "Wand"
+    ],
+    "text": "(26 - 31) % increased Cast Speed Gain (7 - 11) % of Elemental Damage as Extra Cold Damage"
+   },
+   {
+    "targets": [
+     "Martial Weapon"
+    ],
+    "text": "(15 - 20) % increased Physical Damage +(7 - 10) to all Attributes"
+   }
+  ]
+ },
+ {
+  "name": "The Runebinder's Alloy",
+  "slug": "The_Runebinders_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Staff : (25 — 50) % chance to gain Nature's Archon when your Plants Overgrow",
+   "Wand : +1 to Limit for Elemental Skills",
+   "Sceptre : + (4 — 5) maximum stacks of Puppet Master",
+   "Crossbow : +2 to maximum number of Summoned Ballista Totems",
+   "Bow : (40 — 50) % increased Effect of your Mark Skills"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Staff"
+    ],
+    "text": "(25 - 50) % chance to gain Nature's Archon when your Plants Overgrow"
+   },
+   {
+    "targets": [
+     "Wand"
+    ],
+    "text": "+1 to Limit for Elemental Skills"
+   },
+   {
+    "targets": [
+     "Sceptre"
+    ],
+    "text": "+ (4 - 5) maximum stacks of Puppet Master"
+   },
+   {
+    "targets": [
+     "Crossbow"
+    ],
+    "text": "+2 to maximum number of Summoned Ballista Totems"
+   },
+   {
+    "targets": [
+     "Bow"
+    ],
+    "text": "(40 - 50) % increased Effect of your Mark Skills"
+   }
+  ]
+ },
+ {
+  "name": "The Runefather's Alloy",
+  "slug": "The_Runefathers_Alloy",
+  "section": "Stackable Currency Item",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Removes a random modifier and augments a Rare item with a new guaranteed modifier",
+   "Mace : (60 — 75) % chance for Skills to retain 40% of Glory on use",
+   "Quarterstaff : Tempest Bells are destroyed after an additional (4 — 5) Hits",
+   "Spear : +(8 — 10) to Weapon Range",
+   "Talisman : Lightning Damage from Hits also Contributes to Flammability and Ignite Magnitudes"
+  ],
+  "tier": "Alloy",
+  "removesRandomModifier": true,
+  "rarityIn": [
+   "Rare"
+  ],
+  "rarityOut": "Rare",
+  "guaranteedByClass": [
+   {
+    "targets": [
+     "Mace"
+    ],
+    "text": "(60 - 75) % chance for Skills to retain 40% of Glory on use"
+   },
+   {
+    "targets": [
+     "Quarterstaff"
+    ],
+    "text": "Tempest Bells are destroyed after an additional (4 - 5) Hits"
+   },
+   {
+    "targets": [
+     "Spear"
+    ],
+    "text": "+(8 - 10) to Weapon Range"
+   },
+   {
+    "targets": [
+     "Talisman"
+    ],
+    "text": "Lightning Damage from Hits also Contributes to Flammability and Ignite Magnitudes"
+   }
+  ]
+ }
+]

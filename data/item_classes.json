@@ -1,0 +1,329 @@
+[
+ {
+  "name": "Wand",
+  "slot": "Weapon1H",
+  "group": "Caster Weapon",
+  "modPages": [
+   "Wands"
+  ],
+  "baseCount": 16
+ },
+ {
+  "name": "Staff",
+  "slot": "Weapon2H",
+  "group": "Caster Weapon",
+  "modPages": [
+   "Staves"
+  ],
+  "baseCount": 17
+ },
+ {
+  "name": "Quarterstaff",
+  "slot": "Weapon2H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Quarterstaves"
+  ],
+  "baseCount": 29
+ },
+ {
+  "name": "Sceptre",
+  "slot": "Weapon1H",
+  "group": "Caster Weapon",
+  "modPages": [
+   "Sceptres"
+  ],
+  "baseCount": 16
+ },
+ {
+  "name": "Focus",
+  "slot": "Offhand",
+  "group": "Offhand",
+  "modPages": [
+   "Foci"
+  ],
+  "baseCount": 51
+ },
+ {
+  "name": "Bow",
+  "slot": "Weapon2H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Bows"
+  ],
+  "baseCount": 34
+ },
+ {
+  "name": "Crossbow",
+  "slot": "Weapon2H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Crossbows"
+  ],
+  "baseCount": 34
+ },
+ {
+  "name": "Quiver",
+  "slot": "Offhand",
+  "group": "Offhand",
+  "modPages": [
+   "Quivers"
+  ],
+  "baseCount": 11
+ },
+ {
+  "name": "Spear",
+  "slot": "Weapon1H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Spears"
+  ],
+  "baseCount": 36
+ },
+ {
+  "name": "Flail",
+  "slot": "Weapon1H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Flails"
+  ],
+  "baseCount": 13
+ },
+ {
+  "name": "Claw",
+  "slot": "Weapon1H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Claws"
+  ],
+  "baseCount": 13
+ },
+ {
+  "name": "Dagger",
+  "slot": "Weapon1H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Daggers"
+  ],
+  "baseCount": 14
+ },
+ {
+  "name": "One Hand Sword",
+  "slot": "Weapon1H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "One_Hand_Swords"
+  ],
+  "baseCount": 15
+ },
+ {
+  "name": "Two Hand Sword",
+  "slot": "Weapon2H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Two_Hand_Swords"
+  ],
+  "baseCount": 15
+ },
+ {
+  "name": "One Hand Axe",
+  "slot": "Weapon1H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "One_Hand_Axes"
+  ],
+  "baseCount": 13
+ },
+ {
+  "name": "Two Hand Axe",
+  "slot": "Weapon2H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Two_Hand_Axes"
+  ],
+  "baseCount": 13
+ },
+ {
+  "name": "One Hand Mace",
+  "slot": "Weapon1H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "One_Hand_Maces"
+  ],
+  "baseCount": 36
+ },
+ {
+  "name": "Two Hand Mace",
+  "slot": "Weapon2H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Two_Hand_Maces"
+  ],
+  "baseCount": 40
+ },
+ {
+  "name": "Trap",
+  "slot": "Weapon1H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Traps"
+  ],
+  "baseCount": 13
+ },
+ {
+  "name": "Talisman",
+  "slot": "Weapon1H",
+  "group": "Martial Weapon",
+  "modPages": [
+   "Talismans"
+  ],
+  "baseCount": 31
+ },
+ {
+  "name": "Shield",
+  "slot": "Offhand",
+  "group": "Armour",
+  "modPages": [
+   "Shields_str",
+   "Shields_str_dex",
+   "Shields_str_int"
+  ],
+  "baseCount": 144
+ },
+ {
+  "name": "Buckler",
+  "slot": "Offhand",
+  "group": "Armour",
+  "modPages": [
+   "Bucklers"
+  ],
+  "baseCount": 49
+ },
+ {
+  "name": "Body Armour",
+  "slot": "Body",
+  "group": "Armour",
+  "modPages": [
+   "Body_Armours_dex",
+   "Body_Armours_dex_int",
+   "Body_Armours_int",
+   "Body_Armours_str",
+   "Body_Armours_str_dex",
+   "Body_Armours_str_dex_int",
+   "Body_Armours_str_int"
+  ],
+  "baseCount": 347
+ },
+ {
+  "name": "Helmet",
+  "slot": "Helmet",
+  "group": "Armour",
+  "modPages": [
+   "Helmets_dex",
+   "Helmets_dex_int",
+   "Helmets_int",
+   "Helmets_str",
+   "Helmets_str_dex",
+   "Helmets_str_int"
+  ],
+  "baseCount": 257
+ },
+ {
+  "name": "Gloves",
+  "slot": "Gloves",
+  "group": "Armour",
+  "modPages": [
+   "Gloves_dex",
+   "Gloves_dex_int",
+   "Gloves_int",
+   "Gloves_str",
+   "Gloves_str_dex",
+   "Gloves_str_int"
+  ],
+  "baseCount": 201
+ },
+ {
+  "name": "Boots",
+  "slot": "Boots",
+  "group": "Armour",
+  "modPages": [
+   "Boots_dex",
+   "Boots_dex_int",
+   "Boots_int",
+   "Boots_str",
+   "Boots_str_dex",
+   "Boots_str_int"
+  ],
+  "baseCount": 191
+ },
+ {
+  "name": "Amulet",
+  "slot": "Amulet",
+  "group": "Jewellery",
+  "modPages": [
+   "Amulets"
+  ],
+  "baseCount": 23
+ },
+ {
+  "name": "Ring",
+  "slot": "Ring",
+  "group": "Jewellery",
+  "modPages": [
+   "Rings"
+  ],
+  "baseCount": 27
+ },
+ {
+  "name": "Belt",
+  "slot": "Belt",
+  "group": "Jewellery",
+  "modPages": [
+   "Belts"
+  ],
+  "baseCount": 17
+ },
+ {
+  "name": "Life Flask",
+  "slot": "Flask",
+  "group": "Flask",
+  "modPages": [
+   "Life_Flasks"
+  ],
+  "baseCount": 9
+ },
+ {
+  "name": "Mana Flask",
+  "slot": "Flask",
+  "group": "Flask",
+  "modPages": [
+   "Mana_Flasks"
+  ],
+  "baseCount": 9
+ },
+ {
+  "name": "Charm",
+  "slot": "Charm",
+  "group": "Flask",
+  "modPages": [
+   "Charms"
+  ],
+  "baseCount": 13
+ },
+ {
+  "name": "Jewel",
+  "slot": "Jewel",
+  "group": "Jewel",
+  "modPages": [
+   "Diamond",
+   "Emerald",
+   "Ruby",
+   "Sapphire",
+   "Time-Lost_Diamond",
+   "Time-Lost_Emerald",
+   "Time-Lost_Ruby",
+   "Time-Lost_Sapphire"
+  ],
+  "baseCount": 8
+ }
+]

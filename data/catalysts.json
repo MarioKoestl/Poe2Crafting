@@ -1,0 +1,340 @@
+[
+ {
+  "name": "Flesh Catalyst",
+  "slug": "Flesh_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Life modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Life",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Neural Catalyst",
+  "slug": "Neural_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Mana modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Mana",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Carapace Catalyst",
+  "slug": "Carapace_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Armour , Evasion and Energy Shield modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Armour , Evasion and Energy Shield",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Uul-Netol's Catalyst",
+  "slug": "Uul-Netols_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Physical modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Physical",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Xoph's Catalyst",
+  "slug": "Xophs_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Fire modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Fire",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Tul's Catalyst",
+  "slug": "Tuls_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Cold modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Cold",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Esh's Catalyst",
+  "slug": "Eshs_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Lightning modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Lightning",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Chayula's Catalyst",
+  "slug": "Chayulas_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Chaos modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Chaos",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Reaver Catalyst",
+  "slug": "Reaver_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Attack modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Attack",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Sibilant Catalyst",
+  "slug": "Sibilant_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Caster modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Caster",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Skittering Catalyst",
+  "slug": "Skittering_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Speed modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Speed",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Adaptive Catalyst",
+  "slug": "Adaptive_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Attribute modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Attribute",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Necrotic Catalyst",
+  "slug": "Necrotic_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Minion modifiers on a ring or amulet Replaces other quality types"
+  ],
+  "qualityType": "Minion",
+  "target": "ring or amulet"
+ },
+ {
+  "name": "Refined Flesh Catalyst",
+  "slug": "Refined_Flesh_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Life modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Life",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Neural Catalyst",
+  "slug": "Refined_Neural_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Mana modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Mana",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Carapace Catalyst",
+  "slug": "Refined_Carapace_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Armour , Evasion and Energy Shield modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Armour , Evasion and Energy Shield",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Uul-Netol's Catalyst",
+  "slug": "Refined_Uul-Netols_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Physical modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Physical",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Xoph's Catalyst",
+  "slug": "Refined_Xophs_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Fire modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Fire",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Tul's Catalyst",
+  "slug": "Refined_Tuls_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Cold modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Cold",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Esh's Catalyst",
+  "slug": "Refined_Eshs_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Lightning modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Lightning",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Chayula's Catalyst",
+  "slug": "Refined_Chayulas_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Chaos modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Chaos",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Reaver Catalyst",
+  "slug": "Refined_Reaver_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Attack modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Attack",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Sibilant Catalyst",
+  "slug": "Refined_Sibilant_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Caster modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Caster",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Skittering Catalyst",
+  "slug": "Refined_Skittering_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Speed modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Speed",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Adaptive Catalyst",
+  "slug": "Refined_Adaptive_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Attribute modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Attribute",
+  "target": "jewel"
+ },
+ {
+  "name": "Refined Necrotic Catalyst",
+  "slug": "Refined_Necrotic_Catalyst",
+  "section": "Catalysts",
+  "stackSize": "1 / 10",
+  "minModLevel": null,
+  "maxItemLevel": null,
+  "description": [
+   "Adds quality that enhances Minion modifiers on a jewel Replaces other quality types"
+  ],
+  "qualityType": "Minion",
+  "target": "jewel"
+ }
+]

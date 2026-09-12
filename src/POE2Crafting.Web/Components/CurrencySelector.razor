@@ -1,0 +1,89 @@
+@inject CraftingSession Session
+
+<div class="currency-panel">
+    <h3>Currencies</h3>
+
+    <div class="currency-filter">
+        <input type="text" @bind="_filter" @bind:event="oninput" placeholder="Search currencies..." />
+    </div>
+
+    <div class="currency-grid">
+        @foreach (var (currency, app) in GetFilteredCurrencies())
+        {
+            var iconUrl = CurrencyIconHelper.GetIconUrl(currency);
+            <button class="currency-btn @(app.Ok ? "applicable" : "not-applicable") @(_selected == currency.Name ? "selected" : "")"
+                    @onclick="() => Select(currency)" title="@currency.DescriptionText">
+                @if (iconUrl != null)
+                {
+                    <img src="@iconUrl" alt="" class="currency-icon" loading="lazy" onerror="this.style.display='none'" />
+                }
+                <span class="currency-name">@currency.Name</span>
+                @if (!app.Ok)
+                {
+                    <span class="currency-reason">@app.Reason</span>
+                }
+            </button>
+        }
+    </div>
+
+    @if (_selectedCurrency != null)
+    {
+        var omens = Session.OmensFor(_selectedCurrency);
+        @if (omens.Count > 0)
+        {
+            <div class="omen-section">
+                <h4>Omens (optional)</h4>
+                <div class="omen-grid">
+                    <button class="omen-btn @(_selectedOmen == null ? "selected" : "")" @onclick="() => SelectOmen(null)">
+                        None
+                    </button>
+                    @foreach (var omen in omens)
+                    {
+                        <button class="omen-btn @(_selectedOmen?.Name == omen.Name ? "selected" : "")"
+                                @onclick="() => SelectOmen(omen)" title="@omen.Description">
+                            @omen.Name
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<CraftAction> OnCurrencySelected { get; set; }
+
+    private string _filter = "";
+    private string? _selected;
+    private CurrencyDef? _selectedCurrency;
+    private OmenDef? _selectedOmen;
+
+    private IEnumerable<(CurrencyDef Currency, Applicability App)> GetFilteredCurrencies()
+    {
+        var all = Session.ApplicableCurrencies();
+        if (!string.IsNullOrWhiteSpace(_filter))
+            all = all.Where(x => x.Currency.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+        return all;
+    }
+
+    private async Task Select(CurrencyDef currency)
+    {
+        _selectedCurrency = currency;
+        _selected = currency.Name;
+        _selectedOmen = null;
+        await FireSelected();
+    }
+
+    private async Task SelectOmen(OmenDef? omen)
+    {
+        _selectedOmen = omen;
+        await FireSelected();
+    }
+
+    private async Task FireSelected()
+    {
+        if (_selectedCurrency == null) return;
+        var action = new CraftAction { Currency = _selectedCurrency, Omen = _selectedOmen };
+        await OnCurrencySelected.InvokeAsync(action);
+    }
+}

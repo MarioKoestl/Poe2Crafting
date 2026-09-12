@@ -1,0 +1,216 @@
+@using POE2Crafting.Core.Engine
+
+<div class="planner-panel">
+
+    @if (_result == null)
+    {
+        <div class="planner-empty">
+            <p>Define your target item and click <strong>Find Crafting Paths</strong> to see strategies.</p>
+        </div>
+    }
+    else if (_result.Strategies.Count == 0)
+    {
+        <div class="planner-empty">
+            <p>No viable strategies found for this target. Try adjusting the target mods or item level.</p>
+        </div>
+    }
+    else
+    {
+        <div class="planner-header">
+            <h4>
+                @(_result.Strategies.Count) Strateg@(_result.Strategies.Count == 1 ? "y" : "ies") Found
+                @if (_result.FromItem)
+                {
+                    <span class="from-item-badge">from current item</span>
+                }
+            </h4>
+            @if (_result.FromItem && !string.IsNullOrEmpty(_result.SourceItemDescription))
+            {
+                <div class="source-item-info">Starting from: @_result.SourceItemDescription</div>
+            }
+        </div>
+
+        <div class="strategy-list">
+            @foreach (var strat in _result.Strategies)
+            {
+                var s = strat;
+                var isSelected = _selectedStrategy?.Id == s.Id;
+                <div class="strategy-card @(isSelected ? "selected" : "") @(s.HasBrickRisk ? "has-brick-risk" : "")"
+                     @onclick="() => SelectStrategy(s)">
+
+                    <div class="strategy-card-header">
+                        <span class="strategy-name">@s.Name</span>
+                        @if (s.HasBrickRisk)
+                        {
+                            <span class="brick-badge" title="This strategy has steps that can destroy wanted mods">⚠ Brick Risk</span>
+                        }
+                    </div>
+
+                    <div class="strategy-card-stats">
+                        <div class="stat">
+                            <span class="stat-label">Success</span>
+                            <span class="stat-value @GetProbabilityClass(s.OverallProbability)">@FormatProbability(s.OverallProbability)</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Expected</span>
+                            <span class="stat-value">~@FormatAttempts(s.ExpectedAttempts) tries</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Steps</span>
+                            <span class="stat-value">@s.Steps.Count</span>
+                        </div>
+                    </div>
+
+                    <div class="strategy-card-desc">@s.Description</div>
+                </div>
+            }
+        </div>
+
+        @if (_selectedStrategy != null)
+        {
+            <div class="strategy-detail">
+                <div class="detail-tabs">
+                    <button class="btn btn-sm @(_showDiagram ? "" : "btn-active")" @onclick="() => _showDiagram = false">
+                        Step Details
+                    </button>
+                    <button class="btn btn-sm @(_showDiagram ? "btn-active" : "")" @onclick="() => _showDiagram = true">
+                        Flowchart
+                    </button>
+                </div>
+
+                @if (_showDiagram)
+                {
+                    <MermaidDiagram Definition="@_mermaidDef" DiagramId="@($"strat-{_selectedStrategy.Id}")" />
+                }
+                else
+                {
+                    <div class="step-list">
+                        @for (int i = 0; i < _selectedStrategy.Steps.Count; i++)
+                        {
+                            var step = _selectedStrategy.Steps[i];
+                            <div class="step-row @GetStepClass(step)">
+                                <div class="step-number">@(i + 1)</div>
+                                <div class="step-content">
+                                    <div class="step-header-row">
+                                        <span class="step-currency">@step.CurrencyName</span>
+                                        <span class="step-prob @GetProbabilityClass(step.SuccessProbability)">
+                                            @FormatProbability(step.SuccessProbability)
+                                        </span>
+                                    </div>
+                                    <div class="step-desc">@step.Description</div>
+                                    @if (step.BrickProbability.HasValue && step.BrickProbability > 0)
+                                    {
+                                        <div class="step-brick-warning">
+                                            ⚠ @FormatProbability(step.BrickProbability.Value) chance to destroy a wanted mod
+                                        </div>
+                                    }
+                                    @if (step.RestartLabel != null && step.SuccessProbability < 1.0)
+                                    {
+                                        <div class="step-restart">On fail: @step.RestartLabel</div>
+                                    }
+                                    @if (step.Variants.Count > 0)
+                                    {
+                                        <div class="step-variants">
+                                            @foreach (var v in step.Variants)
+                                            {
+                                                <div class="variant-row @(v.IsRecommended ? "variant-best" : "")">
+                                                    <span class="variant-name">
+                                                        @if (v.IsRecommended) { <span class="variant-star">★</span> }
+                                                        @v.Name
+                                                    </span>
+                                                    <span class="variant-prob @GetProbabilityClass(v.Probability)">
+                                                        @FormatProbability(v.Probability)
+                                                    </span>
+                                                    @if (v.MinModLevel > 0)
+                                                    {
+                                                        <span class="variant-level">min ilvl @v.MinModLevel</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    @if (step.Notes.Count > 0)
+                                    {
+                                        <div class="step-notes">
+                                            @foreach (var note in step.Notes)
+                                            {
+                                                <div class="step-note">@note</div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @if (_selectedStrategy.Warnings.Count > 0)
+                    {
+                        <div class="strategy-warnings">
+                            @foreach (var w in _selectedStrategy.Warnings)
+                            {
+                                <div class="strategy-warning">ℹ @w</div>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private ItemBuilder.PlannerResult? _result;
+    private CraftingStrategy? _selectedStrategy;
+    private bool _showDiagram = false;
+    private string _mermaidDef = "";
+
+    public void ShowResults(ItemBuilder.PlannerResult result)
+    {
+        _result = result;
+        _selectedStrategy = result.Strategies.FirstOrDefault();
+        _showDiagram = false;
+        if (_selectedStrategy != null)
+            _mermaidDef = CraftingPathFinder.ToMermaid(_selectedStrategy);
+        StateHasChanged();
+    }
+
+    private void SelectStrategy(CraftingStrategy strategy)
+    {
+        _selectedStrategy = strategy;
+        _mermaidDef = CraftingPathFinder.ToMermaid(strategy);
+        _showDiagram = false;
+    }
+
+    private static string FormatProbability(double p)
+    {
+        if (p >= 0.999) return "100%";
+        if (p >= 0.01) return $"{p:P1}";
+        if (p >= 0.0001) return $"{p:P3}";
+        return $"{p:P6}";
+    }
+
+    private static string FormatAttempts(double attempts)
+    {
+        if (double.IsPositiveInfinity(attempts)) return "∞";
+        if (attempts < 10) return $"{attempts:F1}";
+        if (attempts < 1000) return $"{attempts:N0}";
+        if (attempts < 1_000_000) return $"{attempts / 1000:F1}K";
+        return $"{attempts / 1_000_000:F1}M";
+    }
+
+    private static string GetProbabilityClass(double p) => p switch
+    {
+        >= 0.5 => "prob-high",
+        >= 0.1 => "prob-mid",
+        >= 0.01 => "prob-low",
+        _ => "prob-very-low"
+    };
+
+    private static string GetStepClass(CraftStep step) => step.Type switch
+    {
+        CraftStepType.Brick => "step-brick",
+        CraftStepType.Checkpoint => "step-checkpoint",
+        CraftStepType.Decision => "step-decision",
+        _ => ""
+    };
+}
