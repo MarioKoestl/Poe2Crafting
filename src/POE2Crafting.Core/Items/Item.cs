@@ -39,6 +39,9 @@ public sealed class ItemMod
     }
 
     public string RangeText() => Def?.Text ?? RawText ?? ModId;
+
+    /// <summary>True when the mod occupies a prefix or suffix slot.</summary>
+    [JsonIgnore] public bool IsAffix => Item.IsAffixKind(Kind) && Affix != AffixType.Other;
 }
 
 /// <summary>A craftable item.</summary>
@@ -67,10 +70,12 @@ public sealed class Item
 
     public IEnumerable<ItemMod> Prefixes => Mods.Where(m => m.Affix == AffixType.Prefix && IsAffixKind(m.Kind));
     public IEnumerable<ItemMod> Suffixes => Mods.Where(m => m.Affix == AffixType.Suffix && IsAffixKind(m.Kind));
-    public IEnumerable<ItemMod> Affixes => Mods.Where(m => IsAffixKind(m.Kind));
+    /// <summary>Mods occupying a prefix or suffix slot (explicit, crafted, desecrated).</summary>
+    public IEnumerable<ItemMod> Affixes => Mods.Where(m => m.IsAffix);
     public int PrefixCount => Prefixes.Count();
     public int SuffixCount => Suffixes.Count();
     public int AffixCount => PrefixCount + SuffixCount;
+    public int CountOf(AffixType type) => type == AffixType.Prefix ? PrefixCount : type == AffixType.Suffix ? SuffixCount : 0;
 
     public static bool IsAffixKind(ModKind k) => k is ModKind.Explicit or ModKind.Crafted or ModKind.Desecrated;
 
@@ -89,7 +94,8 @@ public sealed class Item
     public void Bind(GameData data)
     {
         Base ??= data.FindBase(BaseName);
-        if (Base != null && string.IsNullOrEmpty(ItemClass)) ItemClass = Base.ItemClass;
+        // the game client uses plural class names ("Staves"), the data store singular ones ("Staff")
+        if (Base != null) ItemClass = Base.ItemClass;
         foreach (var m in Mods)
         {
             m.Def ??= data.FindMod(m.ModId);
@@ -120,6 +126,15 @@ public static class ModText
             return m.Value;
         });
     }
+
+    static readonly System.Text.RegularExpressions.Regex NumberOrRangeRx = new(@"\(-?\d+(?:\.\d+)?\s*-\s*-?\d+(?:\.\d+)?\)|\d+(?:\.\d+)?", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// The stat a mod grants with all numbers removed, e.g. "+(5-6) to Level of all Physical Spell Skills" -> "+# to level of all physical spell skills".
+    /// Tiers are numbered per family AND stat: one family can hold several stats (Physical/Fire/... Spell Skill levels).
+    /// </summary>
+    public static string StatSignature(string template) =>
+        System.Text.RegularExpressions.Regex.Replace(NumberOrRangeRx.Replace(template, "#"), @"\s+", " ").Trim().ToLowerInvariant();
 
     public static List<double[]> ParseRanges(string template) =>
         RangeRx.Matches(template).Select(m => new[]

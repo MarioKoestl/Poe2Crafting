@@ -1,4 +1,5 @@
 @* Displays an item in a POE-style tooltip layout *@
+@inject ModPool Pool
 
 <div class="item-box rarity-@Item.Rarity.ToString().ToLower()">
     <div class="item-header">
@@ -23,31 +24,41 @@
 
     <div class="item-separator"></div>
 
-    @* Implicit mods *@
-    @foreach (var mod in Item.Mods.Where(m => m.Kind == ModKind.Implicit))
+    @* Runes, implicit and enchant mods *@
+    @foreach (var rune in Item.Runes)
     {
-        <div class="mod-line implicit" title="Implicit">@mod.DisplayText()</div>
+        <div class="mod-line implicit" title="Rune">@rune</div>
+    }
+    @foreach (var mod in Item.Mods.Where(m => m.Kind is ModKind.Implicit or ModKind.Enchant))
+    {
+        <div class="mod-line implicit" title="@mod.Kind">@mod.DisplayText()</div>
     }
 
-    @if (Item.Mods.Any(m => m.Kind == ModKind.Implicit) && Item.Affixes.Any())
+    @if ((Item.Runes.Count > 0 || Item.Mods.Any(m => m.Kind is ModKind.Implicit or ModKind.Enchant)) && Item.Affixes.Any())
     {
         <div class="item-separator"></div>
     }
 
     @* Explicit mods *@
-    @foreach (var mod in Item.Mods.Where(m => Item.IsAffixKind(m.Kind)).OrderBy(m => m.Affix))
+    @foreach (var mod in Item.Affixes.OrderBy(m => m.Affix))
     {
         <div class="mod-line @(mod.Affix == AffixType.Prefix ? "prefix" : "suffix") @(mod.Kind == ModKind.Crafted ? "crafted" : "") @(mod.Fractured ? "fractured" : "") @(mod.Kind == ModKind.Desecrated ? "desecrated" : "")">
             <span class="mod-indicator" title="@ModTooltip(mod)">@(mod.Affix == AffixType.Prefix ? "P" : "S")</span>
-            @if (mod.Def != null)
+            @if (mod.Def != null && mod.Kind != ModKind.Crafted && Pool.TryDisplayTier(mod.Def, Item) is { } tier)
             {
-                <span class="mod-tier" title="@mod.Def.Name">T@(mod.Def.Tier)</span>
+                <span class="mod-tier" title="@mod.Def.Name">T@(tier)</span>
             }
             <span class="mod-text">@mod.DisplayText()</span>
             @if (mod.Fractured) { <span class="mod-badge fractured-badge">Fractured</span> }
             @if (mod.Kind == ModKind.Crafted) { <span class="mod-badge crafted-badge">Crafted</span> }
             @if (mod.Kind == ModKind.Desecrated) { <span class="mod-badge desecrated-badge">Desecrated</span> }
         </div>
+    }
+
+    @* Lines that could not be matched to a prefix/suffix (e.g. unique mods, simple Ctrl+C text) *@
+    @foreach (var mod in Item.Mods.Where(m => Item.IsAffixKind(m.Kind) && !m.IsAffix))
+    {
+        <div class="mod-line unmatched" title="Not matched to a known prefix/suffix">@mod.DisplayText()</div>
     }
 
     @* Corrupted implicit mods *@
@@ -76,7 +87,12 @@
     {
         var parts = new List<string>();
         parts.Add(mod.Affix == AffixType.Prefix ? "Prefix" : "Suffix");
-        if (mod.Def != null) { parts.Add($"\"{mod.Def.Name}\""); parts.Add($"Tier {mod.Def.Tier}/{mod.Def.TierCount}"); parts.Add($"ilvl {mod.Def.Level}"); }
+        if (mod.Def != null)
+        {
+            parts.Add($"\"{mod.Def.Name}\"");
+            if (mod.Kind != ModKind.Crafted && Pool.TryDisplayTier(mod.Def, Item) is { } tier) parts.Add($"Tier {tier}/{Pool.DisplayTierCount(mod.Def, Item)}");
+            parts.Add($"ilvl {mod.Def.Level}");
+        }
         if (mod.SourceName != null) parts.Add($"Source: {mod.SourceName}");
         return string.Join(" · ", parts);
     }

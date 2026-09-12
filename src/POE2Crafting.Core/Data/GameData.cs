@@ -14,6 +14,9 @@ public sealed class GameData
         WriteIndented = true,
     };
 
+    /// <summary>Mod categories whose mods are the guaranteed result of an essence or alloy.</summary>
+    public static readonly string[] EssenceCategories = { "essence", "perfect_essence" };
+
     public string DataFolder { get; }
     public IReadOnlyList<BaseItem> Bases { get; }
     public IReadOnlyList<ModDef> Mods { get; }
@@ -25,11 +28,15 @@ public sealed class GameData
     public IReadOnlyList<ItemClassDef> ItemClasses { get; }
     public SimConfig Config { get; }
 
+    /// <summary>One synthetic currency (Op = "essence") per essence and alloy, so they flow through the same engine/UI path as orbs.</summary>
+    public IReadOnlyList<CurrencyDef> EssenceCurrencies { get; }
+
     private readonly Dictionary<string, BaseItem> _baseByName;
     private readonly Dictionary<string, ModDef> _modById;
     private readonly Dictionary<string, CurrencyDef> _currencyByName;
     private readonly Dictionary<string, OmenDef> _omenByName;
     private readonly Dictionary<string, EssenceDef> _essenceByName;
+    private readonly Dictionary<string, List<ModDef>> _essenceModsByName;
 
     private GameData(string folder, List<BaseItem> bases, List<ModDef> mods, List<CurrencyDef> currencies, List<EssenceDef> essences,
         List<EssenceDef> alloys, List<OmenDef> omens, List<CatalystDef> catalysts, List<ItemClassDef> classes, SimConfig config)
@@ -42,6 +49,21 @@ public sealed class GameData
         _currencyByName = currencies.GroupBy(c => c.Name).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         _omenByName = omens.GroupBy(o => o.Name).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         _essenceByName = essences.Concat(alloys).GroupBy(e => e.Name).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        _essenceModsByName = mods.Where(m => EssenceCategories.Contains(m.Category))
+            .GroupBy(m => m.Name).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        EssenceCurrencies = essences.Concat(alloys).Select(e => new CurrencyDef
+        {
+            Name = e.Name,
+            Slug = e.Slug,
+            Section = e.Tier == "Alloy" ? "Alloy" : "Essence",
+            Description = e.Description,
+            Op = "essence",
+            RarityIn = e.RarityIn,
+            RarityOut = e.RarityOut,
+            Essence = e,
+        }).ToList();
+
         ComputeTiers(mods);
     }
 
@@ -65,11 +87,14 @@ public sealed class GameData
             Read<SimConfig>("config.json"));
     }
 
-    /// <summary>Tier = 1 + number of distinct higher levels within the same family, generation type, and category (global across item classes).</summary>
+    /// <summary>
+    /// Global tier = 1 + number of distinct higher levels within the same family, stat, generation type, and category (across all item classes).
+    /// Only a fallback: what the UI shows comes from ModPool.DisplayTier, which ranks per base.
+    /// </summary>
     private static void ComputeTiers(List<ModDef> mods)
     {
         foreach (var group in mods.Where(m => m.Family != null && (m.IsPrefix || m.IsSuffix))
-                                  .GroupBy(m => (m.Family, m.Gen, m.Category)))
+                                  .GroupBy(m => (m.Family, m.Gen, m.Category, Items.ModText.StatSignature(m.Text))))
         {
             var levels = group.Select(m => m.Level).Distinct().OrderByDescending(l => l).ToList();
             foreach (var m in group)
@@ -87,9 +112,29 @@ public sealed class GameData
     public OmenDef? FindOmen(string name) => _omenByName.TryGetValue(name.Trim(), out var o) ? o : null;
     public EssenceDef? FindEssenceOrAlloy(string name) => _essenceByName.TryGetValue(name.Trim(), out var e) ? e : null;
 
+    /// <summary>Base whose name appears in a magic item's full name ("Glyphic Siphoning Wand of the Stars"); longest match wins.</summary>
+    public BaseItem? FindBaseInName(string fullName) =>
+        FindBase(fullName) ?? Bases.Where(b => b.Name.Length > 0 && fullName.Contains(b.Name, StringComparison.OrdinalIgnoreCase))
+                                   .OrderByDescending(b => b.Name.Length).FirstOrDefault();
+
     public IEnumerable<BaseItem> BasesOfClass(string itemClass) => Bases.Where(b => b.ItemClass.Equals(itemClass, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>All pages (poe2db ModifiersCalc pages) that belong to an item class, used as a fallback when a base has no page.</summary>
     public IEnumerable<string> PagesOfClass(string itemClass) =>
         ItemClasses.FirstOrDefault(c => c.Name.Equals(itemClass, StringComparison.OrdinalIgnoreCase))?.ModPages ?? Enumerable.Empty<string>();
+
+    /// <summary>Pages whose mods and weights apply to a base (its own page, or all pages of its class as a fallback).</summary>
+    public IReadOnlyList<string> PagesFor(BaseItem? baseItem, string itemClass)
+    {
+        if (baseItem?.ModPage is { } p) return new[] { p };
+        return PagesOfClass(baseItem?.ItemClass ?? itemClass).ToList();
+    }
+
+    /// <summary>The modifier an essence or alloy grants on the given base, or null if it has no effect on that item class.</summary>
+    public ModDef? EssenceModFor(EssenceDef essence, BaseItem? baseItem, string itemClass)
+    {
+        if (!_essenceModsByName.TryGetValue(essence.Name, out var mods)) return null;
+        var pages = PagesFor(baseItem, itemClass);
+        return mods.FirstOrDefault(m => m.Weights.Keys.Any(pages.Contains));
+    }
 }

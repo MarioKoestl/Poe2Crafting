@@ -91,6 +91,9 @@ public sealed class CurrencyDef
     public string? Element { get; set; }
     public bool? Otherworldly { get; set; }
 
+    /// <summary>For Op == "essence": the essence or alloy this synthetic currency applies (see GameData.EssenceCurrencies).</summary>
+    [JsonIgnore] public EssenceDef? Essence { get; set; }
+
     [JsonIgnore] public string DescriptionText => string.Join(" ", Description);
     public override string ToString() => Name;
 }
@@ -111,6 +114,9 @@ public sealed class EssenceDef
     public string? RarityOut { get; set; }
     public List<string> Description { get; set; } = new();
     public List<GuaranteedMod> GuaranteedByClass { get; set; } = new();
+
+    /// <summary>Perfect, Corrupted and Alloy variants remove a mod and add a "Crafted" modifier; Lesser/Normal/Greater add a regular explicit mod.</summary>
+    [JsonIgnore] public bool AddsCraftedMod => Tier is "Perfect" or "Corrupted" or "Alloy";
     public override string ToString() => Name;
 }
 
@@ -170,6 +176,10 @@ public sealed class SimAssumptions
     public Dictionary<string, int> QualityPerUse { get; set; } = new();
     public int ShardsPerOrb { get; set; } = 10;
     public bool OnlyOneCraftedModPerItem { get; set; } = true;
+
+    public int MaxPrefixes(Items.Rarity r) => r switch { Items.Rarity.Magic => MagicMaxPrefixes, Items.Rarity.Rare => RareMaxPrefixes, _ => 0 };
+    public int MaxSuffixes(Items.Rarity r) => r switch { Items.Rarity.Magic => MagicMaxSuffixes, Items.Rarity.Rare => RareMaxSuffixes, _ => 0 };
+    public int MaxAffixes(Items.Rarity r, AffixType type) => type == AffixType.Prefix ? MaxPrefixes(r) : type == AffixType.Suffix ? MaxSuffixes(r) : 0;
 }
 
 /// <summary>poe2db exports IsPerfect as "1"/"0" strings and IsAlloy as bool; accept both.</summary>

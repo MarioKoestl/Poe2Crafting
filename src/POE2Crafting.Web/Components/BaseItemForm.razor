@@ -1,0 +1,69 @@
+@* Item class / base / rarity / item level selectors, shared by the Item Composer and the Planner. *@
+@inject GameData Data
+
+<div class="builder-form">
+    <div class="form-row">
+        <label>Item Class:</label>
+        <select value="@ItemClass" @onchange="OnClassChanged">
+            <option value="">-- Select --</option>
+            @foreach (var cls in Data.ItemClasses.OrderBy(c => c.Name))
+            {
+                <option value="@cls.Name">@cls.Name (@cls.BaseCount bases)</option>
+            }
+        </select>
+    </div>
+
+    @if (!string.IsNullOrEmpty(ItemClass))
+    {
+        <div class="form-row">
+            <label>Base Item:</label>
+            <select value="@BaseName" @onchange="OnBaseChanged">
+                <option value="">-- Select --</option>
+                @foreach (var b in Data.BasesOfClass(ItemClass).Where(b => !b.Hidden).OrderBy(b => b.Name))
+                {
+                    <option value="@b.Name">@b.Name@(string.IsNullOrEmpty(b.Implicit) ? "" : $" — {b.Implicit}")</option>
+                }
+            </select>
+        </div>
+    }
+
+    <div class="form-row">
+        <label>@RarityLabel:</label>
+        <select value="@Rarity" @onchange="OnRarityChanged">
+            <option value="@Rarity.Normal">Normal</option>
+            <option value="@Rarity.Magic">Magic</option>
+            <option value="@Rarity.Rare">Rare</option>
+        </select>
+    </div>
+
+    <div class="form-row">
+        <label>Item Level:</label>
+        <input type="number" min="1" max="100" value="@ItemLevel" @onchange="OnItemLevelChanged" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public string ItemClass { get; set; } = "";
+    [Parameter] public EventCallback<string> ItemClassChanged { get; set; }
+    [Parameter] public string BaseName { get; set; } = "";
+    [Parameter] public EventCallback<string> BaseNameChanged { get; set; }
+    [Parameter] public Rarity Rarity { get; set; } = Rarity.Rare;
+    [Parameter] public EventCallback<Rarity> RarityChanged { get; set; }
+    [Parameter] public int ItemLevel { get; set; } = 82;
+    [Parameter] public EventCallback<int> ItemLevelChanged { get; set; }
+    [Parameter] public string RarityLabel { get; set; } = "Rarity";
+
+    private async Task OnClassChanged(ChangeEventArgs e)
+    {
+        await ItemClassChanged.InvokeAsync(e.Value?.ToString() ?? "");
+        await BaseNameChanged.InvokeAsync("");
+    }
+
+    private Task OnBaseChanged(ChangeEventArgs e) => BaseNameChanged.InvokeAsync(e.Value?.ToString() ?? "");
+
+    private Task OnRarityChanged(ChangeEventArgs e) =>
+        Enum.TryParse<Rarity>(e.Value?.ToString(), out var r) ? RarityChanged.InvokeAsync(r) : Task.CompletedTask;
+
+    private Task OnItemLevelChanged(ChangeEventArgs e) =>
+        int.TryParse(e.Value?.ToString(), out var v) ? ItemLevelChanged.InvokeAsync(v) : Task.CompletedTask;
+}

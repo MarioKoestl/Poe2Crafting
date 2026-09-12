@@ -3,13 +3,12 @@ using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Core.Engine;
 
-/// <summary>What the user wants to apply: a currency, optionally modified by an omen (essences/alloys come in stage 2).</summary>
+/// <summary>What the user wants to apply: a currency (essences/alloys are synthetic currencies with Op "essence"), optionally modified by an omen.</summary>
 public sealed class CraftAction
 {
     public CurrencyDef Currency { get; init; } = null!;
     public OmenDef? Omen { get; init; }
-    public EssenceDef? Essence { get; init; }
-    public string DisplayName => Essence?.Name ?? Currency.Name + (Omen != null ? $" + {Omen.Name}" : "");
+    public string DisplayName => Currency.Name + (Omen != null ? $" + {Omen.Name}" : "");
 }
 
 /// <summary>Result of checking whether an action can be applied to an item.</summary>
@@ -44,6 +43,10 @@ public sealed class StepPreview
     public List<string> Notes { get; init; } = new();
     public double PrefixProbability { get; init; }
     public double SuffixProbability { get; init; }
+    /// <summary>Removal and addition are separate random events (Chaos Orb): a manual choice picks the removal first, then the addition.</summary>
+    public bool TwoStepChoice { get; init; }
+    /// <summary>Heading for the Removals list (e.g. "Fracture Target" when the list is not a removal).</summary>
+    public string? RemovalLabel { get; init; }
 }
 
 /// <summary>Manual selection of an outcome instead of rolling.</summary>

@@ -215,7 +215,8 @@
             using var stream = e.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
             var project = await System.Text.Json.JsonSerializer.DeserializeAsync<CraftingProject>(stream, GameData.JsonOptions);
             if (project != null) { Session.LoadProject(project); CloseModals(); _selectedAction = null; }
+            else Session.SetError("Load failed: the file is empty.");
         }
-        catch (Exception ex) { Session.ImportItem(""); /* triggers error */ }
+        catch (Exception ex) { Session.SetError($"Load failed: {ex.Message}"); }
     }
 }

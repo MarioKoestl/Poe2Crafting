@@ -47,6 +47,19 @@ public sealed class TargetMod
     /// <summary>Resolved ModDef from family + tier lookup.</summary>
     public ModDef? ResolvedMod { get; set; }
 
+    /// <summary>True (default): any tier at least as good as the target counts as a hit. False: only the exact tier.</summary>
+    public bool AllowBetterTiers { get; set; } = true;
+
+    /// <summary>Whether a rolled/present modifier satisfies this target (same family and affix type, and the tier is good enough).</summary>
+    public bool Matches(ModDef? mod)
+    {
+        if (mod == null || mod.Family != Family || mod.AffixType != AffixType) return false;
+        if (ResolvedMod == null) return true;
+        if (!AllowBetterTiers) return mod.Id == ResolvedMod.Id;
+        // one family can hold several stats (e.g. Fire/Physical spell skill levels); tiers of one stat differ by level, higher = better
+        return ModText.StatSignature(mod.Text) == ModText.StatSignature(ResolvedMod.Text) && mod.Level >= ResolvedMod.Level;
+    }
+
     public string DisplayName => ResolvedMod != null
         ? $"T{DisplayTier ?? ResolvedMod.Tier} {ResolvedMod.Name}"
         : $"{Family} (T{DisplayTier ?? Tier})";
@@ -63,6 +76,8 @@ public sealed class CraftingStrategy
     public double ExpectedAttempts => OverallProbability > 0 ? 1.0 / OverallProbability : double.PositiveInfinity;
     public bool HasBrickRisk { get; set; }
     public List<string> Warnings { get; set; } = new();
+    /// <summary>Label of the flowchart's start node.</summary>
+    public string StartLabel { get; set; } = "Normal Base Item";
 }
 
 /// <summary>One step in a crafting strategy.</summary>

@@ -2,12 +2,12 @@
 
 <div class="preview-panel">
     @{
-        var preview = Session.Preview(Action);
+        var item = Session.CurrentItem;
+        var preview = Session.Preview(Action, _pendingRemoval);
     }
 
     <h3>@Action.DisplayName</h3>
 
-    @* Currency description *@
     @if (Action.Currency.Description.Count > 0)
     {
         <div class="currency-description">
@@ -18,13 +18,12 @@
         </div>
     }
 
-    @if (!preview.Applicability.Ok)
+    @if (!preview.Applicability.Ok || item == null)
     {
         <div class="error-banner">@preview.Applicability.Reason</div>
     }
     else
     {
-        @* Notes / Assumptions *@
         @if (preview.Notes.Count > 0)
         {
             <div class="notes-section">
@@ -35,15 +34,15 @@
             </div>
         }
 
-        @* Removal distribution *@
         @if (preview.Removals.Count > 0)
         {
             <div class="distribution-section">
-                <h4>@(preview.RemoveCount > 0 ? $"Removal ({preview.RemoveCount}x)" : "Fracture Target")</h4>
+                <h4>@(preview.RemovalLabel ?? $"Removal ({preview.RemoveCount}x)")</h4>
                 <div class="distribution-list">
                     @foreach (var r in preview.Removals.OrderByDescending(x => x.Probability))
                     {
-                        <div class="dist-row">
+                        var isPending = _pendingRemoval == r.Index;
+                        <div class="dist-row @(isPending ? "pending-choice" : "")">
                             <div class="dist-bar-bg">
                                 <div class="dist-bar removal" style="width: @($"{r.Probability * 100:F1}")%"></div>
                             </div>
@@ -51,36 +50,45 @@
                             <span class="dist-label">@r.Mod.DisplayText()</span>
                             @if (_manualMode)
                             {
-                                <button class="btn btn-xs" @onclick="() => ChooseRemoval(r.Index)">Choose</button>
+                                <button class="btn btn-xs @(isPending ? "btn-active" : "")" @onclick="() => ChooseRemoval(r.Index, preview.TwoStepChoice)">
+                                    @(preview.TwoStepChoice ? (isPending ? "Chosen" : "Pick") : "Choose")
+                                </button>
                             }
                         </div>
                     }
                 </div>
+                @if (_manualMode && preview.TwoStepChoice)
+                {
+                    <div class="note">
+                        @if (_pendingRemoval == null)
+                        {
+                            <text>Pick the removed modifier first to see what can be added afterwards, or choose an addition directly (a compatible removal is rolled).</text>
+                        }
+                        else
+                        {
+                            <text>Removal fixed. Now choose the added modifier below. </text>
+                            <button class="btn btn-xs" @onclick="() => _pendingRemoval = null">Reset</button>
+                        }
+                    </div>
+                }
             </div>
         }
 
-        @* Addition distribution — poe2db style *@
         @if (preview.Additions.Count > 0)
         {
             <div class="distribution-section">
                 <h4>Addition (@(preview.AddCount)x) — P(@($"{preview.PrefixProbability:P0}")) / S(@($"{preview.SuffixProbability:P0}"))</h4>
                 <div class="addition-list">
-                    @{
-                        var sorted = preview.Additions
-                            .OrderByDescending(c => c.Probability)
-                            .Take(_showAll ? int.MaxValue : 20)
-                            .ToList();
-                    }
-                    @foreach (var c in sorted)
+                    @foreach (var c in preview.Additions.OrderByDescending(c => c.Probability).Take(_showAll ? int.MaxValue : 20))
                     {
                         <div class="add-row @(c.Mod.IsPrefix ? "prefix-row" : "suffix-row")">
                             <span class="add-pct">@($"{c.Probability * 100:F2}") %</span>
                             <span class="add-type @(c.Mod.IsPrefix ? "type-prefix" : "type-suffix")">@(c.Mod.IsPrefix ? "P" : "S")</span>
-                            <span class="add-tier">T@(c.Mod.Tier)</span>
+                            <span class="add-tier">@(c.Mod.Category == ModPool.NormalCategory ? $"T{Session.Engine.Pool.DisplayTier(c.Mod, item)}" : "")</span>
                             <span class="add-name">@c.Mod.Name</span>
                             <span class="add-sep">—</span>
                             <span class="add-stat">@c.Mod.Text</span>
-                            @if (_manualMode)
+                            @if (_manualMode && preview.Additions.Count > 1)
                             {
                                 <button class="btn btn-xs add-choose" @onclick="() => ChooseAddition(c.Mod.Id)">Choose</button>
                             }
@@ -94,7 +102,6 @@
             </div>
         }
 
-        @* Special outcomes *@
         @if (preview.SpecialOutcomes.Count > 0)
         {
             <div class="distribution-section">
@@ -116,12 +123,9 @@
             </div>
         }
 
-        @* Action buttons *@
         <div class="action-bar">
-            <button class="btn btn-primary btn-execute" @onclick="DoExecute">
-                Roll (Random)
-            </button>
-            <button class="btn @(_manualMode ? "btn-active" : "")" @onclick="() => _manualMode = !_manualMode">
+            <button class="btn btn-primary btn-execute" @onclick="DoExecute">Roll (Random)</button>
+            <button class="btn @(_manualMode ? "btn-active" : "")" @onclick="ToggleManual">
                 @(_manualMode ? "Hide Choices" : "Choose Outcome")
             </button>
         </div>
@@ -135,23 +139,50 @@
 
     private bool _manualMode;
     private bool _showAll;
+    private int? _pendingRemoval;
+    private CraftAction? _lastAction;
+    private int _lastHistoryCount = -1;
 
-    private double MaxAddProb(StepPreview p) => p.Additions.Count > 0 ? p.Additions.Max(x => x.Probability) : 1;
-
-    private async Task DoExecute() => await OnExecute.InvokeAsync();
-
-    private async Task ChooseRemoval(int index)
+    protected override void OnParametersSet()
     {
+        // a new action or a changed item invalidates half-made choices (mod indices refer to the old item)
+        if (!ReferenceEquals(Action, _lastAction) || Session.History.Count != _lastHistoryCount || Session.History.Count == 0)
+        {
+            _pendingRemoval = null;
+            _showAll = false;
+            _lastAction = Action;
+            _lastHistoryCount = Session.History.Count;
+        }
+    }
+
+    private void ToggleManual()
+    {
+        _manualMode = !_manualMode;
+        _pendingRemoval = null;
+    }
+
+    private async Task DoExecute()
+    {
+        _pendingRemoval = null;
+        await OnExecute.InvokeAsync();
+    }
+
+    private async Task ChooseRemoval(int index, bool twoStep)
+    {
+        if (twoStep) { _pendingRemoval = _pendingRemoval == index ? null : index; return; }
         await OnChoose.InvokeAsync(new ManualChoice { RemoveIndices = new() { index } });
     }
 
     private async Task ChooseAddition(string modId)
     {
-        await OnChoose.InvokeAsync(new ManualChoice { AddModIds = new() { modId } });
+        var choice = new ManualChoice
+        {
+            RemoveIndices = _pendingRemoval is { } r ? new() { r } : new(),
+            AddModIds = new() { modId },
+        };
+        _pendingRemoval = null;
+        await OnChoose.InvokeAsync(choice);
     }
 
-    private async Task ChooseSpecial(string outcome)
-    {
-        await OnChoose.InvokeAsync(new ManualChoice { SpecialOutcome = outcome });
-    }
+    private async Task ChooseSpecial(string outcome) => await OnChoose.InvokeAsync(new ManualChoice { SpecialOutcome = outcome });
 }

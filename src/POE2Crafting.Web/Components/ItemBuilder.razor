@@ -6,245 +6,71 @@
 
     <div class="builder-layout">
         <div class="builder-controls">
+            <BaseItemForm @bind-ItemClass="_itemClass" @bind-BaseName="BaseName" @bind-Rarity="TargetRarity" @bind-ItemLevel="ItemLevel" RarityLabel="Target Rarity" />
 
-    <div class="builder-form">
-        <div class="form-row">
-            <label>Item Class:</label>
-            <select @bind="SelectedClass">
-                <option value="">-- Select --</option>
-                @foreach (var cls in Data.ItemClasses.OrderBy(c => c.Name))
-                {
-                    <option value="@cls.Name">@cls.Name (@cls.BaseCount bases)</option>
-                }
-            </select>
-        </div>
-
-        @if (!string.IsNullOrEmpty(SelectedClass))
-        {
-            <div class="form-row">
-                <label>Base Item:</label>
-                <select @bind="SelectedBase">
-                    <option value="">-- Select --</option>
-                    @foreach (var b in Data.BasesOfClass(SelectedClass).Where(b => !b.Hidden).OrderBy(b => b.Name))
-                    {
-                        <option value="@b.Name">@b.Name@(string.IsNullOrEmpty(b.Implicit) ? "" : $" — {b.Implicit}")</option>
-                    }
-                </select>
-            </div>
-        }
-
-        <div class="form-row">
-            <label>Target Rarity:</label>
-            <select @bind="TargetRarity">
-                <option value="@Rarity.Normal">Normal</option>
-                <option value="@Rarity.Magic">Magic</option>
-                <option value="@Rarity.Rare">Rare</option>
-            </select>
-        </div>
-
-        <div class="form-row">
-            <label>Item Level:</label>
-            <input type="number" @bind="ItemLevel" min="1" max="100" />
-        </div>
-    </div>
-
-    @if (!string.IsNullOrEmpty(SelectedBase) && _availableMods != null)
-    {
-        @if (_targetRarity == Rarity.Normal)
-        {
-            <div class="target-mods-section">
-                <p class="rarity-note">Normal items have no explicit modifiers. Select <strong>Magic</strong> or <strong>Rare</strong> to add target mods.</p>
-            </div>
-        }
-        else
-        {
-        <div class="target-mods-section">
-            <h4>Target Modifiers <span class="mod-count">(@_targetMods.Count(m => m.AffixType == AffixType.Prefix)P / @_targetMods.Count(m => m.AffixType == AffixType.Suffix)S)</span></h4>
-
-            @if (_targetMods.Count > 0)
+            @if (Session.CurrentItem?.Base is { } current && !ReferenceEquals(current, _base))
             {
-                <div class="target-mod-list">
-                    @for (int i = 0; i < _targetMods.Count; i++)
-                    {
-                        var idx = i;
-                        var tm = _targetMods[i];
-                        <div class="target-mod-row @(tm.AffixType == AffixType.Prefix ? "prefix-row" : "suffix-row") @CategoryRowClass(tm.Category)">
-                            <span class="tm-type @(tm.AffixType == AffixType.Prefix ? "type-prefix" : "type-suffix")">
-                                @(tm.AffixType == AffixType.Prefix ? "P" : "S")
-                            </span>
-                            <span class="tm-tier">T@(tm.DisplayTier ?? GetDisplayTier(tm.ResolvedMod))</span>
-                            <span class="tm-name">@(tm.ResolvedMod?.Name ?? tm.Family)</span>
-                            <span class="tm-text">@(tm.ResolvedMod?.Text ?? "")</span>
-                            @if (tm.Category != "normal")
-                            {
-                                <span class="tm-cat-badge @CategoryBadgeClass(tm.Category)">@CategoryShortName(tm.Category)</span>
-                            }
-                            <button class="btn btn-xs tm-remove" @onclick="() => RemoveMod(idx)">✕</button>
-                        </div>
-                    }
+                <div class="builder-hint">
+                    <button class="btn btn-sm" @onclick="UseCurrentBase">Use current item's base (@current.Name, ilvl @Session.CurrentItem.ItemLevel)</button>
                 </div>
             }
 
-            <div class="add-mod-section">
-                <div class="add-mod-tabs">
-                    <button class="btn btn-sm @(_showPrefixes ? "btn-active" : "")" @onclick="() => _showPrefixes = true">
-                        + Prefix (@(_targetMods.Count(m => m.AffixType == AffixType.Prefix))/@MaxPrefixes(_targetRarity))
-                    </button>
-                    <button class="btn btn-sm @(!_showPrefixes ? "btn-active" : "")" @onclick="() => _showPrefixes = false">
-                        + Suffix (@(_targetMods.Count(m => m.AffixType == AffixType.Suffix))/@MaxSuffixes(_targetRarity))
-                    </button>
-                </div>
-
-                <div class="mod-family-filter">
-                    <input type="text" @bind="_modFilter" @bind:event="oninput" placeholder="Search mods..." />
-                </div>
-
-                <div class="mod-browser">
-                    @{
-                        var affixType = _showPrefixes ? AffixType.Prefix : AffixType.Suffix;
-                    }
-                    @foreach (var catInfo in _categoryInfos)
-                    {
-                        var category = catInfo.Key;
-                        var families = GetFilteredFamilies(affixType, category).ToList();
-                        if (families.Count > 0)
-                        {
-                            <div class="mod-category-section">
-                                <div class="mod-category-header @catInfo.HeaderClass" @onclick="() => ToggleCategory(category)">
-                                    <span class="cat-expand">@(_collapsedCategories.Contains(category) ? "▸" : "▾")</span>
-                                    <span class="cat-label @catInfo.LabelClass">@catInfo.Label @(_showPrefixes ? "Prefix" : "Suffix")</span>
-                                    <span class="cat-count">@families.Count</span>
-                                </div>
-                                @if (!_collapsedCategories.Contains(category))
-                                {
-                                    <div class="mod-category-content">
-                                        @foreach (var family in families)
-                                        {
-                                            var familyKey = family.Key;
-                                            var expandKey = $"{category}|{familyKey}";
-                                            var isAdded = _targetMods.Any(m => m.Family == familyKey && m.Category == category);
-
-                                            <div class="mod-family @(isAdded ? "family-added" : "")">
-                                                <div class="family-header" @onclick="() => ToggleFamily(expandKey)">
-                                                    <span class="family-expand">@(_expandedFamily == expandKey ? "▾" : "▸")</span>
-                                                    <span class="family-name">@GetFamilyDisplayName(family)</span>
-                                                    @foreach (var tag in GetFamilyTags(family.Value).Take(3))
-                                                    {
-                                                        <span class="mod-tag" style="color: @GetTagColor(tag)">@tag</span>
-                                                    }
-                                                    @if (isAdded)
-                                                    {
-                                                        <span class="family-badge">added</span>
-                                                    }
-                                                </div>
-                                                @if (_expandedFamily == expandKey)
-                                                {
-                                                    <div class="family-tiers">
-                                                        @foreach (var mod in family.Value.OrderBy(m => GetDisplayTier(m)))
-                                                        {
-                                                            var currentMod = mod;
-                                                            var isThisTier = _targetMods.Any(m => m.ResolvedMod?.Id == currentMod.Id);
-                                                            var canAdd = CanAddMod(currentMod, category);
-                                                            var modWeight = GetModWeight(currentMod);
-                                                            <button class="tier-btn @(isThisTier ? "selected" : "") @(!canAdd && !isThisTier ? "disabled" : "")"
-                                                                    @onclick="() => ToggleMod(currentMod, category)" disabled="@(!canAdd && !isThisTier)">
-                                                                <span class="tier-label">T@(GetDisplayTier(currentMod))</span>
-                                                                <span class="tier-name">@currentMod.Name</span>
-                                                                <span class="tier-text">@currentMod.Text</span>
-                                                                <span class="tier-weight" title="Weight">@modWeight</span>
-                                                                <span class="tier-level">ilvl @currentMod.Level</span>
-                                                            </button>
-                                                        }
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            </div>
-                        }
-                    }
-                </div>
-            </div>
-        </div>
-        }@* end else (not Normal) *@
-
-        <div class="builder-actions">
-            <button class="btn btn-primary btn-execute" @onclick="FindPaths" disabled="@(_targetMods.Count == 0)">
-                Find Crafting Paths
-            </button>
-            @if (Session.CurrentItem != null)
+            @if (_base != null)
             {
-                <button class="btn btn-execute" @onclick="FindPathsFromCurrent" disabled="@(_targetMods.Count == 0)"
-                        title="Calculate paths starting from the current item in the simulator">
-                    Path from Current Item
-                </button>
+                <ModBrowser Base="_base" ItemLevel="_itemLevel" Rarity="_rarity" Selection="_selection" OnChanged="BuildPreviewItem" Title="Target Modifiers" />
+
+                <label class="checkbox-row" title="Count a roll of a better tier than the selected one as a hit">
+                    <input type="checkbox" @bind="_allowBetterTiers" /> Better tiers also count as a hit
+                </label>
+
+                <div class="builder-actions">
+                    <button class="btn btn-primary btn-execute" @onclick="FindPaths" disabled="@(_selection.Mods.Count == 0)">
+                        Find Crafting Paths
+                    </button>
+                    @if (Session.CurrentItem != null)
+                    {
+                        var sameBase = ReferenceEquals(Session.CurrentItem.Base, _base);
+                        <button class="btn btn-execute" @onclick="FindPathsFromCurrent" disabled="@(_selection.Mods.Count == 0 || !sameBase)"
+                                title="@(sameBase ? "Calculate paths starting from the current item in the simulator" : "The current item has a different base than this target")">
+                            Path from Current Item
+                        </button>
+                    }
+                </div>
             }
         </div>
-    }
-
-        </div>@* end builder-controls *@
 
         @if (_previewItem != null)
         {
             <div class="builder-preview">
                 <h4>Item Preview</h4>
-                <ItemDisplay Item="@_previewItem" />
+                <ItemDisplay Item="_previewItem" />
             </div>
         }
-    </div>@* end builder-layout *@
+    </div>
 </div>
 
 @code {
     [Parameter] public EventCallback<PlannerResult> OnPathsFound { get; set; }
 
-    // ---- State ----
-    private string _selectedClass = "";
-    private string _selectedBase = "";
+    private string _itemClass = "";
+    private string _baseName = "";
+    private BaseItem? _base;
     private int _itemLevel = 82;
-    private Rarity _targetRarity = Rarity.Rare;
-    private List<TargetMod> _targetMods = new();
-    private bool _showPrefixes = true;
-    private string _modFilter = "";
-    private string? _expandedFamily;
+    private Rarity _rarity = Rarity.Rare;
+    private bool _allowBetterTiers = true;
+    private ModSelection _selection = null!;
     private Item? _previewItem;
-    private Item? _virtualItem;
-    private HashSet<string> _collapsedCategories = new();
 
-    // ---- Mod data by category ----
-    private Dictionary<string, List<ModDef>>? _availableMods;
-    private Dictionary<string, List<ModDef>>? _otherworldlyMods;
-    private Dictionary<string, List<ModDef>>? _desecMods;
+    protected override void OnInitialized() => _selection = new ModSelection(Data.Config.Assumptions);
 
-    // ---- Per-page display tiers ----
-    private Dictionary<string, int> _displayTiers = new();
-    private Dictionary<string, int> _displayTierCounts = new();
-
-    // ---- Category definitions ----
-    private record CategoryInfo(string Key, string Label, string HeaderClass, string LabelClass);
-    private static readonly CategoryInfo[] _categoryInfos =
+    private string BaseName
     {
-        new("normal", "Base", "base-header", "base-label"),
-        new("breach_otherworldly", "Otherworldly", "otherworldly-header", "otherworldly-label"),
-        new("desecrated", "Desecrated", "desecrated-header", "desecrated-label"),
-    };
-
-    // ---- Properties ----
-    private string SelectedClass
-    {
-        get => _selectedClass;
-        set { _selectedClass = value; SelectedBase = ""; }
-    }
-
-    private string SelectedBase
-    {
-        get => _selectedBase;
+        get => _baseName;
         set
         {
-            _selectedBase = value;
-            _targetMods.Clear();
-            _expandedFamily = null;
-            RefreshAvailableMods();
+            _baseName = value;
+            _base = string.IsNullOrEmpty(value) ? null : Data.FindBase(value);
+            _selection.Clear();
             BuildPreviewItem();
         }
     }
@@ -252,371 +78,55 @@
     private int ItemLevel
     {
         get => _itemLevel;
-        set { _itemLevel = value; RefreshAvailableMods(); BuildPreviewItem(); }
+        set { _itemLevel = Math.Clamp(value, 1, 100); _selection.Enforce(_rarity, _itemLevel); BuildPreviewItem(); }
     }
 
     private Rarity TargetRarity
     {
-        get => _targetRarity;
-        set
-        {
-            _targetRarity = value;
-            EnforceModLimits();
-            BuildPreviewItem();
-        }
+        get => _rarity;
+        set { _rarity = value; _selection.Enforce(_rarity, _itemLevel); BuildPreviewItem(); }
     }
 
-    // ---- Data loading ----
-    private void RefreshAvailableMods()
+    private void UseCurrentBase()
     {
-        _availableMods = null;
-        _otherworldlyMods = null;
-        _desecMods = null;
-        _virtualItem = null;
-        _displayTiers.Clear();
-        _displayTierCounts.Clear();
-
-        if (string.IsNullOrEmpty(_selectedBase)) return;
-        var baseItem = Data.FindBase(_selectedBase);
-        if (baseItem == null) return;
-
-        _virtualItem = new Item
-        {
-            BaseName = baseItem.Name,
-            ItemClass = baseItem.ItemClass,
-            Rarity = Rarity.Normal,
-            ItemLevel = _itemLevel,
-            Base = baseItem,
-        };
-
-        // Normal mods — all tiers (not filtered by item level, so user sees the full picture)
-        var normalMods = Session.Engine.Pool.AllForBase(_virtualItem).ToList();
-        _availableMods = normalMods
-            .GroupBy(m => m.Family ?? m.Name)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        // Otherworldly mods
-        var owMods = Session.Engine.Pool.AllForBaseByCategory(_virtualItem, "breach_otherworldly").ToList();
-        if (owMods.Count > 0)
-            _otherworldlyMods = owMods
-                .GroupBy(m => m.Family ?? m.Name)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-        // Desecrated mods
-        var desMods = Session.Engine.Pool.AllForBaseByCategory(_virtualItem, "desecrated").ToList();
-        if (desMods.Count > 0)
-            _desecMods = desMods
-                .GroupBy(m => m.Family ?? m.Name)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-        // Compute per-page display tiers — single source of truth in ModPool
-        var (tiers, tierCounts) = Session.Engine.Pool.ComputeAllDisplayTiers(_virtualItem);
-        _displayTiers = tiers;
-        _displayTierCounts = tierCounts;
+        var current = Session.CurrentItem;
+        if (current?.Base == null) return;
+        _itemClass = current.Base.ItemClass;
+        BaseName = current.Base.Name;
+        ItemLevel = current.ItemLevel;
     }
 
-    private int GetDisplayTier(ModDef? mod)
+    private void BuildPreviewItem() => _previewItem = _base != null ? _selection.BuildItem(_base, _rarity, _itemLevel) : null;
+
+    private TargetItemSpec BuildSpec(Item forItem) => new()
     {
-        if (mod == null) return 0;
-        if (_displayTiers.TryGetValue(mod.Id, out var t)) return t;
-        // Fallback via ModPool (e.g. mod not yet in dictionaries)
-        if (_virtualItem != null && mod != null)
-            return Session.Engine.Pool.ComputeDisplayTier(mod, _virtualItem);
-        return mod.Tier;
-    }
-
-    private int GetDisplayTierCount(ModDef? mod)
-    {
-        if (mod == null) return 0;
-        if (_displayTierCounts.TryGetValue(mod.Id, out var t)) return t;
-        return mod.TierCount;
-    }
-
-    private int GetModWeight(ModDef mod)
-    {
-        if (_virtualItem == null) return 0;
-        return Session.Engine.Pool.WeightForItem(mod, _virtualItem);
-    }
-
-    // ---- Filtering ----
-    private IEnumerable<KeyValuePair<string, List<ModDef>>> GetFilteredFamilies(AffixType type, string category = "normal")
-    {
-        var modDict = category switch
-        {
-            "breach_otherworldly" => _otherworldlyMods,
-            "desecrated" => _desecMods,
-            _ => _availableMods,
-        };
-
-        if (modDict == null) return Enumerable.Empty<KeyValuePair<string, List<ModDef>>>();
-
-        return modDict
-            .Where(f => f.Value.Any(m => m.AffixType == type))
-            .Where(f => string.IsNullOrWhiteSpace(_modFilter) ||
-                        f.Key.Contains(_modFilter, StringComparison.OrdinalIgnoreCase) ||
-                        f.Value.Any(m => m.Text.Contains(_modFilter, StringComparison.OrdinalIgnoreCase) ||
-                                        m.Name.Contains(_modFilter, StringComparison.OrdinalIgnoreCase)))
-            .Select(f => new KeyValuePair<string, List<ModDef>>(
-                f.Key, f.Value.Where(m => m.AffixType == type).ToList()))
-            .OrderBy(f => f.Key);
-    }
-
-    // ---- Add / Remove mods ----
-    private bool CanAddMod(ModDef mod, string category = "normal")
-    {
-        if (_targetRarity == Rarity.Normal) return false;
-        if (_targetMods.Any(m => m.Family == mod.Family && m.Category == category)) return false;
-        if (mod.IsPrefix && _targetMods.Count(m => m.AffixType == AffixType.Prefix) >= MaxPrefixes(_targetRarity)) return false;
-        if (mod.IsSuffix && _targetMods.Count(m => m.AffixType == AffixType.Suffix) >= MaxSuffixes(_targetRarity)) return false;
-        if (mod.Level > _itemLevel) return false;
-        return true;
-    }
-
-    private void ToggleMod(ModDef mod, string category = "normal")
-    {
-        // If this exact mod tier is already selected, remove it
-        var existingIdx = _targetMods.FindIndex(m => m.ResolvedMod?.Id == mod.Id);
-        if (existingIdx >= 0)
-        {
-            RemoveMod(existingIdx);
-            return;
-        }
-        AddMod(mod, category);
-    }
-
-    private void AddMod(ModDef mod, string category = "normal")
-    {
-        if (!CanAddMod(mod, category)) return;
-
-        _targetMods.RemoveAll(m => m.Family == mod.Family && m.Category == category);
-
-        _targetMods.Add(new TargetMod
-        {
-            Family = mod.Family ?? mod.Name,
-            Tier = mod.Tier,
-            AffixType = mod.AffixType,
-            ResolvedMod = mod,
-            Category = category,
-            DisplayTier = GetDisplayTier(mod),
-        });
-
-        BuildPreviewItem();
-    }
-
-    private void RemoveMod(int index)
-    {
-        if (index >= 0 && index < _targetMods.Count)
-        {
-            _targetMods.RemoveAt(index);
-            BuildPreviewItem();
-        }
-    }
-
-    // ---- UI toggles ----
-    private void ToggleFamily(string expandKey)
-    {
-        _expandedFamily = _expandedFamily == expandKey ? null : expandKey;
-    }
-
-    private void ToggleCategory(string cat)
-    {
-        if (!_collapsedCategories.Remove(cat))
-            _collapsedCategories.Add(cat);
-    }
-
-    private void EnforceModLimits()
-    {
-        int maxP = MaxPrefixes(_targetRarity);
-        int maxS = MaxSuffixes(_targetRarity);
-        while (_targetMods.Count(m => m.AffixType == AffixType.Prefix) > maxP)
-        {
-            var last = _targetMods.LastOrDefault(m => m.AffixType == AffixType.Prefix);
-            if (last != null) _targetMods.Remove(last); else break;
-        }
-        while (_targetMods.Count(m => m.AffixType == AffixType.Suffix) > maxS)
-        {
-            var last = _targetMods.LastOrDefault(m => m.AffixType == AffixType.Suffix);
-            if (last != null) _targetMods.Remove(last); else break;
-        }
-    }
-
-    private static int MaxPrefixes(Rarity r) => r switch { Rarity.Magic => 1, Rarity.Rare => 3, _ => 0 };
-    private static int MaxSuffixes(Rarity r) => r switch { Rarity.Magic => 1, Rarity.Rare => 3, _ => 0 };
-
-    // ---- Preview ----
-    private void BuildPreviewItem()
-    {
-        if (string.IsNullOrEmpty(_selectedBase))
-        {
-            _previewItem = null;
-            return;
-        }
-
-        var baseItem = Data.FindBase(_selectedBase);
-        if (baseItem == null) { _previewItem = null; return; }
-
-        var item = new Item
-        {
-            BaseName = _selectedBase,
-            ItemClass = _selectedClass,
-            Rarity = _targetRarity,
-            ItemLevel = _itemLevel,
-            Base = baseItem,
-            Sockets = baseItem.SocketLimit ?? 0,
-        };
-
-        if (!string.IsNullOrEmpty(baseItem.Implicit))
-        {
-            var ranges = ModText.ParseRanges(baseItem.Implicit);
-            var midValues = ranges.Select(r => Math.Round((r[0] + r[1]) / 2)).ToList();
-            item.Mods.Add(new ItemMod
-            {
-                ModId = "base_implicit",
-                Kind = ModKind.Implicit,
-                RawText = ModText.Render(baseItem.Implicit, midValues),
-            });
-        }
-
-        foreach (var tm in _targetMods)
-        {
-            if (tm.ResolvedMod == null) continue;
-            var ranges = ModText.ParseRanges(tm.ResolvedMod.Text);
-            item.Mods.Add(new ItemMod
-            {
-                ModId = tm.ResolvedMod.Id,
-                Kind = ModKind.Explicit,
-                Affix = tm.AffixType,
-                Def = tm.ResolvedMod,
-                Values = ranges.Select(r => Math.Round((r[0] + r[1]) / 2)).ToList(),
-            });
-        }
-
-        _previewItem = item;
-    }
-
-    // ---- Display helpers ----
-    private string GetFamilyDisplayName(KeyValuePair<string, List<ModDef>> family)
-    {
-        var firstMod = family.Value.FirstOrDefault();
-        if (firstMod == null) return family.Key;
-
-        var text = firstMod.Text;
-        if (string.IsNullOrWhiteSpace(text)) return firstMod.Name ?? family.Key;
-
-        text = text.Replace("#", "").Trim();
-        while (text.Contains("  ")) text = text.Replace("  ", " ");
-        return text;
-    }
-
-    private static IEnumerable<string> GetFamilyTags(List<ModDef> mods)
-    {
-        return mods.SelectMany(m => m.ModTags).Distinct();
-    }
-
-    private static string GetTagColor(string tag)
-    {
-        if (tag.Contains("life")) return "#cc4444";
-        if (tag.Contains("mana")) return "#6688ff";
-        if (tag.Contains("speed")) return "#44cc44";
-        if (tag.Contains("fire")) return "#cc4444";
-        if (tag.Contains("cold")) return "#6688ff";
-        if (tag.Contains("lightning")) return "#ffcc44";
-        if (tag.Contains("chaos")) return "#aa44cc";
-        if (tag.Contains("physical")) return "#c8c4b8";
-        if (tag.Contains("critical")) return "#ffdd44";
-        if (tag.Contains("attribute")) return "#44aacc";
-        if (tag.Contains("resistance")) return "#cc8833";
-        if (tag.Contains("defences") || tag.Contains("armour") || tag.Contains("evasion") || tag.Contains("energy_shield")) return "#66ccaa";
-        if (tag.Contains("attack")) return "#cc8844";
-        if (tag.Contains("caster")) return "#8866cc";
-        if (tag.Contains("minion")) return "#88cc44";
-        return "#807c70";
-    }
-
-    private static string CategoryShortName(string category) => category switch
-    {
-        "breach_otherworldly" => "OW",
-        "desecrated" => "Des",
-        _ => "",
+        BaseName = forItem.BaseName,
+        ItemClass = forItem.ItemClass,
+        ItemLevel = forItem.ItemLevel,
+        TargetRarity = _rarity,
+        TargetMods = _selection.ToTargetMods(Session.Engine.Pool, forItem, _allowBetterTiers),
     };
 
-    private static string CategoryBadgeClass(string category) => category switch
-    {
-        "breach_otherworldly" => "cat-badge-otherworldly",
-        "desecrated" => "cat-badge-desecrated",
-        _ => "",
-    };
-
-    private static string CategoryRowClass(string category) => category switch
-    {
-        "breach_otherworldly" => "otherworldly-row",
-        "desecrated" => "desecrated-row",
-        _ => "",
-    };
-
-    // ---- Path finding ----
     private async Task FindPaths()
     {
-        if (string.IsNullOrEmpty(_selectedBase) || _targetMods.Count == 0) return;
-
-        var spec = new TargetItemSpec
-        {
-            BaseName = _selectedBase,
-            ItemClass = _selectedClass,
-            ItemLevel = _itemLevel,
-            TargetRarity = _targetRarity,
-            TargetMods = _targetMods.Select(m => new TargetMod
-            {
-                Family = m.Family,
-                Tier = m.Tier,
-                AffixType = m.AffixType,
-                ResolvedMod = m.ResolvedMod,
-                Category = m.Category,
-                DisplayTier = m.DisplayTier,
-            }).ToList(),
-        };
-
-        var finder = new CraftingPathFinder(Data, Session.Engine.Pool);
-        var strategies = finder.FindPaths(spec);
-
-        await OnPathsFound.InvokeAsync(new PlannerResult
-        {
-            Spec = spec,
-            Strategies = strategies,
-            FromItem = false,
-        });
+        if (_base == null || _selection.Mods.Count == 0) return;
+        var spec = BuildSpec(new Item { BaseName = _base.Name, ItemClass = _base.ItemClass, ItemLevel = _itemLevel, Base = _base });
+        var strategies = new CraftingPathFinder(Data, Session.Engine.Pool).FindPaths(spec);
+        await OnPathsFound.InvokeAsync(new PlannerResult { Spec = spec, Strategies = strategies });
     }
 
     private async Task FindPathsFromCurrent()
     {
-        if (Session.CurrentItem == null || _targetMods.Count == 0) return;
-
-        var spec = new TargetItemSpec
-        {
-            BaseName = Session.CurrentItem.BaseName,
-            ItemClass = Session.CurrentItem.ItemClass,
-            ItemLevel = Session.CurrentItem.ItemLevel,
-            TargetRarity = _targetRarity,
-            TargetMods = _targetMods.Select(m => new TargetMod
-            {
-                Family = m.Family,
-                Tier = m.Tier,
-                AffixType = m.AffixType,
-                ResolvedMod = m.ResolvedMod,
-                Category = m.Category,
-                DisplayTier = m.DisplayTier,
-            }).ToList(),
-        };
-
-        var finder = new CraftingPathFinder(Data, Session.Engine.Pool);
-        var strategies = finder.FindPathsFromItem(Session.CurrentItem, spec);
-
+        var current = Session.CurrentItem;
+        if (current == null || _selection.Mods.Count == 0) return;
+        var spec = BuildSpec(current);
+        var strategies = new CraftingPathFinder(Data, Session.Engine.Pool).FindPathsFromItem(current, spec);
         await OnPathsFound.InvokeAsync(new PlannerResult
         {
             Spec = spec,
             Strategies = strategies,
             FromItem = true,
-            SourceItemDescription = Session.CurrentItem.ToString(),
+            SourceItemDescription = current.ToString(),
         });
     }
 

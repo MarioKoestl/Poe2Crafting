@@ -11,29 +11,9 @@ namespace POE2Crafting.Tests;
 /// </summary>
 public class CraftingEngineTests
 {
-    private static (GameData data, ModPool pool, CraftingEngine engine) SetupMinimal()
-    {
-        // Since GameData.Load requires JSON files, these tests verify the engine
-        // against live data. Skip if data folder is not available.
-        var dataFolder = FindDataFolder();
-        if (dataFolder == null) return (null!, null!, null!);
-        var data = GameData.Load(dataFolder);
-        var pool = new ModPool(data);
-        var engine = new CraftingEngine(data, pool);
-        return (data, pool, engine);
-    }
-
-    private static string? FindDataFolder()
-    {
-        // Try common locations
-        var candidates = new[]
-        {
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "data"),
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "data"),
-            @"C:\Development\POE2Crafting\data",
-        };
-        return candidates.Select(Path.GetFullPath).FirstOrDefault(Directory.Exists);
-    }
+    // These tests verify the engine against the real data store and skip when it is not available.
+    private static (GameData data, ModPool pool, CraftingEngine engine) SetupMinimal() =>
+        TestData.Data == null ? (null!, null!, null!) : (TestData.Data, TestData.Pool!, TestData.Engine!);
 
     [SkippableFact]
     public void Transmutation_on_normal_makes_magic()
