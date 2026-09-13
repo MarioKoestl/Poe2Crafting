@@ -1,62 +1,34 @@
-using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Engine;
 using POE2Crafting.Core.Items;
 using Xunit;
 
 namespace POE2Crafting.Tests;
 
-/// <summary>
-/// Integration tests for CraftingEngine. Uses a minimal in-memory GameData setup.
-/// These tests verify the engine logic without needing the full data files.
-/// </summary>
+/// <summary>Basic currency behaviour against the real data store (skipped when it is not available).</summary>
 public class CraftingEngineTests
 {
-    // These tests verify the engine against the real data store and skip when it is not available.
-    private static (GameData data, ModPool pool, CraftingEngine engine) SetupMinimal() =>
-        TestData.Data == null ? (null!, null!, null!) : (TestData.Data, TestData.Pool!, TestData.Engine!);
+    private const string Wand = "Siphoning Wand";
 
     [SkippableFact]
     public void Transmutation_on_normal_makes_magic()
     {
-        var (data, pool, engine) = SetupMinimal();
-        Skip.If(data == null, "Data folder not found");
+        Skip.If(TestData.Data == null, "Data folder not found");
+        var item = TestData.NewItem(Wand);
+        var action = TestData.Action("Orb of Transmutation");
 
-        var baseItem = data.FindBase("Siphoning Wand");
-        Skip.If(baseItem == null, "Siphoning Wand not in data");
-
-        var item = new Item { BaseName = baseItem.Name, ItemClass = baseItem.ItemClass, Rarity = Rarity.Normal, ItemLevel = 82, Base = baseItem };
-        var transmute = data.Currencies.First(c => c.Op == "transmute");
-        var action = new CraftAction { Currency = transmute };
-
-        var check = engine.Check(item, action);
-        Assert.True(check.Ok);
-
-        var result = engine.Execute(item, action, new Rng(42));
+        Assert.True(TestData.Engine!.Check(item, action).Ok);
+        var result = TestData.Engine.Execute(item, action, new Rng(42));
         Assert.True(result.Applied);
         Assert.Equal(Rarity.Magic, result.Item.Rarity);
-        Assert.True(result.Item.AffixCount >= 1);
+        Assert.Equal(1, result.Item.AffixCount);
     }
 
     [SkippableFact]
     public void Augment_adds_one_mod_to_magic()
     {
-        var (data, pool, engine) = SetupMinimal();
-        Skip.If(data == null, "Data folder not found");
-
-        var baseItem = data.FindBase("Siphoning Wand");
-        Skip.If(baseItem == null);
-
-        var item = new Item { BaseName = baseItem.Name, ItemClass = baseItem.ItemClass, Rarity = Rarity.Magic, ItemLevel = 82, Base = baseItem };
-        // Add one prefix manually
-        var prefixes = pool.Candidates(item, AffixType.Prefix);
-        Skip.If(prefixes.Count == 0);
-        var mod = prefixes[0].Mod;
-        item.Mods.Add(new ItemMod { ModId = mod.Id, Def = mod, Affix = AffixType.Prefix, Kind = ModKind.Explicit, Values = CraftingEngine.RollValues(mod, new Rng(1)) });
-
-        var augment = data.Currencies.First(c => c.Op == "augment");
-        var action = new CraftAction { Currency = augment };
-        var result = engine.Execute(item, action, new Rng(42));
-
+        Skip.If(TestData.Data == null, "Data folder not found");
+        var item = TestData.NewItem(Wand, Rarity.Magic).WithAffixes(1, 0);
+        var result = TestData.Engine!.Execute(item, TestData.Action("Orb of Augmentation"), new Rng(42));
         Assert.True(result.Applied);
         Assert.Equal(2, result.Item.AffixCount);
     }
@@ -64,27 +36,9 @@ public class CraftingEngineTests
     [SkippableFact]
     public void Annul_removes_one_mod()
     {
-        var (data, pool, engine) = SetupMinimal();
-        Skip.If(data == null, "Data folder not found");
-
-        var baseItem = data.FindBase("Siphoning Wand");
-        Skip.If(baseItem == null);
-
-        // Start with a 2-mod magic item
-        var item = new Item { BaseName = baseItem.Name, ItemClass = baseItem.ItemClass, Rarity = Rarity.Magic, ItemLevel = 82, Base = baseItem };
-        var rng = new Rng(1);
-        var prefixes = pool.Candidates(item, AffixType.Prefix);
-        var suffixes = pool.Candidates(item, AffixType.Suffix);
-        Skip.If(prefixes.Count == 0 || suffixes.Count == 0);
-
-        var p = prefixes[0].Mod;
-        var s = suffixes[0].Mod;
-        item.Mods.Add(new ItemMod { ModId = p.Id, Def = p, Affix = AffixType.Prefix, Kind = ModKind.Explicit, Values = CraftingEngine.RollValues(p, rng) });
-        item.Mods.Add(new ItemMod { ModId = s.Id, Def = s, Affix = AffixType.Suffix, Kind = ModKind.Explicit, Values = CraftingEngine.RollValues(s, rng) });
-
-        var annul = data.Currencies.First(c => c.Op == "annul");
-        var result = engine.Execute(item, new CraftAction { Currency = annul }, new Rng(42));
-
+        Skip.If(TestData.Data == null, "Data folder not found");
+        var item = TestData.NewItem(Wand, Rarity.Magic).WithAffixes(1, 1);
+        var result = TestData.Engine!.Execute(item, TestData.Action("Orb of Annulment"), new Rng(42));
         Assert.True(result.Applied);
         Assert.Equal(1, result.Item.AffixCount);
     }
@@ -92,16 +46,10 @@ public class CraftingEngineTests
     [SkippableFact]
     public void Corrupted_item_cannot_be_modified()
     {
-        var (data, pool, engine) = SetupMinimal();
-        Skip.If(data == null, "Data folder not found");
-
-        var baseItem = data.FindBase("Siphoning Wand");
-        Skip.If(baseItem == null);
-
-        var item = new Item { BaseName = baseItem.Name, ItemClass = baseItem.ItemClass, Rarity = Rarity.Normal, ItemLevel = 82, Base = baseItem, Corrupted = true };
-        var transmute = data.Currencies.First(c => c.Op == "transmute");
-        var check = engine.Check(item, new CraftAction { Currency = transmute });
-
+        Skip.If(TestData.Data == null, "Data folder not found");
+        var item = TestData.NewItem(Wand);
+        item.Corrupted = true;
+        var check = TestData.Engine!.Check(item, TestData.Action("Orb of Transmutation"));
         Assert.False(check.Ok);
         Assert.Contains("Corrupted", check.Reason);
     }
@@ -109,18 +57,41 @@ public class CraftingEngineTests
     [SkippableFact]
     public void Preview_shows_candidates_for_transmute()
     {
-        var (data, pool, engine) = SetupMinimal();
-        Skip.If(data == null, "Data folder not found");
-
-        var baseItem = data.FindBase("Siphoning Wand");
-        Skip.If(baseItem == null);
-
-        var item = new Item { BaseName = baseItem.Name, ItemClass = baseItem.ItemClass, Rarity = Rarity.Normal, ItemLevel = 82, Base = baseItem };
-        var transmute = data.Currencies.First(c => c.Op == "transmute");
-        var preview = engine.Preview(item, new CraftAction { Currency = transmute });
-
+        Skip.If(TestData.Data == null, "Data folder not found");
+        var preview = TestData.Engine!.Preview(TestData.NewItem(Wand), TestData.Action("Orb of Transmutation"));
         Assert.True(preview.Applicability.Ok);
-        Assert.True(preview.Additions.Count > 0, "Should have addition candidates");
+        Assert.NotEmpty(preview.Additions);
         Assert.Equal(1, preview.AddCount);
+    }
+
+    [SkippableFact]
+    public void Every_simulated_currency_has_an_operation()
+    {
+        Skip.If(TestData.Data == null, "Data folder not found");
+        var item = TestData.NewItem(Wand);
+        var unsupported = TestData.Data!.AllCurrencies.Where(c => c.Op != null)
+            .Where(c => TestData.Engine!.Check(item, new CraftAction { Currency = c }).Reason.Contains("planned for a later stage"))
+            .Select(c => c.Op).Distinct().ToList();
+        Assert.Empty(unsupported);
+    }
+
+    [SkippableFact]
+    public void Every_simulated_currency_and_crafting_omen_has_info_with_icon_and_description()
+    {
+        Skip.If(TestData.Data == null, "Data folder not found");
+        var names = TestData.Data!.AllCurrencies.Where(c => c.Op != null).Select(c => c.Name)
+            .Concat(TestData.Data.Omens.Where(o => o.Crafting).Select(o => o.Name));
+        var incomplete = names.Where(n => TestData.Data.FindCraftItem(n) is not { IconUrl: not null } info || info.Description.Count == 0).ToList();
+        Assert.Empty(incomplete);
+
+        // icons are served locally from the web project's wwwroot (downloaded by tools/poe2db_icons.py)
+        var wwwroot = Path.Combine(TestData.Data.DataFolder, "..", "src", "POE2Crafting.Web", "wwwroot");
+        var missingFiles = names.Select(n => TestData.Data.FindCraftItem(n)!.IconUrl!).Distinct().Where(url => !File.Exists(Path.Combine(wwwroot, url))).ToList();
+        Assert.Empty(missingFiles);
+
+        var exalt = TestData.Data.FindCraftItem("Perfect Exalted Orb")!;
+        Assert.Equal("Currency", exalt.Kind);
+        Assert.Contains("Minimum modifier level: 50", exalt.Facts);
+        Assert.Equal("Omen", TestData.Data.FindCraftItem("Omen of Sinistral Exaltation")!.Kind);
     }
 }

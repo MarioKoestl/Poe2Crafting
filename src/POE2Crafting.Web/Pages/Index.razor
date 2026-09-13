@@ -2,94 +2,123 @@
 @inject CraftingSession Session
 @inject GameData Data
 
-<div class="crafting-page">
+@* Desktop: every column/pane is its own (single) scroll area; narrow screens stack everything and the page scrolls. *@
+<div class="crafting-page @(_composing ? "composing" : "")">
     @* ---- LEFT: Item Panel ---- *@
-    <section class="item-panel">
+    <section class="item-panel panel">
         <div class="panel-header">
-            <h2>Item</h2>
+            <h2>@(!_composing ? "Item" : _editing ? "Edit Item" : "New Item")</h2>
             <div class="item-actions">
-                <button class="btn btn-sm" @onclick="ShowImport" disabled="@_composing">Import (Ctrl+Alt+C)</button>
-                <button class="btn btn-sm @(_composing ? "btn-active" : "")" @onclick="ToggleCompose">
-                    @(_composing ? "Back to Item" : "Compose New")
-                </button>
-                <button class="btn btn-sm" @onclick="ShowSaveLoad" disabled="@_composing">Save / Load</button>
+                @if (_composing)
+                {
+                    <button class="btn btn-sm" @onclick="OnComposeCancelled">Back to Item</button>
+                }
+                else
+                {
+                    @if (Session.CurrentItem != null)
+                    {
+                        <button class="btn btn-sm btn-primary" @onclick="() => StartCompose(edit: true)" title="Change modifiers, values, rarity or item level of this item">Edit</button>
+                    }
+                    <button class="btn btn-sm" @onclick="() => StartCompose(edit: false)" title="Compose a new item from a base">New</button>
+                    <button class="btn btn-sm" @onclick="ShowImport">Import</button>
+                    <button class="btn btn-sm" @onclick="ShowSaveLoad">Save / Load</button>
+                }
             </div>
         </div>
 
-        @if (Session.LastError != null)
-        {
-            <div class="error-banner">@Session.LastError</div>
-        }
-
-        @if (_composing)
-        {
-            <ItemComposer OnComposed="OnComposed" OnCancelled="OnComposeCancelled" />
-        }
-        else
-        {
-            @if (Session.CurrentItem != null)
+        <div class="panel-body">
+            @if (Session.LastError != null)
             {
-                <ItemDisplay Item="Session.CurrentItem" />
+                <div class="error-banner">@Session.LastError</div>
+            }
+
+            @if (_composing)
+            {
+                <ItemComposer Edit="_editing" OnComposed="OnItemReplaced" OnCancelled="OnComposeCancelled" />
             }
             else
             {
-                <div class="empty-state">
-                    <p>No item loaded. Import an item from the game (Ctrl+Alt+C text) or compose a new one with modifiers.</p>
-                </div>
-            }
-
-            @* History *@
-            @if (Session.History.Count > 0)
-            {
-                <div class="history-section">
-                    <h3>Crafting History <button class="btn btn-xs" @onclick="Undo" disabled="@(Session.History.Count <= 1)">Undo</button></h3>
-                    <div class="history-list">
-                        @foreach (var entry in Session.History.AsEnumerable().Reverse())
-                        {
-                            <div class="history-entry">
-                                <span class="history-action">@entry.Action</span>
-                                <span class="history-summary">@entry.Summary</span>
-                            </div>
-                        }
+                @if (Session.CurrentItem != null)
+                {
+                    <ItemDisplay Item="Session.CurrentItem" />
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">◇</div>
+                        <p>No item loaded.</p>
+                        <p class="empty-hint">Import an item from the game (Ctrl+Alt+C text) or compose one with modifiers.</p>
                     </div>
-                </div>
+                }
+
+                @if (Session.History.Count > 0)
+                {
+                    <div class="history-section">
+                        <h3 class="section-title">
+                            Crafting History
+                            <button class="btn btn-xs" @onclick="Undo" disabled="@(Session.History.Count <= 1)">Undo</button>
+                        </h3>
+                        <div class="history-list">
+                            @foreach (var entry in Session.History.AsEnumerable().Reverse())
+                            {
+                                <div class="history-entry">
+                                    <span class="history-action"><CraftText Text="@entry.Action" /></span>
+                                    <span class="history-summary" title="@entry.Summary">@entry.Summary</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
             }
-        }
+        </div>
     </section>
 
-    @* ---- RIGHT: Mode Tabs + Panels ---- *@
-    <section class="crafting-panel">
+    @* ---- RIGHT: Mode Tabs + two panes ---- *@
+    <section class="crafting-panel panel">
         <div class="mode-tabs">
-            <button class="mode-tab @(_mode == Mode.Simulator ? "active" : "")" @onclick="() => _mode = Mode.Simulator">
-                Simulator
-            </button>
-            <button class="mode-tab @(_mode == Mode.Planner ? "active" : "")" @onclick="() => _mode = Mode.Planner">
-                Crafting Planner
-            </button>
+            <button class="mode-tab @(_mode == Mode.Simulator ? "active" : "")" @onclick="() => _mode = Mode.Simulator">Simulator</button>
+            <button class="mode-tab @(_mode == Mode.Planner ? "active" : "")" @onclick="() => _mode = Mode.Planner">Crafting Planner</button>
         </div>
 
         @if (_mode == Mode.Simulator)
         {
             @if (Session.CurrentItem != null)
             {
-                <CurrencySelector OnCurrencySelected="OnCurrencySelected" />
-
-                @if (_selectedAction != null)
-                {
-                    <PreviewPanel Action="_selectedAction" OnExecute="OnExecute" OnChoose="OnChoose" />
-                }
+                <div class="workspace">
+                    <div class="pane">
+                        <RevealPanel OnChanged="StateHasChanged" />
+                        <CurrencySelector OnCurrencySelected="OnCurrencySelected" />
+                    </div>
+                    <div class="pane">
+                        @if (_selectedAction != null)
+                        {
+                            <PreviewPanel Action="_selectedAction" OnExecute="OnExecute" />
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <div class="empty-icon">⟡</div>
+                                <p>Select a currency</p>
+                                <p class="empty-hint">Its probabilities appear here; roll randomly or choose the outcome.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
             }
             else
             {
                 <div class="empty-state">
+                    <div class="empty-icon">◇</div>
                     <p>Load an item to see available currencies.</p>
                 </div>
             }
         }
         else @* Planner Mode *@
         {
-            <ItemBuilder OnPathsFound="OnPathsFound" />
-            <PlannerPanel @ref="_plannerPanel" />
+            <div class="workspace">
+                <div class="pane"><ItemBuilder OnPathsFound="OnPathsFound" /></div>
+                <div class="pane"><PlannerPanel @ref="_plannerPanel" /></div>
+            </div>
         }
     </section>
 </div>
@@ -136,7 +165,7 @@
 
     private Mode _mode = Mode.Simulator;
     private bool _showImport, _showSaveLoad;
-    private bool _composing;
+    private bool _composing, _editing;
     private string _importText = "";
     private CraftAction? _selectedAction;
     private PlannerPanel? _plannerPanel;
@@ -145,50 +174,43 @@
     private void ShowSaveLoad() { CloseModals(); _showSaveLoad = true; }
     private void CloseModals() { _showImport = false; _showSaveLoad = false; }
 
-    private void ToggleCompose()
+    /// <summary>Open the composer: a new item, or the current item for editing.</summary>
+    private void StartCompose(bool edit)
     {
-        _composing = !_composing;
-        if (_composing) CloseModals();
+        CloseModals();
+        _editing = edit;
+        _composing = true;
     }
 
-    private void OnComposed()
+    /// <summary>A different item (compose, edit, import, load, undo) invalidates the selected currency preview.</summary>
+    private void OnItemReplaced()
     {
         _composing = false;
         _selectedAction = null;
+        CloseModals();
     }
 
-    private void OnComposeCancelled()
-    {
-        _composing = false;
-    }
+    private void OnComposeCancelled() => _composing = false;
 
     private void DoImport()
     {
         if (string.IsNullOrWhiteSpace(_importText)) return;
-        Session.ImportItem(_importText);
-        if (Session.LastError == null) { _importText = ""; CloseModals(); _selectedAction = null; }
+        if (!Session.ImportItem(_importText)) return;
+        _importText = "";
+        OnItemReplaced();
     }
 
     private void OnCurrencySelected(CraftAction action) => _selectedAction = action;
 
-    private void OnExecute()
+    private void OnExecute(ManualChoice? choice)
     {
-        if (_selectedAction == null) return;
-        Session.Execute(_selectedAction);
-        StateHasChanged();
-    }
-
-    private void OnChoose(ManualChoice choice)
-    {
-        if (_selectedAction == null) return;
-        Session.Execute(_selectedAction, choice);
-        StateHasChanged();
+        if (_selectedAction != null) Session.Execute(_selectedAction, choice);
     }
 
     private void Undo()
     {
         Session.Undo();
-        _selectedAction = null;
+        OnItemReplaced();
     }
 
     private void OnPathsFound(ItemBuilder.PlannerResult result)
@@ -214,7 +236,7 @@
         {
             using var stream = e.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
             var project = await System.Text.Json.JsonSerializer.DeserializeAsync<CraftingProject>(stream, GameData.JsonOptions);
-            if (project != null) { Session.LoadProject(project); CloseModals(); _selectedAction = null; }
+            if (project != null) { Session.LoadProject(project); OnItemReplaced(); }
             else Session.SetError("Load failed: the file is empty.");
         }
         catch (Exception ex) { Session.SetError($"Load failed: {ex.Message}"); }

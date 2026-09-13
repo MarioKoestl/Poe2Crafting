@@ -126,12 +126,46 @@ Item Level: 82
         Assert.Equal("(189-208)% increased Spell Damage", mod.Def!.Text);
     }
 
+    [SkippableFact]
+    public void Shown_value_range_wins_over_a_mismatching_affix_name()
+    {
+        Skip.If(TestData.Data == null, "Data folder not found");
+        var text = @"Item Class: Rings
+Rarity: Rare
+Doom Hold
+Iron Ring
+--------
+Item Level: 82
+--------
+{ Prefix Modifier ""Rotund"" (Tier: 5) — Life }
++62(60-69) to maximum Life";
+        var mod = Assert.Single(ItemParser.Parse(text, TestData.Data).Affixes);
+        Assert.Equal("+(60-69) to maximum Life", mod.Def!.Text);
+    }
+
+    [SkippableFact]
+    public void Simple_ctrl_c_suffix_line_is_resolved_as_suffix()
+    {
+        Skip.If(TestData.Data == null, "Data folder not found");
+        var text = @"Item Class: Staves
+Rarity: Magic
+Sanctified Staff
+--------
+Item Level: 82
+--------
+53% increased Critical Hit Chance for Spells";
+        var mod = Assert.Single(ItemParser.Parse(text, TestData.Data).Affixes);
+        Assert.Equal(AffixType.Suffix, mod.Affix);
+        Assert.NotNull(mod.Def);
+    }
+
     [Fact]
     public void Normalised_texts_of_item_line_and_template_are_equal()
     {
-        Assert.Equal(ItemParser.NormaliseText("+(209-248) to maximum Mana"), ItemParser.NormaliseText("+238(209-248) to maximum Mana"));
-        Assert.Equal(ItemParser.NormaliseText("Adds (13-18) to (25-29) Fire Damage"), ItemParser.NormaliseText("Adds 16(13-18) to 27(25-29) Fire Damage"));
-        Assert.NotEqual(ItemParser.NormaliseText("(10-20)% increased Spell Damage"), ItemParser.NormaliseText("15% increased Cast Speed"));
+        Assert.Equal(ModText.StatSignature("+(209-248) to maximum Mana"), ModText.StatSignature("+238(209-248) to maximum Mana"));
+        Assert.Equal(ModText.StatSignature("+(209-248) to maximum Mana"), ModText.StatSignature("+238 to maximum Mana"));
+        Assert.Equal(ModText.StatSignature("Adds (13-18) to (25-29) Fire Damage"), ModText.StatSignature("Adds 16(13-18) to 27(25-29) Fire Damage"));
+        Assert.NotEqual(ModText.StatSignature("(10-20)% increased Spell Damage"), ModText.StatSignature("15% increased Cast Speed"));
     }
 
     [Fact]

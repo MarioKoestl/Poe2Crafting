@@ -1,0 +1,23 @@
+@* A probability bar row (removal, special outcome) with an optional choose button. *@
+
+<div class="dist-row @(Highlighted ? "pending-choice" : "")">
+    <div class="dist-bar-bg">
+        <div class="dist-bar @BarClass" style="width: @($"{Probability * 100:F1}")%"></div>
+    </div>
+    <span class="dist-pct">@($"{Probability:P1}")</span>
+    <span class="dist-label">@Label</span>
+    @if (ChooseLabel != null)
+    {
+        <button class="btn btn-xs @(Highlighted ? "btn-active" : "")" @onclick="OnChoose">@ChooseLabel</button>
+    }
+</div>
+
+@code {
+    [Parameter] public double Probability { get; set; }
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string BarClass { get; set; } = "";
+    [Parameter] public bool Highlighted { get; set; }
+    /// <summary>Button text; null hides the button.</summary>
+    [Parameter] public string? ChooseLabel { get; set; }
+    [Parameter] public EventCallback OnChoose { get; set; }
+}

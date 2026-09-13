@@ -1,0 +1,21 @@
+@* Text made of crafting item names joined by " + " (currency + omen) or " → " (path), e.g. "Perfect Exalted Orb + Omen of Sinistral Exaltation":
+   every known name becomes a CraftItemLink, everything else stays text. *@
+@using System.Text.RegularExpressions
+
+@foreach (var part in Separator.Split(Text))
+{
+    if (Separator.IsMatch(part))
+    {
+        @part
+    }
+    else
+    {
+        <CraftItemLink Name="@part" />
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+
+    private static readonly Regex Separator = new("( \\+ | → )", RegexOptions.Compiled);
+}

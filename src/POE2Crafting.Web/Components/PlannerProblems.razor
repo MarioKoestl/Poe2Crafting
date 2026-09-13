@@ -1,0 +1,14 @@
+@* Reasons why the planner could not (fully) reach the target. *@
+@if (Problems.Count > 0)
+{
+    <div class="strategy-warnings">
+        @foreach (var problem in Problems)
+        {
+            <div class="strategy-warning">⚠ @problem</div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public List<string> Problems { get; set; } = new();
+}

@@ -30,12 +30,25 @@ public sealed class Rng
         return weights.Count - 1;
     }
 
+    /// <summary>Pick up to <paramref name="count"/> distinct indices, each draw proportional to the remaining weights.</summary>
+    public List<int> SampleWeighted(IReadOnlyList<double> weights, int count)
+    {
+        var remaining = weights.ToList();
+        var picked = new List<int>();
+        while (picked.Count < count && remaining.Any(w => w > 0))
+        {
+            int i = PickWeighted(remaining);
+            picked.Add(i);
+            remaining[i] = 0;
+        }
+        return picked;
+    }
+
     /// <summary>Roll a value inside a range; integer ranges give integers, fractional ranges keep two decimals.</summary>
     public double RollRange(double min, double max)
     {
         if (max < min) (min, max) = (max, min);
-        bool integer = min == Math.Floor(min) && max == Math.Floor(max);
-        if (integer) return _random.Next((int)min, (int)max + 1);
+        if (Items.ModText.IsIntegerRange(min, max)) return _random.Next((int)min, (int)max + 1);
         return Math.Round(min + _random.NextDouble() * (max - min), 2);
     }
 }

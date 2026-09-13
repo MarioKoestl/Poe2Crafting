@@ -2,139 +2,78 @@
 @inject GameData Data
 
 <div class="item-builder">
-    <h3>Target Item</h3>
+    <h3 class="pane-title">Target Item</h3>
 
-    <div class="builder-layout">
-        <div class="builder-controls">
-            <BaseItemForm @bind-ItemClass="_itemClass" @bind-BaseName="BaseName" @bind-Rarity="TargetRarity" @bind-ItemLevel="ItemLevel" RarityLabel="Target Rarity" />
-
-            @if (Session.CurrentItem?.Base is { } current && !ReferenceEquals(current, _base))
-            {
-                <div class="builder-hint">
-                    <button class="btn btn-sm" @onclick="UseCurrentBase">Use current item's base (@current.Name, ilvl @Session.CurrentItem.ItemLevel)</button>
-                </div>
-            }
-
-            @if (_base != null)
-            {
-                <ModBrowser Base="_base" ItemLevel="_itemLevel" Rarity="_rarity" Selection="_selection" OnChanged="BuildPreviewItem" Title="Target Modifiers" />
-
-                <label class="checkbox-row" title="Count a roll of a better tier than the selected one as a hit">
-                    <input type="checkbox" @bind="_allowBetterTiers" /> Better tiers also count as a hit
-                </label>
-
-                <div class="builder-actions">
-                    <button class="btn btn-primary btn-execute" @onclick="FindPaths" disabled="@(_selection.Mods.Count == 0)">
-                        Find Crafting Paths
-                    </button>
-                    @if (Session.CurrentItem != null)
-                    {
-                        var sameBase = ReferenceEquals(Session.CurrentItem.Base, _base);
-                        <button class="btn btn-execute" @onclick="FindPathsFromCurrent" disabled="@(_selection.Mods.Count == 0 || !sameBase)"
-                                title="@(sameBase ? "Calculate paths starting from the current item in the simulator" : "The current item has a different base than this target")">
-                            Path from Current Item
-                        </button>
-                    }
-                </div>
-            }
+    @if (Session.CurrentItem is { Base: not null } currentItem)
+    {
+        <div class="builder-hint">
+            <button class="btn btn-sm" @onclick="() => _draft.LoadFrom(currentItem, copyValues: false)"
+                    title="Take base, rarity, item level and modifiers of the current item as the target, then edit it">
+                Load current item as target
+            </button>
         </div>
+    }
+    else
+    {
+        <p class="rarity-note">Import or compose an item on the left first; the target is built from that item.</p>
+    }
 
-        @if (_previewItem != null)
+    @if (_draft.Base != null)
+    {
+        <div class="builder-hint">Target base: <strong>@_draft.Base.Name</strong> (ilvl @_draft.ItemLevel)</div>
+
+        @if (_draft.Preview != null)
         {
             <div class="builder-preview">
-                <h4>Item Preview</h4>
-                <ItemDisplay Item="_previewItem" />
+                <ItemDisplay Item="_draft.Preview" />
             </div>
         }
-    </div>
+
+        <BaseItemForm Draft="_draft" RarityLabel="Target Rarity" ShowBase="false" OnChanged="StateHasChanged" />
+        <ModBrowser Draft="_draft" Title="Target Modifiers" ValueLabel="min" OnChanged="StateHasChanged" />
+
+        <label class="checkbox-row" title="Count a roll of a better tier than the selected one as a hit">
+            <input type="checkbox" @bind="_allowBetterTiers" /> Better tiers also count as a hit
+        </label>
+
+        <div class="builder-actions sticky-actions">
+            @{
+                var sameBase = Session.CurrentItem != null && ReferenceEquals(Session.CurrentItem.Base, _draft.Base);
+            }
+            <button class="btn btn-primary btn-execute" @onclick="FindPaths" disabled="@(!sameBase)"
+                    title="@(sameBase ? "Calculate the steps from the current item to this target" : "The item on the left has a different base: load it as target again")">
+                Path from Current Item
+            </button>
+        </div>
+    }
 </div>
 
 @code {
     [Parameter] public EventCallback<PlannerResult> OnPathsFound { get; set; }
 
-    private string _itemClass = "";
-    private string _baseName = "";
-    private BaseItem? _base;
-    private int _itemLevel = 82;
-    private Rarity _rarity = Rarity.Rare;
+    private ItemDraft _draft = null!;
     private bool _allowBetterTiers = true;
-    private ModSelection _selection = null!;
-    private Item? _previewItem;
 
-    protected override void OnInitialized() => _selection = new ModSelection(Data.Config.Assumptions);
-
-    private string BaseName
-    {
-        get => _baseName;
-        set
-        {
-            _baseName = value;
-            _base = string.IsNullOrEmpty(value) ? null : Data.FindBase(value);
-            _selection.Clear();
-            BuildPreviewItem();
-        }
-    }
-
-    private int ItemLevel
-    {
-        get => _itemLevel;
-        set { _itemLevel = Math.Clamp(value, 1, 100); _selection.Enforce(_rarity, _itemLevel); BuildPreviewItem(); }
-    }
-
-    private Rarity TargetRarity
-    {
-        get => _rarity;
-        set { _rarity = value; _selection.Enforce(_rarity, _itemLevel); BuildPreviewItem(); }
-    }
-
-    private void UseCurrentBase()
-    {
-        var current = Session.CurrentItem;
-        if (current?.Base == null) return;
-        _itemClass = current.Base.ItemClass;
-        BaseName = current.Base.Name;
-        ItemLevel = current.ItemLevel;
-    }
-
-    private void BuildPreviewItem() => _previewItem = _base != null ? _selection.BuildItem(_base, _rarity, _itemLevel) : null;
-
-    private TargetItemSpec BuildSpec(Item forItem) => new()
-    {
-        BaseName = forItem.BaseName,
-        ItemClass = forItem.ItemClass,
-        ItemLevel = forItem.ItemLevel,
-        TargetRarity = _rarity,
-        TargetMods = _selection.ToTargetMods(Session.Engine.Pool, forItem, _allowBetterTiers),
-    };
+    protected override void OnInitialized() => _draft = new ItemDraft(Data);
 
     private async Task FindPaths()
     {
-        if (_base == null || _selection.Mods.Count == 0) return;
-        var spec = BuildSpec(new Item { BaseName = _base.Name, ItemClass = _base.ItemClass, ItemLevel = _itemLevel, Base = _base });
-        var strategies = new CraftingPathFinder(Data, Session.Engine.Pool).FindPaths(spec);
-        await OnPathsFound.InvokeAsync(new PlannerResult { Spec = spec, Strategies = strategies });
-    }
-
-    private async Task FindPathsFromCurrent()
-    {
-        var current = Session.CurrentItem;
-        if (current == null || _selection.Mods.Count == 0) return;
-        var spec = BuildSpec(current);
-        var strategies = new CraftingPathFinder(Data, Session.Engine.Pool).FindPathsFromItem(current, spec);
-        await OnPathsFound.InvokeAsync(new PlannerResult
+        if (Session.CurrentItem is not { } start) return;
+        var spec = new TargetItemSpec
         {
-            Spec = spec,
-            Strategies = strategies,
-            FromItem = true,
-            SourceItemDescription = current.ToString(),
-        });
+            BaseName = start.BaseName,
+            ItemClass = start.ItemClass,
+            ItemLevel = start.ItemLevel,
+            TargetRarity = _draft.Rarity,
+            TargetMods = _draft.Selection.ToTargetMods(Session.Engine.Pool, start, _allowBetterTiers),
+        };
+        var plan = new CraftingPathFinder(Data, Session.Engine.Pool).FindPathsFromItem(start, spec);
+        await OnPathsFound.InvokeAsync(new PlannerResult { Plan = plan, SourceItemDescription = start.ToString() });
     }
 
     public sealed class PlannerResult
     {
-        public TargetItemSpec Spec { get; init; } = null!;
-        public List<CraftingStrategy> Strategies { get; init; } = new();
-        public bool FromItem { get; init; }
-        public string? SourceItemDescription { get; init; }
+        public PlanResult Plan { get; init; } = new();
+        public string SourceItemDescription { get; init; } = "";
     }
 }

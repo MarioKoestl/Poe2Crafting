@@ -8,4 +8,8 @@
     <RootNamespace>POE2Crafting.Core</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="POE2Crafting.Tests" />
+  </ItemGroup>
+
 </Project>

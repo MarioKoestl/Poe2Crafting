@@ -1,5 +1,6 @@
 @* Displays an item in a POE-style tooltip layout *@
 @inject ModPool Pool
+@inject GameData Data
 
 <div class="item-box rarity-@Item.Rarity.ToString().ToLower()">
     <div class="item-header">
@@ -24,17 +25,17 @@
 
     <div class="item-separator"></div>
 
-    @* Runes, implicit and enchant mods *@
+    @* Runes, corruption enchantments, implicit and enchant mods *@
     @foreach (var rune in Item.Runes)
     {
         <div class="mod-line implicit" title="Rune">@rune</div>
     }
-    @foreach (var mod in Item.Mods.Where(m => m.Kind is ModKind.Implicit or ModKind.Enchant))
+    @foreach (var mod in ImplicitLines)
     {
-        <div class="mod-line implicit" title="@mod.Kind">@mod.DisplayText()</div>
+        <div class="mod-line @(mod.Kind == ModKind.CorruptedImplicit ? "corrupted-implicit" : "implicit")" title="@mod.Kind">@mod.DisplayText()</div>
     }
 
-    @if ((Item.Runes.Count > 0 || Item.Mods.Any(m => m.Kind is ModKind.Implicit or ModKind.Enchant)) && Item.Affixes.Any())
+    @if ((Item.Runes.Count > 0 || ImplicitLines.Any()) && Item.Affixes.Any())
     {
         <div class="item-separator"></div>
     }
@@ -42,13 +43,14 @@
     @* Explicit mods *@
     @foreach (var mod in Item.Affixes.OrderBy(m => m.Affix))
     {
-        <div class="mod-line @(mod.Affix == AffixType.Prefix ? "prefix" : "suffix") @(mod.Kind == ModKind.Crafted ? "crafted" : "") @(mod.Fractured ? "fractured" : "") @(mod.Kind == ModKind.Desecrated ? "desecrated" : "")">
-            <span class="mod-indicator" title="@ModTooltip(mod)">@(mod.Affix == AffixType.Prefix ? "P" : "S")</span>
+        <div class="mod-line @AffixUi.Css(mod.Affix) @(mod.Kind == ModKind.Crafted ? "crafted" : "") @(mod.Fractured ? "fractured" : "") @(mod.Kind == ModKind.Desecrated ? "desecrated" : "")">
+            <span class="mod-indicator" title="@ModTooltip(mod)">@AffixUi.Letter(mod.Affix)</span>
             @if (mod.Def != null && mod.Kind != ModKind.Crafted && Pool.TryDisplayTier(mod.Def, Item) is { } tier)
             {
-                <span class="mod-tier" title="@mod.Def.Name">T@(tier)</span>
+                <span class="mod-tier" title="@mod.Def.DisplayName">T@(tier)</span>
             }
             <span class="mod-text">@mod.DisplayText()</span>
+            @if (Item.QualityEnhances(mod)) { <span class="mod-badge quality-badge" title="Enhanced by @(Item.Quality)% @Item.QualityType quality">+@(Item.Quality)% Q</span> }
             @if (mod.Fractured) { <span class="mod-badge fractured-badge">Fractured</span> }
             @if (mod.Kind == ModKind.Crafted) { <span class="mod-badge crafted-badge">Crafted</span> }
             @if (mod.Kind == ModKind.Desecrated) { <span class="mod-badge desecrated-badge">Desecrated</span> }
@@ -61,19 +63,15 @@
         <div class="mod-line unmatched" title="Not matched to a known prefix/suffix">@mod.DisplayText()</div>
     }
 
-    @* Corrupted implicit mods *@
-    @foreach (var mod in Item.Mods.Where(m => m.Kind == ModKind.CorruptedImplicit))
-    {
-        <div class="mod-line corrupted-implicit">@mod.DisplayText()</div>
-    }
-
     <div class="item-footer">
         <div class="affix-count">
             Affixes: @Item.PrefixCount P / @Item.SuffixCount S
-            @if (Item.Rarity == Rarity.Magic) { <span class="max-info">(max 1/1)</span> }
-            @if (Item.Rarity == Rarity.Rare) { <span class="max-info">(max 3/3)</span> }
+            @if (Item.Rarity is Rarity.Magic or Rarity.Rare)
+            {
+                <span class="max-info">(max @Rules.MaxPrefixes(Item.Rarity)/@Rules.MaxSuffixes(Item.Rarity))</span>
+            }
         </div>
-        @if (Item.Corrupted) { <div class="flag corrupted">Corrupted</div> }
+        @if (Item.Corrupted) { <div class="flag corrupted">@(Item.TwiceCorrupted ? "Twice Corrupted" : "Corrupted")</div> }
         @if (Item.Mirrored) { <div class="flag mirrored">Mirrored</div> }
         @if (Item.Sanctified) { <div class="flag sanctified">Sanctified</div> }
         @if (Item.Foreseeing) { <div class="flag foreseeing">Foreseeing</div> }
@@ -83,13 +81,18 @@
 @code {
     [Parameter, EditorRequired] public Item Item { get; set; } = null!;
 
+    private SimAssumptions Rules => Data.Config.Assumptions;
+
+    private IEnumerable<ItemMod> ImplicitLines => Item.Mods.Where(m => m.Kind is ModKind.CorruptedImplicit or ModKind.Implicit or ModKind.Enchant)
+        .OrderBy(m => m.Kind == ModKind.CorruptedImplicit ? 0 : 1);
+
     private string ModTooltip(ItemMod mod)
     {
         var parts = new List<string>();
-        parts.Add(mod.Affix == AffixType.Prefix ? "Prefix" : "Suffix");
+        parts.Add(mod.Affix.ToString());
         if (mod.Def != null)
         {
-            parts.Add($"\"{mod.Def.Name}\"");
+            parts.Add($"\"{mod.Def.DisplayName}\"");
             if (mod.Kind != ModKind.Crafted && Pool.TryDisplayTier(mod.Def, Item) is { } tier) parts.Add($"Tier {tier}/{Pool.DisplayTierCount(mod.Def, Item)}");
             parts.Add($"ilvl {mod.Def.Level}");
         }

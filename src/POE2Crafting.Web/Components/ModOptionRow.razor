@@ -1,0 +1,25 @@
+@* One modifier as a selectable row (probability, P/S, tier, name, text), used by the preview and the Well of Souls. *@
+@inject ModPool Pool
+
+<div class="add-row @AffixUi.Css(Mod.AffixType, "-row")">
+    @if (Probability is { } p)
+    {
+        <span class="add-pct">@($"{p * 100:F2}") %</span>
+    }
+    <span class="add-type @AffixUi.TypeCss(Mod.AffixType)">@AffixUi.Letter(Mod.AffixType)</span>
+    <span class="add-tier">@(Pool.TryDisplayTier(Mod, Item) is { } tier ? $"T{tier}" : "")</span>
+    <span class="add-name">@Mod.DisplayName</span>
+    <span class="add-sep">—</span>
+    <span class="add-stat">@Mod.Text</span>
+    @if (OnChoose.HasDelegate)
+    {
+        <button class="btn btn-xs add-choose" @onclick="OnChoose">Choose</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ModDef Mod { get; set; } = null!;
+    [Parameter, EditorRequired] public Item Item { get; set; } = null!;
+    [Parameter] public double? Probability { get; set; }
+    [Parameter] public EventCallback OnChoose { get; set; }
+}

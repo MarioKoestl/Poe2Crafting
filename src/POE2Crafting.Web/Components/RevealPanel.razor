@@ -1,0 +1,81 @@
+@* Well of Souls: reveal the unrevealed desecrated modifiers of the current item. *@
+@inject CraftingSession Session
+
+@if (Session.CurrentItem is { } item && item.UnrevealedMods.Any())
+{
+    <div class="reveal-panel">
+        <h3 class="pane-title">Well of Souls</h3>
+        <label class="checkbox-row" title="Omen of Abyssal Echoes: the reveal options can be rerolled once">
+            <input type="checkbox" @bind="_echoes" /> <CraftItemLink Name="Omen of Abyssal Echoes" /> active
+        </label>
+
+        @foreach (var (mod, index) in item.UnrevealedMods.ToList())
+        {
+            var idx = index;
+            var options = Session.RevealOptions(idx);
+            var showPool = _showPool.Contains(idx);
+            <div class="distribution-section">
+                <h4>
+                    @mod.DisplayText()
+                    <span class="mod-count">@RevealSummary(mod)</span>
+                </h4>
+
+                @if (options == null)
+                {
+                    <button class="btn btn-primary" @onclick="() => Do(() => Session.RollRevealOptions(idx))">Reveal (roll options)</button>
+                }
+                else
+                {
+                    <div class="addition-list">
+                        @foreach (var option in options)
+                        {
+                            <ModOptionRow Mod="option" Item="item" OnChoose="() => Do(() => Session.Reveal(idx, option.Id))" />
+                        }
+                    </div>
+                    @if (_echoes && Session.CanRerollReveal(idx))
+                    {
+                        <button class="btn btn-sm" @onclick="() => Do(() => Session.RerollRevealOptions(idx))">Reroll options (Abyssal Echoes)</button>
+                    }
+                }
+
+                <button class="btn btn-sm" @onclick="() => TogglePool(idx)">@(showPool ? "Hide" : "Show") full pool / choose any</button>
+                @if (showPool)
+                {
+                    <div class="addition-list">
+                        @foreach (var c in Session.Engine.RevealPool(item, idx))
+                        {
+                            <ModOptionRow Mod="c.Mod" Item="item" Probability="c.Probability" OnChoose="() => Do(() => Session.Reveal(idx, c.Mod.Id))" />
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Raised after the item or the rolled options changed, so the page (item display, history) re-renders.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool _echoes;
+
+    private Task Do(Action action)
+    {
+        action();
+        return OnChanged.InvokeAsync();
+    }
+    private readonly HashSet<int> _showPool = new();
+
+    private void TogglePool(int index)
+    {
+        if (!_showPool.Remove(index)) _showPool.Add(index);
+    }
+
+    private static string RevealSummary(ItemMod mod)
+    {
+        var parts = new List<string?> { mod.SourceName, mod.Reveal?.RequiredTag?.Replace("_mod", "") is { } boss ? $"guaranteed {boss}" : null,
+            mod.Reveal?.MinModLevel > 0 ? $"min level {mod.Reveal.MinModLevel}" : null, mod.Reveal?.Otherworldly == true ? "otherworldly" : null };
+        var text = string.Join(", ", parts.Where(p => p != null));
+        return text.Length > 0 ? $"({text})" : "";
+    }
+}

@@ -1,33 +1,49 @@
 @inject CraftingSession Session
+@inject GameData Data
 
 <div class="currency-panel">
-    <h3>Currencies</h3>
+    <h3 class="pane-title">Currencies</h3>
 
-    <div class="currency-filter">
-        <input type="text" @bind="_filter" @bind:event="oninput" placeholder="Search currencies, essences, alloys..." />
-        <label class="checkbox-row">
-            <input type="checkbox" @bind="_onlyApplicable" /> Only applicable
+    <div class="search-filter">
+        <input type="text" @bind="_filter" @bind:event="oninput" placeholder="Search names and descriptions (e.g. life, spell, prefix)..." />
+        <label class="checkbox-row" title="Hide currencies that cannot be used on the current item">
+            <input type="checkbox" @bind="_onlyApplicable" /> Only usable
         </label>
     </div>
 
-    @foreach (var group in GetGroups())
+    @{
+        var (groups, hidden) = GetGroups();
+    }
+    @if (hidden > 0)
     {
-        <h4 class="currency-group-title">@group.Key <span class="mod-count">(@group.Count(x => x.App.Ok) usable)</span></h4>
+        <p class="builder-hint">
+            @hidden more match@(hidden == 1 ? "es" : "") but can't be used on this item.
+            <button class="btn btn-xs" @onclick="() => _onlyApplicable = false">Show all</button>
+        </p>
+    }
+
+    @foreach (var group in groups)
+    {
+        <h4 class="currency-group-title">@group.Key <span class="count-pill">@group.Count(x => x.App.Ok) usable</span></h4>
         <div class="currency-grid">
             @foreach (var (currency, app) in group)
             {
-                var iconUrl = CurrencyIconHelper.GetIconUrl(currency);
+                var iconUrl = Data.FindCraftItem(currency.Name)?.IconUrl;
                 <button class="currency-btn @(app.Ok ? "applicable" : "not-applicable") @(_selectedCurrency?.Name == currency.Name ? "selected" : "")"
-                        @onclick="() => Select(currency)" title="@currency.DescriptionText">
-                    @if (iconUrl != null)
-                    {
-                        <img src="@iconUrl" alt="" class="currency-icon" loading="lazy" onerror="this.style.display='none'" />
-                    }
-                    <span class="currency-name">@currency.Name</span>
-                    @if (!app.Ok)
-                    {
-                        <span class="currency-reason">@app.Reason</span>
-                    }
+                        @onclick="() => Select(currency)" title="@(app.Ok ? currency.DescriptionText : app.Reason)">
+                    <span class="currency-icon-box">
+                        @if (iconUrl != null)
+                        {
+                            <img src="@iconUrl" alt="" class="currency-icon" loading="lazy" onerror="this.style.display='none'" />
+                        }
+                    </span>
+                    <span class="currency-text">
+                        <span class="currency-name"><CraftItemLink Name="@currency.Name" ShowIcon="false" /></span>
+                        @if (!app.Ok)
+                        {
+                            <span class="currency-reason" title="@app.Reason">@app.Reason</span>
+                        }
+                    </span>
                 </button>
             }
         </div>
@@ -39,15 +55,23 @@
         @if (omens.Count > 0)
         {
             <div class="omen-section">
-                <h4>Omens (optional)</h4>
+                <h4>Active omens <span class="count-pill">@(_selectedOmens.Count == 0 ? "none" : $"{_selectedOmens.Count} active")</span></h4>
                 <div class="omen-grid">
-                    <button class="omen-btn @(_selectedOmen == null ? "selected" : "")" @onclick="() => SelectOmen(null)">None</button>
                     @foreach (var omen in omens)
                     {
-                        <button class="omen-btn @(_selectedOmen?.Name == omen.Name ? "selected" : "")"
-                                @onclick="() => SelectOmen(omen)" title="@omen.Description">
-                            @omen.Name
+                        var active = _selectedOmens.Contains(omen);
+                        var blocked = active ? null : Session.CombinationProblem(_selectedCurrency, _selectedOmens.Append(omen).ToList());
+                        @* aria-disabled instead of disabled: disabled buttons swallow the hover that opens the omen info *@
+                        <button class="omen-btn @(active ? "selected" : "") @(blocked != null ? "blocked" : "")" aria-disabled="@(blocked != null)"
+                                title="@(blocked ?? (active ? "Click to deactivate" : "Click to activate (several omens can be active at once)"))"
+                                @onclick="() => { if (blocked == null) return ToggleOmen(omen); return Task.CompletedTask; }">
+                            <span class="omen-check">@(active ? "✓" : "+")</span>
+                            <CraftItemLink Name="@omen.Name" />
                         </button>
+                    }
+                    @if (_selectedOmens.Count > 0)
+                    {
+                        <button class="btn btn-xs" @onclick="ClearOmens">Clear</button>
                     }
                 </div>
             </div>
@@ -58,40 +82,55 @@
 @code {
     [Parameter] public EventCallback<CraftAction> OnCurrencySelected { get; set; }
 
-    private string _filter = "";
-    private bool _onlyApplicable;
-    private CurrencyDef? _selectedCurrency;
-    private OmenDef? _selectedOmen;
+    private const string OrbsSection = "Orbs & Currency";
+    private static readonly string[] SyntheticSections = { GameData.EssenceSection, GameData.AlloySection, GameData.CatalystSection };
+    private static readonly string[] GroupOrder = SyntheticSections.Prepend(OrbsSection).ToArray();
 
-    private IEnumerable<IGrouping<string, (CurrencyDef Currency, Applicability App)>> GetGroups()
+    private string _filter = "";
+    private bool _onlyApplicable = true;
+    private CurrencyDef? _selectedCurrency;
+    private readonly List<OmenDef> _selectedOmens = new();
+
+    /// <summary>Currencies matching the search (name or description), grouped; plus how many matches the "only usable" filter hides.</summary>
+    private (List<IGrouping<string, (CurrencyDef Currency, Applicability App)>> Groups, int Hidden) GetGroups()
     {
-        IEnumerable<(CurrencyDef Currency, Applicability App)> all = Session.ApplicableCurrencies();
-        if (!string.IsNullOrWhiteSpace(_filter))
-            all = all.Where(x => x.Currency.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase));
-        if (_onlyApplicable)
-            all = all.Where(x => x.App.Ok);
-        return all
+        var matching = Session.ApplicableCurrencies().Where(x => Matches(x.Currency)).ToList();
+        var shown = _onlyApplicable ? matching.Where(x => x.App.Ok).ToList() : matching;
+        var groups = shown
             .OrderByDescending(x => x.App.Ok).ThenBy(x => x.Currency.Name)
-            .GroupBy(x => x.Currency.Op == "essence" ? (x.Currency.Section == "Alloy" ? "Alloys" : "Essences") : "Orbs & Currency")
-            .OrderBy(g => g.Key switch { "Orbs & Currency" => 0, "Essences" => 1, _ => 2 });
+            .GroupBy(x => SyntheticSections.Contains(x.Currency.Section) ? x.Currency.Section! : OrbsSection)
+            .OrderBy(g => Array.IndexOf(GroupOrder, g.Key))
+            .ToList();
+        return (groups, string.IsNullOrWhiteSpace(_filter) ? 0 : matching.Count - shown.Count);
     }
+
+    private bool Matches(CurrencyDef currency) =>
+        string.IsNullOrWhiteSpace(_filter) ||
+        currency.Name.Contains(_filter.Trim(), StringComparison.OrdinalIgnoreCase) ||
+        currency.DescriptionText.Contains(_filter.Trim(), StringComparison.OrdinalIgnoreCase);
 
     private async Task Select(CurrencyDef currency)
     {
         _selectedCurrency = currency;
-        _selectedOmen = null;
+        _selectedOmens.Clear();
         await FireSelected();
     }
 
-    private async Task SelectOmen(OmenDef? omen)
+    private async Task ToggleOmen(OmenDef omen)
     {
-        _selectedOmen = omen;
+        if (!_selectedOmens.Remove(omen)) _selectedOmens.Add(omen);
+        await FireSelected();
+    }
+
+    private async Task ClearOmens()
+    {
+        _selectedOmens.Clear();
         await FireSelected();
     }
 
     private async Task FireSelected()
     {
         if (_selectedCurrency == null) return;
-        await OnCurrencySelected.InvokeAsync(new CraftAction { Currency = _selectedCurrency, Omen = _selectedOmen });
+        await OnCurrencySelected.InvokeAsync(new CraftAction { Currency = _selectedCurrency, Omens = _selectedOmens.ToList() });
     }
 }

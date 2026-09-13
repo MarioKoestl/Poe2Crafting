@@ -26,10 +26,6 @@ public static class ItemParser
     private static readonly Regex PropertyRx = new(@"^[A-Z][A-Za-z' ]{1,40}:(\s|$)", RegexOptions.Compiled);
     private static readonly Regex MarkerRx = new(@"\s*\((implicit|rune|enchant|crafted|desecrated|fractured|augmented)\)\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    // "238(209-248)" | "(209-248)" | "238"
-    private static readonly Regex ValueToken = new(@"(?<v>-?\d+(?:\.\d+)?)(?:\((?<a>-?\d+(?:\.\d+)?)-(?<b>-?\d+(?:\.\d+)?)\))?", RegexOptions.Compiled);
-    private static readonly Regex TemplateToken = new(@"\((?<a>-?\d+(?:\.\d+)?)\s*-\s*(?<b>-?\d+(?:\.\d+)?)\)|(?<v>-?\d+(?:\.\d+)?)", RegexOptions.Compiled);
-
     private static readonly string[] QualityNotCatalyst = { "augmented", "unmet" };
 
     /// <summary>Parse an item text. Optionally bind to game data for base and ModDef resolution.</summary>
@@ -113,6 +109,7 @@ public static class ItemParser
             switch (lines[0])
             {
                 case "Corrupted": item.Corrupted = true; return;
+                case "Twice Corrupted": item.Corrupted = item.TwiceCorrupted = true; return;
                 case "Mirrored": item.Mirrored = true; return;
                 case "Unidentified": item.Identified = false; return;
                 case "Sanctified": item.Sanctified = true; return;
@@ -162,7 +159,7 @@ public static class ItemParser
         {
             if (current == null) return;
             current.RawText = string.Join("\n", statTexts);
-            current.Values = statTexts.SelectMany(l => ValueToken.Matches(l).Select(m => ParseDouble(m.Groups["v"].Value))).ToList();
+            current.Values = ModText.RolledTokens(current.RawText).Select(t => t.Value).ToList();
             if (statTexts.Count > 0 || current.ModId.Length > 0) item.Mods.Add(current);
             current = null;
             statTexts.Clear();
@@ -193,7 +190,7 @@ public static class ItemParser
             }
 
             // reminder text, e.g. "(Consecrated Ground ...)"
-            if (line.StartsWith('(') && line.EndsWith(')') && !TemplateToken.IsMatch(line.Trim('(', ')'))) continue;
+            if (line.StartsWith('(') && line.EndsWith(')') && ModText.RolledTokens(line).Count == 0) continue;
 
             var marker = MarkerRx.Match(line);
             if (current == null || marker.Success)
@@ -230,62 +227,50 @@ public static class ItemParser
     private static void TryResolveMod(ItemMod mod, Item item, GameData data)
     {
         if (string.IsNullOrWhiteSpace(mod.RawText)) return;
-        if (mod.Kind is ModKind.Implicit or ModKind.Enchant) return;
+        // "(enchant)" lines on corrupted items are corruption enchantments; other implicits/enchants are shown as text
+        if (mod.Kind == ModKind.Implicit || mod.Kind == ModKind.Enchant && !item.Corrupted) return;
 
         var pages = data.PagesFor(item.Base, item.ItemClass);
-        var template = NormaliseText(mod.RawText);
-        var itemRanges = mod.RawText.Split('\n').SelectMany(l => ValueToken.Matches(l))
-            .Where(m => m.Groups["a"].Success).Select(m => (ParseDouble(m.Groups["a"].Value), ParseDouble(m.Groups["b"].Value))).ToList();
+        var signature = ModText.StatSignature(mod.RawText);
+        var itemRanges = ModText.RolledTokens(mod.RawText).Where(t => t.Range != null).Select(t => t.Range!).ToList();
 
         var candidates = data.Mods.Where(def =>
             CategoryFits(def.Category, mod.Kind) &&
             (mod.Affix == AffixType.Other || def.AffixType == mod.Affix) &&
             def.Weights.Keys.Any(pages.Contains) &&
-            (NormaliseText(def.Text) == template || def.AltTexts.Any(t => NormaliseText(t) == template))).ToList();
+            (ModText.StatSignature(def.Text) == signature || def.AltTexts.Any(t => ModText.StatSignature(t) == signature))).ToList();
         if (candidates.Count == 0) return;
 
         var name = mod.ModId;
         var best = candidates
-            .OrderByDescending(def => name.Length > 0 && def.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(def => itemRanges.Count > 0 && RangesEqual(def.Ranges, itemRanges))
+            // the shown (min-max) range identifies the tier exactly; the affix name can be ambiguous across classes or wrong in pasted text
+            .OrderByDescending(def => itemRanges.Count > 0 && RangesEqual(def.Ranges, itemRanges))
             .ThenByDescending(def => ValuesInside(def, mod.RawText))
-            .ThenBy(def => def.Category == "normal" ? 0 : 1)
+            .ThenByDescending(def => name.Length > 0 && def.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            .ThenBy(def => def.Category == ModCategories.Normal ? 0 : 1)
             .First();
 
         mod.ModId = best.Id;
         mod.Def = best;
+        if (mod.Kind == ModKind.Enchant) mod.Kind = ModKind.CorruptedImplicit;
         if (mod.Affix == AffixType.Other) mod.Affix = best.AffixType;
         mod.Values = AlignValues(best, mod.RawText);
     }
 
     private static bool CategoryFits(string category, ModKind kind) => kind switch
     {
-        ModKind.Crafted => GameData.EssenceCategories.Contains(category),
-        ModKind.Desecrated => category == "desecrated",
-        ModKind.CorruptedImplicit => category is "corrupted" or "corruption_upgrade",
-        _ => category is not ("corrupted" or "corruption_upgrade" or "socketable" or "bonded") && !GameData.EssenceCategories.Contains(category),
+        ModKind.Crafted => ModCategories.EssenceResults.Contains(category),
+        ModKind.Desecrated => category == ModCategories.Desecrated,
+        ModKind.CorruptedImplicit or ModKind.Enchant => category is ModCategories.Corrupted or ModCategories.CorruptionUpgrade,
+        _ => category is not (ModCategories.Corrupted or ModCategories.CorruptionUpgrade or ModCategories.Socketable or ModCategories.Bonded) && !ModCategories.EssenceResults.Contains(category),
     };
 
-    /// <summary>"+238(209-248) to maximum Mana" and "+(209-248) to maximum Mana" both become "+# to maximum mana".</summary>
-    public static string NormaliseText(string text)
-    {
-        var s = RolledWithRange.Replace(text, "#");   // item text: 238(209-248)
-        s = BareRange.Replace(s, "#");                // template:  (209-248)
-        s = BareNumber.Replace(s, "#");               // fixed numbers on both sides
-        s = Regex.Replace(s, @"\s+", " ");
-        return s.Trim().ToLowerInvariant();
-    }
-
-    private static readonly Regex RolledWithRange = new(@"-?\d+(?:\.\d+)?\(-?\d+(?:\.\d+)?\s*-\s*-?\d+(?:\.\d+)?\)", RegexOptions.Compiled);
-    private static readonly Regex BareRange = new(@"\(-?\d+(?:\.\d+)?\s*-\s*-?\d+(?:\.\d+)?\)", RegexOptions.Compiled);
-    private static readonly Regex BareNumber = new(@"\d+(?:\.\d+)?", RegexOptions.Compiled);
-
-    private static bool RangesEqual(List<double[]> defRanges, List<(double a, double b)> itemRanges)
+    private static bool RangesEqual(List<double[]> defRanges, List<double[]> itemRanges)
     {
         var defOnly = defRanges.Where(r => r[0] != r[1]).ToList();
         if (defOnly.Count != itemRanges.Count) return false;
         for (int i = 0; i < defOnly.Count; i++)
-            if (Math.Abs(defOnly[i][0] - itemRanges[i].a) > 0.001 || Math.Abs(defOnly[i][1] - itemRanges[i].b) > 0.001) return false;
+            if (Math.Abs(defOnly[i][0] - itemRanges[i][0]) > 0.001 || Math.Abs(defOnly[i][1] - itemRanges[i][1]) > 0.001) return false;
         return true;
     }
 
@@ -304,14 +289,12 @@ public static class ItemParser
     /// <summary>Pick the rolled numbers that correspond to the template's ranges (skipping fixed numbers like "+1 to Level").</summary>
     private static List<double> AlignValues(ModDef def, string rawText)
     {
-        var itemTokens = rawText.Split('\n').SelectMany(l => ValueToken.Matches(l)).Select(m => ParseDouble(m.Groups["v"].Value)).ToList();
-        var templateTokens = def.Text.Split('\n').SelectMany(l => TemplateToken.Matches(l)).Select(m => m.Groups["a"].Success).ToList();
+        var itemTokens = ModText.RolledTokens(rawText).Select(t => t.Value).ToList();
+        var templateTokens = ModText.TemplateTokenIsRange(def.Text);
         if (itemTokens.Count == templateTokens.Count)
             return itemTokens.Where((_, i) => templateTokens[i]).ToList();
         return itemTokens.Take(def.Ranges.Count).ToList();
     }
-
-    private static double ParseDouble(string s) => double.Parse(s, CultureInfo.InvariantCulture);
 
     // ------------------------------------------------------------------ export
 
@@ -339,7 +322,7 @@ public static class ItemParser
         if (implicits.Count > 0)
         {
             sb.AppendLine("--------");
-            foreach (var m in implicits) sb.AppendLine(m.DisplayText() + (m.Kind == ModKind.Enchant ? " (enchant)" : m.Kind == ModKind.Implicit && !m.DisplayText().StartsWith("Grants Skill:") ? " (implicit)" : ""));
+            foreach (var m in implicits) sb.AppendLine(m.DisplayText() + (m.Kind is ModKind.Enchant or ModKind.CorruptedImplicit ? " (enchant)" : m.Kind == ModKind.Implicit && !m.DisplayText().StartsWith("Grants Skill:") ? " (implicit)" : ""));
         }
         var affixes = item.Mods.Where(m => m.IsAffix).OrderBy(m => m.Affix).ToList();
         if (affixes.Count > 0)
@@ -353,7 +336,7 @@ public static class ItemParser
                 sb.AppendLine(mod.DisplayText());
             }
         }
-        if (item.Corrupted) { sb.AppendLine("--------"); sb.AppendLine("Corrupted"); }
+        if (item.Corrupted) { sb.AppendLine("--------"); sb.AppendLine(item.TwiceCorrupted ? "Twice Corrupted" : "Corrupted"); }
         if (item.Mirrored) { sb.AppendLine("--------"); sb.AppendLine("Mirrored"); }
         return sb.ToString().TrimEnd();
     }

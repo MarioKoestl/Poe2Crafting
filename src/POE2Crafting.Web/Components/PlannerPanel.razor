@@ -2,36 +2,31 @@
 
 <div class="planner-panel">
 
+    <h3 class="pane-title">Crafting Paths</h3>
     @if (_result == null)
     {
         <div class="planner-empty">
-            <p>Define your target item and click <strong>Find Crafting Paths</strong> to see strategies.</p>
+            <div class="empty-icon">⟡</div>
+            <p>Load the current item as target, edit it and click <strong>Path from Current Item</strong>.</p>
         </div>
     }
-    else if (_result.Strategies.Count == 0)
+    else if (_result.Plan.Strategies.Count == 0)
     {
         <div class="planner-empty">
             <p>No viable strategies found for this target. Try adjusting the target mods or item level.</p>
+            <PlannerProblems Problems="_result.Plan.Problems" />
         </div>
     }
     else
     {
+        <PlannerProblems Problems="_result.Plan.Problems" />
         <div class="planner-header">
-            <h4>
-                @(_result.Strategies.Count) Strateg@(_result.Strategies.Count == 1 ? "y" : "ies") Found
-                @if (_result.FromItem)
-                {
-                    <span class="from-item-badge">from current item</span>
-                }
-            </h4>
-            @if (_result.FromItem && !string.IsNullOrEmpty(_result.SourceItemDescription))
-            {
-                <div class="source-item-info">Starting from: @_result.SourceItemDescription</div>
-            }
+            <h4>@(_result.Plan.Strategies.Count) Strateg@(_result.Plan.Strategies.Count == 1 ? "y" : "ies") Found</h4>
+            <div class="source-item-info">Starting from: @_result.SourceItemDescription</div>
         </div>
 
         <div class="strategy-list">
-            @foreach (var strat in _result.Strategies)
+            @foreach (var strat in _result.Plan.Strategies)
             {
                 var s = strat;
                 var isSelected = _selectedStrategy?.Id == s.Id;
@@ -61,7 +56,7 @@
                         </div>
                     </div>
 
-                    <div class="strategy-card-desc">@s.Description</div>
+                    <div class="strategy-card-desc"><CraftText Text="@s.Description" /></div>
                 </div>
             }
         </div>
@@ -92,7 +87,7 @@
                                 <div class="step-number">@(i + 1)</div>
                                 <div class="step-content">
                                     <div class="step-header-row">
-                                        <span class="step-currency">@step.CurrencyName</span>
+                                        <span class="step-currency"><CraftText Text="@step.CurrencyName" /></span>
                                         <span class="step-prob @GetProbabilityClass(step.SuccessProbability)">
                                             @FormatProbability(step.SuccessProbability)
                                         </span>
@@ -108,26 +103,12 @@
                                     {
                                         <div class="step-restart">On fail: @step.RestartLabel</div>
                                     }
-                                    @if (step.Variants.Count > 0)
+                                    @if (step.Result != null)
                                     {
-                                        <div class="step-variants">
-                                            @foreach (var v in step.Variants)
-                                            {
-                                                <div class="variant-row @(v.IsRecommended ? "variant-best" : "")">
-                                                    <span class="variant-name">
-                                                        @if (v.IsRecommended) { <span class="variant-star">★</span> }
-                                                        @v.Name
-                                                    </span>
-                                                    <span class="variant-prob @GetProbabilityClass(v.Probability)">
-                                                        @FormatProbability(v.Probability)
-                                                    </span>
-                                                    @if (v.MinModLevel > 0)
-                                                    {
-                                                        <span class="variant-level">min ilvl @v.MinModLevel</span>
-                                                    }
-                                                </div>
-                                            }
-                                        </div>
+                                        <details class="step-result">
+                                            <summary>Item after this step</summary>
+                                            <ItemDisplay Item="step.Result" />
+                                        </details>
                                     }
                                     @if (step.Notes.Count > 0)
                                     {
@@ -142,16 +123,6 @@
                             </div>
                         }
                     </div>
-
-                    @if (_selectedStrategy.Warnings.Count > 0)
-                    {
-                        <div class="strategy-warnings">
-                            @foreach (var w in _selectedStrategy.Warnings)
-                            {
-                                <div class="strategy-warning">ℹ @w</div>
-                            }
-                        </div>
-                    }
                 }
             </div>
         }
@@ -167,7 +138,7 @@
     public void ShowResults(ItemBuilder.PlannerResult result)
     {
         _result = result;
-        _selectedStrategy = result.Strategies.FirstOrDefault();
+        _selectedStrategy = result.Plan.Strategies.FirstOrDefault();
         _showDiagram = false;
         if (_selectedStrategy != null)
             _mermaidDef = CraftingPathFinder.ToMermaid(_selectedStrategy);
@@ -209,8 +180,6 @@
     private static string GetStepClass(CraftStep step) => step.Type switch
     {
         CraftStepType.Brick => "step-brick",
-        CraftStepType.Checkpoint => "step-checkpoint",
-        CraftStepType.Decision => "step-decision",
-        _ => ""
+        CraftStepType.Checkpoint => "step-checkpoint",        _ => ""
     };
 }

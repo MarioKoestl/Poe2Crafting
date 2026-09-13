@@ -4,10 +4,14 @@ using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Web.Services;
 
-/// <summary>A modifier picked in the mod browser, with the category it was picked from (normal, breach_otherworldly, desecrated).</summary>
+/// <summary>
+/// A modifier picked in the mod browser (or taken from an item), with its category and optional values per range:
+/// the actual values in the Item Composer, minimum values in the Planner (null = middle of the range / any value).
+/// </summary>
 public sealed record SelectedMod(ModDef Mod, string Category)
 {
-    public ModKind Kind => Category == "desecrated" ? ModKind.Desecrated : ModKind.Explicit;
+    public List<double?> Values { get; init; } = Mod.Ranges.Select(_ => (double?)null).ToList();
+    public ModKind Kind => ModCategories.KindFor(Category);
 }
 
 /// <summary>
@@ -47,6 +51,16 @@ public sealed class ModSelection
         else _mods.Add(new SelectedMod(mod, category));
     }
 
+    /// <summary>Take over a mod that is already on an item (no browser rules: the item may hold mods the browser does not offer).</summary>
+    public void AddExisting(ItemMod mod, bool withValues)
+    {
+        if (mod.Def == null || Contains(mod.Def)) return;
+        var selected = new SelectedMod(mod.Def, mod.Def.Category);
+        if (withValues)
+            for (int i = 0; i < selected.Values.Count && i < mod.Values.Count; i++) selected.Values[i] = mod.Values[i];
+        _mods.Add(selected);
+    }
+
     public void RemoveAt(int index)
     {
         if (index >= 0 && index < _mods.Count) _mods.RemoveAt(index);
@@ -63,45 +77,26 @@ public sealed class ModSelection
                 _mods.Remove(_mods.Last(m => m.Mod.AffixType == type));
     }
 
-    /// <summary>Build an item from a base and the selection; implicit and mod values are set to the middle of their ranges.</summary>
-    public Item BuildItem(BaseItem baseItem, Rarity rarity, int itemLevel)
+    /// <summary>
+    /// Build an item from a base and the selection; unset values (and the implicit) use the middle of their ranges.
+    /// With a <paramref name="template"/> of the same base (an edited item), everything but its affixes is kept (implicits, quality, sockets,
+    /// runes, corruption, unrevealed mods) and re-added mods keep their fractured flag.
+    /// </summary>
+    public Item BuildItem(BaseItem baseItem, Rarity rarity, int itemLevel, Item? template = null)
     {
-        var item = new Item
-        {
-            BaseName = baseItem.Name,
-            ItemClass = baseItem.ItemClass,
-            Rarity = rarity,
-            ItemLevel = itemLevel,
-            Base = baseItem,
-            Sockets = baseItem.SocketLimit ?? 0,
-        };
-        if (!string.IsNullOrEmpty(baseItem.Implicit))
-        {
-            var mids = ModText.ParseRanges(baseItem.Implicit).Select(Mid).ToList();
-            item.Mods.Add(new ItemMod { ModId = "base_implicit", Kind = ModKind.Implicit, RawText = ModText.Render(baseItem.Implicit, mids) });
-        }
+        var edit = ReferenceEquals(template?.Base, baseItem);
+        var item = edit ? template!.WithoutAffixes() : Item.FromBase(baseItem, rarity, itemLevel, withImplicit: true);
+        item.Rarity = rarity;
+        item.ItemLevel = itemLevel;
         foreach (var sm in _mods)
         {
-            item.Mods.Add(new ItemMod
-            {
-                ModId = sm.Mod.Id,
-                Def = sm.Mod,
-                Kind = sm.Kind,
-                Affix = sm.Mod.AffixType,
-                Values = sm.Mod.Ranges.Select(Mid).ToList(),
-            });
+            var mod = item.AddMod(sm.Mod, sm.Kind, sm.Values.Select((v, i) => v ?? ModText.MidValue(sm.Mod.Ranges[i])).ToList());
+            mod.Fractured = edit && template!.Affixes.Any(a => a.ModId == sm.Mod.Id && a.Fractured);
         }
         return item;
     }
 
-    private static double Mid(double[] range)
-    {
-        double mid = (range[0] + range[1]) / 2;
-        bool integer = range[0] == Math.Floor(range[0]) && range[1] == Math.Floor(range[1]);
-        return integer ? Math.Round(mid, MidpointRounding.AwayFromZero) : Math.Round(mid, 2);
-    }
-
-    /// <summary>Target specs for the planner.</summary>
+    /// <summary>Target specs for the planner; set values become minimum values.</summary>
     public List<TargetMod> ToTargetMods(ModPool pool, Item virtualItem, bool allowBetterTiers) => _mods.Select(m => new TargetMod
     {
         Family = m.Mod.Family ?? m.Mod.Name,
@@ -111,5 +106,6 @@ public sealed class ModSelection
         Category = m.Category,
         DisplayTier = pool.DisplayTier(m.Mod, virtualItem),
         AllowBetterTiers = allowBetterTiers,
+        MinValues = m.Values.Any(v => v != null) ? m.Values.ToList() : null,
     }).ToList();
 }

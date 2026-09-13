@@ -19,8 +19,18 @@
    "reroll_mods": 0.25,
    "add_socket_or_quality": 0.25
   },
-  "vaalOutcomesNote": "UNVERIFIED placeholder distribution; edit freely",
+  "vaalOutcomesNote": "0.5.x community guides (maxroll, timesaver.gg): ~25% each on equipment; outcomes that cannot happen on an item are dropped and the rest renormalised",
+  "vaalRerollMinMods": 1,
+  "vaalRerollMaxMods": 3,
+  "vaalQualityCap": 23,
+  "architectSuccessChance": 0.5,
   "modLevelRequirementFactor": 0.8,
+  "qualityPerUseNote": "UNVERIFIED (PoE1 convention); catalyst +5 per use from community guides; infuser corruption chance from poe2wiki (0 at 20%, +5% per point above)",
+  "defaultMaxQuality": 20,
+  "catalystQualityPerUse": 5,
+  "infuserOverCap": 10,
+  "infuserCorruptChancePerQuality": 0.05,
+  "catalysingWeightBonusPerQuality": 0.05,
   "qualityPerUse": {
    "Normal": 5,
    "Magic": 2,
@@ -28,6 +38,8 @@
    "Unique": 1
   },
   "shardsPerOrb": 10,
-  "onlyOneCraftedModPerItem": true
+  "onlyOneCraftedModPerItem": true,
+  "revealOptionCount": 3,
+  "putrefactionUnrevealedCount": 6
  }
 }

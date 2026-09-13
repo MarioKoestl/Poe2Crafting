@@ -2,27 +2,26 @@
 @inject GameData Data
 
 <div class="item-composer">
-    <div class="composer-header">
-        <h3>Compose Item</h3>
-        <button class="btn btn-xs" @onclick="OnCancel">Cancel</button>
-    </div>
-
-    <BaseItemForm @bind-ItemClass="_itemClass" @bind-BaseName="BaseName" @bind-Rarity="ComposeRarity" @bind-ItemLevel="ItemLevel" RarityLabel="Rarity" />
-
-    @if (_base != null)
+    @if (Edit)
     {
-        <ModBrowser Base="_base" ItemLevel="_itemLevel" Rarity="_rarity" Selection="_selection" OnChanged="BuildPreviewItem" />
+        <p class="builder-hint">Change modifiers, values, rarity or item level. Quality, sockets, implicits and corruption of the item are kept; changing the base starts a new item.</p>
+    }
 
-        @if (_previewItem != null)
+    <BaseItemForm Draft="_draft" OnChanged="StateHasChanged" />
+
+    @if (_draft.Base != null)
+    {
+        @if (_draft.Preview != null)
         {
             <div class="composer-preview">
-                <h4>Preview</h4>
-                <ItemDisplay Item="_previewItem" />
+                <ItemDisplay Item="_draft.Preview" />
             </div>
         }
 
-        <div class="builder-actions">
-            <button class="btn btn-primary btn-execute" @onclick="DoCompose">Set as Current Item</button>
+        <ModBrowser Draft="_draft" OnChanged="StateHasChanged" />
+
+        <div class="builder-actions sticky-actions">
+            <button class="btn btn-primary btn-execute" @onclick="DoCompose">@(Edit ? "Apply Changes" : "Set as Current Item")</button>
             <button class="btn" @onclick="OnCancel">Cancel</button>
         </div>
     }
@@ -31,49 +30,24 @@
 @code {
     [Parameter] public EventCallback OnComposed { get; set; }
     [Parameter] public EventCallback OnCancelled { get; set; }
+    /// <summary>Edit the current item (as a new history step) instead of composing a new one.</summary>
+    [Parameter] public bool Edit { get; set; }
 
-    private string _itemClass = "";
-    private string _baseName = "";
-    private BaseItem? _base;
-    private int _itemLevel = 82;
-    private Rarity _rarity = Rarity.Rare;
-    private ModSelection _selection = null!;
-    private Item? _previewItem;
+    private ItemDraft _draft = null!;
 
-    protected override void OnInitialized() => _selection = new ModSelection(Data.Config.Assumptions);
-
-    private string BaseName
+    protected override void OnInitialized()
     {
-        get => _baseName;
-        set
-        {
-            _baseName = value;
-            _base = string.IsNullOrEmpty(value) ? null : Data.FindBase(value);
-            _selection.Clear();
-            BuildPreviewItem();
-        }
+        _draft = new ItemDraft(Data);
+        if (Edit && Session.CurrentItem is { } current) _draft.LoadFrom(current, copyValues: true);
     }
-
-    private int ItemLevel
-    {
-        get => _itemLevel;
-        set { _itemLevel = Math.Clamp(value, 1, 100); _selection.Enforce(_rarity, _itemLevel); BuildPreviewItem(); }
-    }
-
-    private Rarity ComposeRarity
-    {
-        get => _rarity;
-        set { _rarity = value; _selection.Enforce(_rarity, _itemLevel); BuildPreviewItem(); }
-    }
-
-    private void BuildPreviewItem() => _previewItem = _base != null ? _selection.BuildItem(_base, _rarity, _itemLevel) : null;
 
     private async Task DoCompose()
     {
-        if (_base == null) return;
-        Session.SetItem(_selection.BuildItem(_base, _rarity, _itemLevel), "Composed");
+        if (_draft.BuildItem() is not { } item) return;
+        if (Edit) Session.EditItem(item);
+        else Session.SetItem(item, "Composed");
         if (Session.LastError == null) await OnComposed.InvokeAsync();
     }
 
-    private async Task OnCancel() => await OnCancelled.InvokeAsync();
+    private Task OnCancel() => OnCancelled.InvokeAsync();
 }

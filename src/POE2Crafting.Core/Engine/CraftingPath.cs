@@ -11,25 +11,6 @@ public sealed class TargetItemSpec
     public int ItemLevel { get; set; } = 82;
     public Rarity TargetRarity { get; set; } = Rarity.Rare;
     public List<TargetMod> TargetMods { get; set; } = new();
-
-    /// <summary>Creates a virtual Normal item matching this spec for probability calculations.</summary>
-    public Item ToBaseItem(GameData data)
-    {
-        var baseItem = data.FindBase(BaseName);
-        return new Item
-        {
-            BaseName = BaseName,
-            ItemClass = ItemClass,
-            Rarity = Rarity.Normal,
-            ItemLevel = ItemLevel,
-            Base = baseItem,
-            Sockets = baseItem?.SocketLimit ?? 0,
-        };
-    }
-
-    public int PrefixCount => TargetMods.Count(m => m.AffixType == AffixType.Prefix);
-    public int SuffixCount => TargetMods.Count(m => m.AffixType == AffixType.Suffix);
-    public int TotalMods => TargetMods.Count;
 }
 
 /// <summary>One desired modifier in the target item.</summary>
@@ -39,7 +20,7 @@ public sealed class TargetMod
     public int? Tier { get; set; }
     public AffixType AffixType { get; set; }
     /// <summary>Mod category: "normal", "breach_otherworldly", "desecrated", etc.</summary>
-    public string Category { get; set; } = "normal";
+    public string Category { get; set; } = ModCategories.Normal;
 
     /// <summary>Per-page display tier (T1 = best on this base). Set by the UI.</summary>
     public int? DisplayTier { get; set; }
@@ -49,6 +30,13 @@ public sealed class TargetMod
 
     /// <summary>True (default): any tier at least as good as the target counts as a hit. False: only the exact tier.</summary>
     public bool AllowBetterTiers { get; set; } = true;
+
+    /// <summary>Optional minimum rolled value per range of the mod (null entries = any value).</summary>
+    public List<double?>? MinValues { get; set; }
+
+    /// <summary>Whether a present mod's rolled values reach the minimum values.</summary>
+    public bool ValuesSatisfiedBy(ItemMod mod) =>
+        MinValues == null || MinValues.Select((min, i) => min == null || i < mod.Values.Count && mod.Values[i] >= min.Value).All(ok => ok);
 
     /// <summary>Whether a rolled/present modifier satisfies this target (same family and affix type, and the tier is good enough).</summary>
     public bool Matches(ModDef? mod)
@@ -61,8 +49,15 @@ public sealed class TargetMod
     }
 
     public string DisplayName => ResolvedMod != null
-        ? $"T{DisplayTier ?? ResolvedMod.Tier} {ResolvedMod.Name}"
+        ? $"T{DisplayTier ?? ResolvedMod.Tier} {ResolvedMod.DisplayName}"
         : $"{Family} (T{DisplayTier ?? Tier})";
+}
+
+/// <summary>Strategies found for a target, plus reasons when (part of) the target cannot be reached.</summary>
+public sealed class PlanResult
+{
+    public List<CraftingStrategy> Strategies { get; } = new();
+    public List<string> Problems { get; } = new();
 }
 
 /// <summary>A computed crafting strategy with steps, probabilities, and brick risks.</summary>
@@ -75,9 +70,8 @@ public sealed class CraftingStrategy
     public double OverallProbability { get; set; }
     public double ExpectedAttempts => OverallProbability > 0 ? 1.0 / OverallProbability : double.PositiveInfinity;
     public bool HasBrickRisk { get; set; }
-    public List<string> Warnings { get; set; } = new();
     /// <summary>Label of the flowchart's start node.</summary>
-    public string StartLabel { get; set; } = "Normal Base Item";
+    public string StartLabel { get; set; } = "Current Item";
 }
 
 /// <summary>One step in a crafting strategy.</summary>
@@ -93,19 +87,10 @@ public sealed class CraftStep
     public string? RestartLabel { get; set; }
     public CraftStepType Type { get; set; } = CraftStepType.Normal;
     public List<string> Notes { get; set; } = new();
-    /// <summary>Currency variants (Normal/Greater/Perfect) with their probabilities for this step.</summary>
-    public List<CurrencyVariant> Variants { get; set; } = new();
+    /// <summary>The item after this step succeeded.</summary>
+    public Item? Result { get; set; }
     /// <summary>Expected attempts for this step (1/probability).</summary>
     public double ExpectedAttempts => SuccessProbability > 0 ? 1.0 / SuccessProbability : double.PositiveInfinity;
-}
-
-/// <summary>A currency variant (Normal/Greater/Perfect) with its probability impact.</summary>
-public sealed class CurrencyVariant
-{
-    public string Name { get; set; } = "";
-    public int MinModLevel { get; set; }
-    public double Probability { get; set; }
-    public bool IsRecommended { get; set; }
 }
 
 public enum CraftStepType
@@ -113,5 +98,4 @@ public enum CraftStepType
     Normal,
     Brick,
     Checkpoint,
-    Decision
 }

@@ -24,15 +24,21 @@ internal static class TestData
     public static ModPool? Pool => _pool.Value;
     public static CraftingEngine? Engine => Data == null ? null : new CraftingEngine(Data, Pool);
 
-    public static Item NewItem(string baseName, Rarity rarity = Rarity.Normal, int itemLevel = 82)
-    {
-        var b = Data!.FindBase(baseName) ?? throw new InvalidOperationException($"Base {baseName} missing");
-        return new Item { BaseName = b.Name, ItemClass = b.ItemClass, Rarity = rarity, ItemLevel = itemLevel, Base = b };
-    }
-
-    public static ItemMod ModOf(ModDef def, ModKind kind = ModKind.Explicit) =>
-        new() { ModId = def.Id, Def = def, Affix = def.AffixType, Kind = kind, Values = def.Ranges.Select(r => r[0]).ToList() };
+    public static Item NewItem(string baseName, Rarity rarity = Rarity.Normal, int itemLevel = 82) =>
+        Item.FromBase(Data!.FindBase(baseName) ?? throw new InvalidOperationException($"Base {baseName} missing"), rarity, itemLevel);
 
     public static CurrencyDef Currency(string name) =>
-        Data!.FindCurrency(name) ?? Data.EssenceCurrencies.First(c => c.Name == name);
+        Data!.FindCurrency(name) ?? throw new InvalidOperationException($"Currency {name} missing");
+
+    public static CraftAction Action(string currency, params string?[] omens) =>
+        CraftAction.Of(Currency(currency), omens.OfType<string>().Select(o => Data!.FindOmen(o) ?? throw new InvalidOperationException($"Omen {o} missing")).ToArray());
+
+    /// <summary>Add the first mods (one per family) of each affix type from the item's normal pool.</summary>
+    public static Item WithAffixes(this Item item, int prefixes, int suffixes)
+    {
+        foreach (var (type, count) in new[] { (AffixType.Prefix, prefixes), (AffixType.Suffix, suffixes) })
+            for (int i = 0; i < count; i++)
+                item.AddMod(Pool!.Candidates(item, type).First().Mod);
+        return item;
+    }
 }

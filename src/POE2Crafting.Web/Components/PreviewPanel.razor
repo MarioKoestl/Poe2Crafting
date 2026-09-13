@@ -6,7 +6,7 @@
         var preview = Session.Preview(Action, _pendingRemoval);
     }
 
-    <h3>@Action.DisplayName</h3>
+    <h3 class="pane-title"><CraftText Text="@Action.DisplayName" /></h3>
 
     @if (Action.Currency.Description.Count > 0)
     {
@@ -41,20 +41,10 @@
                 <div class="distribution-list">
                     @foreach (var r in preview.Removals.OrderByDescending(x => x.Probability))
                     {
-                        var isPending = _pendingRemoval == r.Index;
-                        <div class="dist-row @(isPending ? "pending-choice" : "")">
-                            <div class="dist-bar-bg">
-                                <div class="dist-bar removal" style="width: @($"{r.Probability * 100:F1}")%"></div>
-                            </div>
-                            <span class="dist-pct">@($"{r.Probability:P1}")</span>
-                            <span class="dist-label">@r.Mod.DisplayText()</span>
-                            @if (_manualMode)
-                            {
-                                <button class="btn btn-xs @(isPending ? "btn-active" : "")" @onclick="() => ChooseRemoval(r.Index, preview.TwoStepChoice)">
-                                    @(preview.TwoStepChoice ? (isPending ? "Chosen" : "Pick") : "Choose")
-                                </button>
-                            }
-                        </div>
+                        var pending = _pendingRemoval == r.Index;
+                        <DistributionRow Probability="r.Probability" Label="@r.Mod.DisplayText()" BarClass="removal" Highlighted="pending"
+                                         ChooseLabel="@(!_manualMode ? null : preview.TwoStepChoice ? (pending ? "Chosen" : "Pick") : "Choose")"
+                                         OnChoose="() => ChooseRemoval(r.Index, preview.TwoStepChoice)" />
                     }
                 </div>
                 @if (_manualMode && preview.TwoStepChoice)
@@ -76,23 +66,21 @@
 
         @if (preview.Additions.Count > 0)
         {
+            var choosable = _manualMode && preview.AdditionsChoosable && preview.Additions.Count > 1;
             <div class="distribution-section">
-                <h4>Addition (@(preview.AddCount)x) — P(@($"{preview.PrefixProbability:P0}")) / S(@($"{preview.SuffixProbability:P0}"))</h4>
+                <h4>
+                    @(preview.AdditionLabel ?? $"Addition ({preview.AddCount}x)")
+                    @if (preview.PrefixProbability + preview.SuffixProbability > 0)
+                    {
+                        <text> — P(@($"{preview.PrefixProbability:P0}")) / S(@($"{preview.SuffixProbability:P0}"))</text>
+                    }
+                </h4>
                 <div class="addition-list">
                     @foreach (var c in preview.Additions.OrderByDescending(c => c.Probability).Take(_showAll ? int.MaxValue : 20))
                     {
-                        <div class="add-row @(c.Mod.IsPrefix ? "prefix-row" : "suffix-row")">
-                            <span class="add-pct">@($"{c.Probability * 100:F2}") %</span>
-                            <span class="add-type @(c.Mod.IsPrefix ? "type-prefix" : "type-suffix")">@(c.Mod.IsPrefix ? "P" : "S")</span>
-                            <span class="add-tier">@(c.Mod.Category == ModPool.NormalCategory ? $"T{Session.Engine.Pool.DisplayTier(c.Mod, item)}" : "")</span>
-                            <span class="add-name">@c.Mod.Name</span>
-                            <span class="add-sep">—</span>
-                            <span class="add-stat">@c.Mod.Text</span>
-                            @if (_manualMode && preview.Additions.Count > 1)
-                            {
-                                <button class="btn btn-xs add-choose" @onclick="() => ChooseAddition(c.Mod.Id)">Choose</button>
-                            }
-                        </div>
+                        var modId = c.Mod.Id;
+                        <ModOptionRow Mod="c.Mod" Item="item" Probability="c.Probability"
+                                      OnChoose="@(choosable ? EventCallback.Factory.Create(this, () => Choose(new ManualChoice { AddModIds = { modId } })) : default)" />
                     }
                     @if (preview.Additions.Count > 20 && !_showAll)
                     {
@@ -108,23 +96,15 @@
                 <h4>Outcomes</h4>
                 @foreach (var kv in preview.SpecialOutcomes)
                 {
-                    <div class="dist-row">
-                        <div class="dist-bar-bg">
-                            <div class="dist-bar special" style="width: @($"{kv.Value * 100:F1}")%"></div>
-                        </div>
-                        <span class="dist-pct">@($"{kv.Value:P1}")</span>
-                        <span class="dist-label">@kv.Key</span>
-                        @if (_manualMode)
-                        {
-                            <button class="btn btn-xs" @onclick="() => ChooseSpecial(kv.Key)">Choose</button>
-                        }
-                    </div>
+                    var outcome = kv.Key;
+                    <DistributionRow Probability="kv.Value" Label="@outcome" BarClass="special" ChooseLabel="@(_manualMode ? "Choose" : null)"
+                                     OnChoose="() => Choose(new ManualChoice { SpecialOutcome = outcome })" />
                 }
             </div>
         }
 
         <div class="action-bar">
-            <button class="btn btn-primary btn-execute" @onclick="DoExecute">Roll (Random)</button>
+            <button class="btn btn-primary btn-execute" @onclick="() => Choose(null)">Roll (Random)</button>
             <button class="btn @(_manualMode ? "btn-active" : "")" @onclick="ToggleManual">
                 @(_manualMode ? "Hide Choices" : "Choose Outcome")
             </button>
@@ -134,8 +114,8 @@
 
 @code {
     [Parameter, EditorRequired] public CraftAction Action { get; set; } = null!;
-    [Parameter] public EventCallback OnExecute { get; set; }
-    [Parameter] public EventCallback<ManualChoice> OnChoose { get; set; }
+    /// <summary>Apply the action: null = roll randomly, otherwise the manual choice.</summary>
+    [Parameter] public EventCallback<ManualChoice?> OnExecute { get; set; }
 
     private bool _manualMode;
     private bool _showAll;
@@ -146,7 +126,7 @@
     protected override void OnParametersSet()
     {
         // a new action or a changed item invalidates half-made choices (mod indices refer to the old item)
-        if (!ReferenceEquals(Action, _lastAction) || Session.History.Count != _lastHistoryCount || Session.History.Count == 0)
+        if (!ReferenceEquals(Action, _lastAction) || Session.History.Count != _lastHistoryCount)
         {
             _pendingRemoval = null;
             _showAll = false;
@@ -161,28 +141,18 @@
         _pendingRemoval = null;
     }
 
-    private async Task DoExecute()
+    private Task ChooseRemoval(int index, bool twoStep)
     {
+        if (!twoStep) return Choose(new ManualChoice { RemoveIndices = { index } });
+        _pendingRemoval = _pendingRemoval == index ? null : index;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Execute with the choice; a pending (two-step) removal is added to it.</summary>
+    private Task Choose(ManualChoice? choice)
+    {
+        if (choice != null && _pendingRemoval is { } r && choice.RemoveIndices.Count == 0) choice.RemoveIndices.Add(r);
         _pendingRemoval = null;
-        await OnExecute.InvokeAsync();
+        return OnExecute.InvokeAsync(choice);
     }
-
-    private async Task ChooseRemoval(int index, bool twoStep)
-    {
-        if (twoStep) { _pendingRemoval = _pendingRemoval == index ? null : index; return; }
-        await OnChoose.InvokeAsync(new ManualChoice { RemoveIndices = new() { index } });
-    }
-
-    private async Task ChooseAddition(string modId)
-    {
-        var choice = new ManualChoice
-        {
-            RemoveIndices = _pendingRemoval is { } r ? new() { r } : new(),
-            AddModIds = new() { modId },
-        };
-        _pendingRemoval = null;
-        await OnChoose.InvokeAsync(choice);
-    }
-
-    private async Task ChooseSpecial(string outcome) => await OnChoose.InvokeAsync(new ManualChoice { SpecialOutcome = outcome });
 }
