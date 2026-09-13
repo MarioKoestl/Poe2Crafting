@@ -9,13 +9,11 @@ namespace POE2Crafting.Core.Engine.Operations;
 /// Omens: Sinistral/Dextral Necromancy (prefix/suffix only), Sovereign/Liege/Blackblooded (guaranteed Ulaman/Amanamu/Kurgal mod),
 /// Putrefaction (replace all mods with unrevealed ones and corrupt), Abyssal Echoes (reroll the reveal options once, handled by the caller).
 /// </summary>
-public sealed class DesecrateOperation : CraftOperation
+internal sealed class DesecrateOperation : CraftOperation
 {
-    /// <summary>Family of "Mark of the Abyssal Lord" (Essence of the Abyss): desecration replaces this mod.</summary>
-    private const string AbyssMarkFamily = "EssenceAbyss";
     private const string UnrevealedModId = "unrevealed_desecrated";
 
-    public DesecrateOperation(CraftingEngine engine) : base(engine, "desecrate") { }
+    public DesecrateOperation(CraftingEngine engine) : base(engine, CurrencyOps.Desecrate) { }
 
     /// <summary>Omen of Abyssal Echoes applies to the later reveal, not to the bone.</summary>
     public override bool AcceptsOmen(CraftContext ctx, OmenDef omen) => base.AcceptsOmen(ctx, omen) && omen.Effect != OmenEffects.RerollRevealOnce;
@@ -27,7 +25,11 @@ public sealed class DesecrateOperation : CraftOperation
         [OmenEffects.GuaranteeKurgal] = "kurgal_mod",
     };
 
-    private static string OutcomeName(AffixType type) => $"Unrevealed {type}";
+    /// <summary>Bones whose desecration can take a boss omen.</summary>
+    private static readonly string[] BossOmenTargets = { ClassTargets.WeaponOrQuiver, ClassTargets.Jewellery };
+
+    /// <summary>The label of the "unrevealed prefix/suffix" outcome (StepPreview.SpecialOutcomes, ManualChoice.SpecialOutcome).</summary>
+    internal static string OutcomeName(AffixType type) => $"Unrevealed {type}";
 
     private static RevealContext RevealContextFor(CraftContext ctx) =>
         new(ctx.MinModLevel, BossOmen(ctx) is { } boss ? BossTags[boss.Effect!] : null, ctx.Currency.Otherworldly == true);
@@ -40,16 +42,15 @@ public sealed class DesecrateOperation : CraftOperation
     private List<ModCandidate> Pool(Item item, AffixType type, RevealContext reveal)
     {
         Func<ModDef, bool>? filter = reveal.RequiredTag is { } tag ? m => m.ModTags.Contains(tag) : null;
-        var list = Engine.Pool.Candidates(item, type, reveal.MinModLevel, filter, ModPool.DesecratedCategory);
-        if (reveal.Otherworldly) list.AddRange(Engine.Pool.Candidates(item, type, reveal.MinModLevel, filter, ModPool.OtherworldlyCategory));
-        ModPool.Normalise(list);
-        return list;
+        var list = Engine.Pool.Candidates(item, type, reveal.MinModLevel, filter, ModCategories.Desecrated);
+        if (reveal.Otherworldly) list.AddRange(Engine.Pool.Candidates(item, type, reveal.MinModLevel, filter, ModCategories.Otherworldly));
+        return ModCandidate.Normalised(list);
     }
 
     public List<ModCandidate> RevealPool(Item item, int modIndex)
     {
         var mod = item.Mods[modIndex];
-        if (!mod.Unrevealed) throw new InvalidOperationException("This modifier is already revealed.");
+        if (!mod.Unrevealed) throw new InvalidChoiceException("This modifier is already revealed.");
         var others = item.Clone();
         others.Mods.RemoveAt(modIndex);
         return Pool(others, mod.Affix, mod.Reveal ?? new RevealContext()).OrderByDescending(c => c.Probability).ToList();
@@ -58,17 +59,15 @@ public sealed class DesecrateOperation : CraftOperation
     public List<ModDef> RollRevealOptions(Item item, int modIndex, Rng rng)
     {
         var pool = RevealPool(item, modIndex);
-        return rng.SampleWeighted(pool.Select(c => c.Probability).ToList(), Engine.A.RevealOptionCount).Select(i => pool[i].Mod).ToList();
+        return rng.SampleWeighted(pool.Select(c => c.Probability).ToList(), Assumptions.RevealOptionCount).Select(i => pool[i].Mod).ToList();
     }
 
     public CraftResult Reveal(Item item, int modIndex, string modId, Rng rng)
     {
         var pick = RevealPool(item, modIndex).FirstOrDefault(c => c.Mod.Id == modId)
-                   ?? throw new InvalidOperationException("The chosen modifier cannot be revealed from this desecrated modifier.");
+                   ?? throw new InvalidChoiceException("The chosen modifier cannot be revealed from this desecrated modifier.");
         var result = item.Clone();
-        var source = result.Mods[modIndex].SourceName;
-        result.Mods.RemoveAt(modIndex);
-        var revealed = result.AddMod(pick.Mod, ModKind.Desecrated, CraftingEngine.RollValues(pick.Mod, rng), source, modIndex);
+        var revealed = result.ReplaceMod(modIndex, pick.Mod, ModKind.Desecrated, CraftingEngine.RollValues(pick.Mod, rng), result.Mods[modIndex].SourceName);
         var detail = $"Revealed {Engine.Describe(revealed, result)}";
         return new CraftResult { Applied = true, Item = result, Summary = $"Well of Souls: {detail}", Details = { detail } };
     }
@@ -83,8 +82,8 @@ public sealed class DesecrateOperation : CraftOperation
         var item = ctx.Item;
         var reveal = RevealContextFor(ctx);
 
-        var mark = CraftingEngine.Removable(item, OmenEffects.None).Where(r => r.Mod.Def?.Family == AbyssMarkFamily).ToList();
-        if (mark.Count > 0) return PlanWithRemoval(item, RemovalCandidate.Uniform(mark), reveal);
+        var mark = CraftingEngine.Removable(item, OmenEffects.None).Where(r => r.Mod.Def?.Family == ModFamilies.AbyssMark).ToList();
+        if (mark.Count > 0) return PlanWithRemoval(item, mark, reveal);
 
         if (Engine.FreeSlots(item, Rarity.Rare, ctx.RestrictedType) == 0)
             return PlanWithRemoval(item, CraftingEngine.Removable(item, ctx.Omens), reveal);
@@ -101,14 +100,14 @@ public sealed class DesecrateOperation : CraftOperation
     }
 
     /// <summary>The new unrevealed mod takes the removed mod's slot; only removals after which something can be revealed count.</summary>
-    private Plan PlanWithRemoval(Item item, List<RemovalCandidate> removals, RevealContext reveal)
+    private Plan PlanWithRemoval(Item item, IEnumerable<RemovalCandidate> removals, RevealContext reveal)
     {
         var usable = RemovalCandidate.Uniform(removals.Where(r =>
         {
             var after = item.Clone();
             after.Mods.RemoveAt(r.Index);
             return Pool(after, r.Mod.Affix, reveal).Count > 0;
-        }).ToList());
+        }));
         var types = usable.GroupBy(r => r.Mod.Affix).ToDictionary(g => g.Key, g => g.Sum(r => r.Probability));
         return new Plan(usable, types);
     }
@@ -119,14 +118,14 @@ public sealed class DesecrateOperation : CraftOperation
     {
         var item = ctx.Item;
         if (item.Sanctified) return Applicability.No("Sanctified items cannot be desecrated.");
-        bool hasMark = item.Affixes.Any(m => m.Def?.Family == AbyssMarkFamily);
+        bool hasMark = item.HasFamily(ModFamilies.AbyssMark);
         if (item.HasDesecratedMod && !hasMark) return Applicability.No("Items with Desecrated modifiers cannot be desecrated again.");
-        if (BossOmen(ctx) is { } boss && ctx.Currency.Target is not ("weapon_or_quiver" or "jewellery"))
+        if (BossOmen(ctx) is { } boss && !BossOmenTargets.Contains(ctx.Currency.Target))
             return Applicability.No($"{boss.Name} only works on Weapon or Jewellery desecration.");
 
         if (ctx.OmenIs(OmenEffects.Putrefaction))
         {
-            ctx.Notes.Add($"Assumption: Putrefaction replaces every non-fractured modifier with {Engine.A.PutrefactionUnrevealedCount} unrevealed modifiers (\"up to 6\", config: putrefactionUnrevealedCount) and corrupts the item.");
+            ctx.Notes.Add($"Assumption: Putrefaction replaces every non-fractured modifier with {Assumptions.PutrefactionUnrevealedCount} unrevealed modifiers (\"up to 6\", config: putrefactionUnrevealedCount) and corrupts the item.");
             return null;
         }
 
@@ -135,7 +134,7 @@ public sealed class DesecrateOperation : CraftOperation
         if (hasMark) ctx.Notes.Add("Mark of the Abyssal Lord is replaced by the unrevealed modifier.");
         else if (Engine.FreeSlots(item, Rarity.Rare, ctx.RestrictedType) == 0)
             ctx.Notes.Add("Modifiers are full: a random modifier is removed and the unrevealed modifier takes its slot (assumption: same affix type).");
-        ctx.Notes.Add($"Reveal at the Well of Souls offers {Engine.A.RevealOptionCount} options (config: revealOptionCount). Desecrated weights in the data are all equal (poe2db has no estimates).");
+        ctx.Notes.Add($"Reveal at the Well of Souls offers {Assumptions.RevealOptionCount} options (config: revealOptionCount). Desecrated weights in the data are all equal (poe2db has no estimates).");
         return null;
     }
 
@@ -149,7 +148,7 @@ public sealed class DesecrateOperation : CraftOperation
             {
                 Removals = CraftingEngine.Removable(ctx.Item, OmenEffects.None),
                 RemovalLabel = "Replaced (all)",
-                SpecialOutcomes = { [$"{Engine.A.PutrefactionUnrevealedCount} unrevealed modifiers, item corrupted"] = 1 },
+                SpecialOutcomes = { [$"{Assumptions.PutrefactionUnrevealedCount} unrevealed modifiers, item corrupted"] = 1 },
                 Additions = possible, AdditionsChoosable = false, AdditionLabel = "Possible revealed modifiers",
                 PrefixProbability = pPrefix, SuffixProbability = 1 - pPrefix,
             };
@@ -176,14 +175,9 @@ public sealed class DesecrateOperation : CraftOperation
         }
 
         var plan = MakePlan(ctx);
-        AffixType type;
-        if (plan.Removals.Count > 0)
-            type = Engine.RemoveOne(ctx, plan.Removals, CraftingEngine.ChosenRemovals(ctx).FirstOrDefault()).Mod.Affix;
-        else
-        {
-            var outcome = CraftingEngine.PickOutcome(ctx, plan.Types.ToDictionary(kv => OutcomeName(kv.Key), kv => kv.Value));
-            type = plan.Types.Keys.First(t => OutcomeName(t) == outcome);
-        }
+        var type = plan.Removals.Count > 0
+            ? Engine.RemoveOne(ctx, plan.Removals, CraftingEngine.ChosenRemovals(ctx).FirstOrDefault()).Mod.Affix
+            : CraftingEngine.PickOutcome(ctx, plan.Types, OutcomeName);
         AddUnrevealed(ctx, type, reveal);
     }
 
@@ -192,23 +186,22 @@ public sealed class DesecrateOperation : CraftOperation
         var item = ctx.Result;
         int removed = item.Mods.RemoveAll(m => m.IsAffix && !m.Fractured);
         ctx.Details.Add($"Removed {removed} modifier(s).");
-        for (int i = 0; i < Engine.A.PutrefactionUnrevealedCount; i++)
+        for (int i = 0; i < Assumptions.PutrefactionUnrevealedCount; i++)
         {
             var type = item.PrefixCount <= item.SuffixCount ? AffixType.Prefix : AffixType.Suffix;
-            if (Engine.FreeSlots(item, type, Rarity.Rare) == 0) type = type == AffixType.Prefix ? AffixType.Suffix : AffixType.Prefix;
+            if (Engine.FreeSlots(item, type, Rarity.Rare) == 0) type = type.Opposite();
             if (Engine.FreeSlots(item, type, Rarity.Rare) == 0) break;
             AddUnrevealed(ctx, type, reveal);
         }
-        item.Corrupted = true;
-        ctx.Details.Add("Item is now Corrupted.");
+        ctx.Corrupt();
     }
 
-    private void AddUnrevealed(ExecuteContext ctx, AffixType type, RevealContext reveal)
+    private static void AddUnrevealed(ExecuteContext ctx, AffixType type, RevealContext reveal)
     {
         ctx.Result.Mods.Add(new ItemMod
         {
             ModId = UnrevealedModId, Kind = ModKind.Desecrated, Affix = type, Unrevealed = true, Reveal = reveal, SourceName = ctx.Currency.Name,
         });
-        ctx.Details.Add($"Added an unrevealed desecrated {type.ToString().ToLower()}.");
+        ctx.Details.Add($"Added an unrevealed desecrated {type.Lower()}.");
     }
 }

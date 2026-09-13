@@ -1,14 +1,24 @@
+using POE2Crafting.Core.Data;
+using POE2Crafting.Core.Items;
+
 namespace POE2Crafting.Core.Engine.Operations;
 
-/// <summary>Divine Orb: reroll all mod values inside their ranges (Omen of the Blessed: implicits only; Omen of Sanctification: sanctify).</summary>
-public sealed class DivineOperation : CraftOperation
+/// <summary>
+/// Divine Orb: reroll the values of all non-fractured mods inside their ranges (fractured mods keep their values;
+/// Omen of the Blessed: implicits only; Omen of Sanctification: sanctify).
+/// </summary>
+internal sealed class DivineOperation : CraftOperation
 {
-    public DivineOperation(CraftingEngine engine) : base(engine, "divine") { }
+    public DivineOperation(CraftingEngine engine) : base(engine, CurrencyOps.Divine) { }
+
+    /// <summary>A mod whose values a Divine Orb rerolls.</summary>
+    internal static bool Rerollable(ItemMod mod) => mod.IsAffix && !mod.Fractured && mod.Def?.Ranges.Count > 0;
 
     public override Applicability? Check(CraftContext ctx)
     {
-        if (!ctx.OmenIs(OmenEffects.ImplicitsOnly) && !ctx.Item.Affixes.Any(m => m.Def?.Ranges.Count > 0))
-            return Applicability.No("No modifier with a value range to reroll.");
+        if (!ctx.OmenIs(OmenEffects.ImplicitsOnly) && !ctx.Item.Affixes.Any(Rerollable))
+            return Applicability.No("No modifier with a value range to reroll (fractured modifiers keep their values).");
+        if (ctx.Item.Affixes.Any(m => m.Fractured)) ctx.Notes.Add("Fractured modifiers keep their values.");
         if (ctx.OmenIs(OmenEffects.Sanctify)) ctx.Notes.Add("Sanctify: the item is marked Sanctified (cannot be desecrated); further effects are UNVERIFIED.");
         if (ctx.OmenIs(OmenEffects.ImplicitsOnly)) ctx.Notes.Add("Implicit values are not tracked numerically; the omen only prevents explicit rerolls.");
         return null;
@@ -25,9 +35,9 @@ public sealed class DivineOperation : CraftOperation
             for (int i = 0; i < ctx.Result.Mods.Count; i++)
             {
                 var m = ctx.Result.Mods[i];
-                if (!m.IsAffix || m.Def == null || m.Def.Ranges.Count == 0) continue;
+                if (!Rerollable(m)) continue;
                 var before = m.DisplayText();
-                m.Values = ctx.Choice?.Rerolls?.TryGetValue(i, out var vals) == true ? vals.ToList() : CraftingEngine.RollValues(m.Def, ctx.Rng);
+                m.Values = ctx.Choice?.Rerolls?.TryGetValue(i, out var values) == true ? values.ToList() : CraftingEngine.RollValues(m.Def!, ctx.Rng);
                 ctx.Details.Add($"{before}  ->  {m.DisplayText()}");
             }
         }

@@ -1,0 +1,58 @@
+@* Guides tab, right pane: the chosen guide — summary, key ideas, every step played through the engine (StrategyGuide), what comes afterwards. *@
+@inject GuideLibrary Guides
+@inherits PlannerStateComponentBase
+@inject CraftingSession Session
+
+@if (Guides.Find(Planner.SelectedGuideId) is not { } guide)
+{
+    <EmptyState Icon="⟡" Hint="Every step is played through the simulator: chances, mod changes and the item after each step.">Choose a guide to see its steps.</EmptyState>
+}
+else
+{
+    var walkthrough = Guides.Walkthrough(guide);
+    <h3 class="pane-title">@guide.Name</h3>
+    <p class="guide-summary">@guide.Summary</p>
+    @if (guide.Source != null)
+    {
+        <div class="guide-source">
+            Source:
+            @if (guide.SourceUrl != null)
+            {
+                <a href="@guide.SourceUrl" target="_blank" rel="noopener">@guide.Source</a>
+            }
+            else
+            {
+                @guide.Source
+            }
+        </div>
+    }
+
+    <PlannerProblems Problems="walkthrough.Problems" />
+    <GuideBulletList Title="How it works" Items="guide.KeyIdeas" />
+
+    @if (walkthrough.Start is { } start)
+    {
+        <div class="guide-actions">
+            <button class="btn btn-sm btn-primary" @onclick="() => LoadStart(guide, start)"
+                    title="Add the starting item to the current project and switch to the simulator to craft along">
+                Craft along in the Simulator
+            </button>
+        </div>
+        <div class="strategy-detail">
+            <StrategyGuide Strategy="walkthrough.Strategy" Start="start" />
+        </div>
+    }
+
+    <GuideBulletList Title="Afterwards" Items="guide.NextSteps" />
+}
+
+@code {
+    /// <summary>The guide's starting item was loaded into the session.</summary>
+    [Parameter] public EventCallback OnStartItemLoaded { get; set; }
+
+    private Task LoadStart(CraftingGuide guide, Item start)
+    {
+        Session.SetItem(start.Clone(), $"Guide: {guide.Name}");
+        return OnStartItemLoaded.InvokeAsync();
+    }
+}

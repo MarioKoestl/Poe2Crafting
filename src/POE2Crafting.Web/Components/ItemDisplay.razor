@@ -2,7 +2,7 @@
 @inject ModPool Pool
 @inject GameData Data
 
-<div class="item-box rarity-@Item.Rarity.ToString().ToLower()">
+<div class="item-box @UiFormat.RarityCss(Item.Rarity)">
     <div class="item-header">
         @if (Item.Rarity is Rarity.Rare or Rarity.Unique && Item.Name != null)
         {
@@ -14,7 +14,7 @@
     <div class="item-props">
         @if (Item.Quality > 0)
         {
-            <div class="prop">Quality: <span class="value-blue">+@(Item.Quality)%@(Item.QualityType != null ? $" ({Item.QualityType})" : "")</span></div>
+            <div class="prop">Quality: <span class="value-blue">+@Item.QualityText</span></div>
         }
         @if (Item.Sockets > 0)
         {
@@ -43,14 +43,15 @@
     @* Explicit mods *@
     @foreach (var mod in Item.Affixes.OrderBy(m => m.Affix))
     {
+        var enhanced = Item.QualityEnhances(mod);
         <div class="mod-line @AffixUi.Css(mod.Affix) @(mod.Kind == ModKind.Crafted ? "crafted" : "") @(mod.Fractured ? "fractured" : "") @(mod.Kind == ModKind.Desecrated ? "desecrated" : "")">
             <span class="mod-indicator" title="@ModTooltip(mod)">@AffixUi.Letter(mod.Affix)</span>
             @if (mod.Def != null && mod.Kind != ModKind.Crafted && Pool.TryDisplayTier(mod.Def, Item) is { } tier)
             {
                 <span class="mod-tier" title="@mod.Def.DisplayName">T@(tier)</span>
             }
-            <span class="mod-text">@mod.DisplayText()</span>
-            @if (Item.QualityEnhances(mod)) { <span class="mod-badge quality-badge" title="Enhanced by @(Item.Quality)% @Item.QualityType quality">+@(Item.Quality)% Q</span> }
+            <span class="mod-text" title="@(enhanced ? $"Base value: {mod.DisplayText()}" : null)">@Item.EffectiveText(mod)</span>
+            @if (enhanced) { <span class="mod-badge quality-badge" title="Values increased by @Item.QualityText quality (base: @mod.DisplayText())">+@(Item.Quality)% Q</span> }
             @if (mod.Fractured) { <span class="mod-badge fractured-badge">Fractured</span> }
             @if (mod.Kind == ModKind.Crafted) { <span class="mod-badge crafted-badge">Crafted</span> }
             @if (mod.Kind == ModKind.Desecrated) { <span class="mod-badge desecrated-badge">Desecrated</span> }
@@ -58,7 +59,7 @@
     }
 
     @* Lines that could not be matched to a prefix/suffix (e.g. unique mods, simple Ctrl+C text) *@
-    @foreach (var mod in Item.Mods.Where(m => Item.IsAffixKind(m.Kind) && !m.IsAffix))
+    @foreach (var mod in Item.Mods.Where(m => m.Kind.OccupiesSlot() && !m.IsAffix))
     {
         <div class="mod-line unmatched" title="Not matched to a known prefix/suffix">@mod.DisplayText()</div>
     }
@@ -68,7 +69,7 @@
             Affixes: @Item.PrefixCount P / @Item.SuffixCount S
             @if (Item.Rarity is Rarity.Magic or Rarity.Rare)
             {
-                <span class="max-info">(max @Rules.MaxPrefixes(Item.Rarity)/@Rules.MaxSuffixes(Item.Rarity))</span>
+                <span class="max-info">(max @Rules.MaxAffixes(Item, Item.Rarity, AffixType.Prefix)/@Rules.MaxAffixes(Item, Item.Rarity, AffixType.Suffix))</span>
             }
         </div>
         @if (Item.Corrupted) { <div class="flag corrupted">@(Item.TwiceCorrupted ? "Twice Corrupted" : "Corrupted")</div> }
@@ -83,13 +84,11 @@
 
     private SimAssumptions Rules => Data.Config.Assumptions;
 
-    private IEnumerable<ItemMod> ImplicitLines => Item.Mods.Where(m => m.Kind is ModKind.CorruptedImplicit or ModKind.Implicit or ModKind.Enchant)
-        .OrderBy(m => m.Kind == ModKind.CorruptedImplicit ? 0 : 1);
+    private IEnumerable<ItemMod> ImplicitLines => Item.Mods.Where(m => m.Kind.IsImplicitLine()).OrderBy(m => m.Kind == ModKind.CorruptedImplicit ? 0 : 1);
 
     private string ModTooltip(ItemMod mod)
     {
-        var parts = new List<string>();
-        parts.Add(mod.Affix.ToString());
+        var parts = new List<string> { mod.Affix.ToString() };
         if (mod.Def != null)
         {
             parts.Add($"\"{mod.Def.DisplayName}\"");

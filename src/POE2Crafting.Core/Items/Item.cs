@@ -5,8 +5,33 @@ namespace POE2Crafting.Core.Items;
 
 public enum Rarity { Normal, Magic, Rare, Unique }
 
-/// <summary>Kind of an explicit modifier line on an item.</summary>
+/// <summary>Kind of a modifier line on an item.</summary>
 public enum ModKind { Explicit, Crafted, Desecrated, Implicit, CorruptedImplicit, Rune, Enchant }
+
+public static class ModKindExtensions
+{
+    /// <summary>Explicit, crafted and desecrated modifiers occupy a prefix or suffix slot; implicits and enchantments don't.</summary>
+    public static bool OccupiesSlot(this ModKind kind) => kind is ModKind.Explicit or ModKind.Crafted or ModKind.Desecrated;
+
+    /// <summary>Implicit-like lines shown above the affixes (base implicits, enchantments, corruption enchantments).</summary>
+    public static bool IsImplicitLine(this ModKind kind) => kind is ModKind.Implicit or ModKind.CorruptedImplicit or ModKind.Enchant;
+}
+
+public static class AffixTypeExtensions
+{
+    /// <summary>Prefix and suffix, the two slot types.</summary>
+    public static readonly AffixType[] Both = { AffixType.Prefix, AffixType.Suffix };
+
+    /// <summary>"prefix" / "suffix" for sentences.</summary>
+    public static string Lower(this AffixType type) => type.ToString().ToLowerInvariant();
+
+    public static AffixType Opposite(this AffixType type) => type switch
+    {
+        AffixType.Prefix => AffixType.Suffix,
+        AffixType.Suffix => AffixType.Prefix,
+        _ => AffixType.Other,
+    };
+}
 
 /// <summary>A modifier instance on an item: a ModDef plus rolled values.</summary>
 public sealed class ItemMod
@@ -44,23 +69,38 @@ public sealed class ItemMod
         return ModText.Render(Def.Text, Values);
     }
 
-    public string RangeText() => Def?.Text ?? RawText ?? ModId;
+    /// <summary>The values of <see cref="ModDef.StatRanges"/>: the rolled values, or the fixed numbers of a text without ranges.</summary>
+    [JsonIgnore] public List<double> StatValues => Def == null || Def.Ranges.Count > 0 ? Values : Def.StatRanges.Select(r => r[0]).ToList();
 
     /// <summary>True when the mod occupies a prefix or suffix slot.</summary>
-    [JsonIgnore] public bool IsAffix => Item.IsAffixKind(Kind) && Affix != AffixType.Other;
+    [JsonIgnore] public bool IsAffix => Kind.OccupiesSlot() && Affix != AffixType.Other;
 }
 
 /// <summary>What an unrevealed desecrated mod can become: set by the bone (minimum modifier level, otherworldly) and omens (boss tag).</summary>
-public sealed record RevealContext(int MinModLevel = 0, string? RequiredTag = null, bool Otherworldly = false);
+public sealed record RevealContext(int MinModLevel = 0, string? RequiredTag = null, bool Otherworldly = false)
+{
+    /// <summary>Short description of the restrictions for the UI, e.g. "min. modifier level 40, amanamu modifiers".</summary>
+    public string Describe()
+    {
+        var parts = new List<string>();
+        if (MinModLevel > 0) parts.Add($"min. modifier level {MinModLevel}");
+        if (RequiredTag != null) parts.Add($"{RequiredTag.Replace("_mod", "")} modifiers");
+        if (Otherworldly) parts.Add("incl. otherworldly modifiers");
+        return string.Join(", ", parts);
+    }
+}
 
 /// <summary>A craftable item.</summary>
 public sealed class Item
 {
+    /// <summary>Item level of new items when none is given (endgame bases).</summary>
+    public const int DefaultItemLevel = 82;
+
     public string BaseName { get; set; } = "";
     public string ItemClass { get; set; } = "";
     public string? Name { get; set; }               // rare / unique name
     public Rarity Rarity { get; set; } = Rarity.Normal;
-    public int ItemLevel { get; set; } = 82;
+    public int ItemLevel { get; set; } = DefaultItemLevel;
     public int Quality { get; set; }
     public string? QualityType { get; set; }        // catalyst type on jewellery
     public int Sockets { get; set; }
@@ -73,47 +113,78 @@ public sealed class Item
     public bool Sanctified { get; set; }
     public bool Identified { get; set; } = true;
     public bool Foreseeing { get; set; }            // Hinekora's Lock active
+    /// <summary>Hinekora's Lock: fixes the result of every currency action on this item state (see CraftingEngine.Foresee).</summary>
+    public int ForeseeSeed { get; set; }
     public string? Notes { get; set; }
 
     [JsonIgnore] public BaseItem? Base { get; set; }
 
-    public IEnumerable<ItemMod> Prefixes => Mods.Where(m => m.Affix == AffixType.Prefix && IsAffixKind(m.Kind));
-    public IEnumerable<ItemMod> Suffixes => Mods.Where(m => m.Affix == AffixType.Suffix && IsAffixKind(m.Kind));
     /// <summary>Mods occupying a prefix or suffix slot (explicit, crafted, desecrated).</summary>
-    public IEnumerable<ItemMod> Affixes => Mods.Where(m => m.IsAffix);
-    public int PrefixCount => Prefixes.Count();
-    public int SuffixCount => Suffixes.Count();
-    public int AffixCount => PrefixCount + SuffixCount;
-    public int CountOf(AffixType type) => type == AffixType.Prefix ? PrefixCount : type == AffixType.Suffix ? SuffixCount : 0;
-
-    public static bool IsAffixKind(ModKind k) => k is ModKind.Explicit or ModKind.Crafted or ModKind.Desecrated;
+    [JsonIgnore] public IEnumerable<ItemMod> Affixes => Mods.Where(m => m.IsAffix);
+    [JsonIgnore] public IEnumerable<ItemMod> Prefixes => Affixes.Where(m => m.Affix == AffixType.Prefix);
+    [JsonIgnore] public IEnumerable<ItemMod> Suffixes => Affixes.Where(m => m.Affix == AffixType.Suffix);
+    [JsonIgnore] public int PrefixCount => CountOf(AffixType.Prefix);
+    [JsonIgnore] public int SuffixCount => CountOf(AffixType.Suffix);
+    [JsonIgnore] public int AffixCount => Affixes.Count();
+    public int CountOf(AffixType type) => type == AffixType.Other ? 0 : Affixes.Count(m => m.Affix == type);
 
     public bool HasFamily(string? family) => family != null && Affixes.Any(m => m.Def?.Family == family);
 
-    /// <summary>Family of "+#% to Maximum Quality" (Essence of the Breach).</summary>
-    private const string MaximumQualityFamily = "LocalMaximumQuality";
+    /// <summary>"Name Base" for rares and uniques, otherwise the base name.</summary>
+    [JsonIgnore] public string Title => Rarity is Rarity.Rare or Rarity.Unique && Name != null ? $"{Name} {BaseName}" : BaseName;
 
     /// <summary>Maximum quality: the base's value (or the default) plus "+#% to Maximum Quality" modifiers.</summary>
     public int MaxQuality(int defaultMax) =>
-        (Base?.Quality ?? defaultMax) + Affixes.Where(m => m.Def?.Family == MaximumQualityFamily)
-            .Sum(m => (int)ModText.RolledTokens(m.DisplayText()).Select(t => t.Value).FirstOrDefault());
+        (Base?.Quality ?? defaultMax) + Affixes.Where(m => m.Def?.Family == ModFamilies.MaximumQuality).Sum(m => (int)m.StatValues.FirstOrDefault());
+
+    /// <summary>"20% (Life)", "0%" without quality.</summary>
+    [JsonIgnore] public string QualityText => Quality == 0 ? "0%" : $"{Quality}%{(QualityType != null ? $" ({QualityType})" : "")}";
 
     /// <summary>Mod tag enhanced by the item's catalyst quality, or null without catalyst quality.</summary>
-    public string? QualityTag => Quality > 0 ? CatalystDef.QualityTagFor(QualityType) : null;
+    [JsonIgnore] public string? QualityTag => Quality > 0 ? CatalystDef.QualityTagFor(QualityType) : null;
 
     /// <summary>Whether catalyst quality on this item enhances the mod (its tags contain the quality type's tag).</summary>
-    public bool QualityEnhances(ItemMod mod) => QualityTag is { } tag && mod.Def?.ModTags.Contains(tag) == true;
+    public bool QualityEnhances(ItemMod mod) => QualityEnhances(mod.Def);
+
+    /// <summary>Whether catalyst quality on this item enhances mods of this definition.</summary>
+    public bool QualityEnhances(ModDef? mod) => QualityTag is { } tag && mod?.ModTags.Contains(tag) == true;
+
+    /// <summary>A copy with catalyst quality of another amount/type (e.g. to test which quality a value target needs).</summary>
+    public Item WithQuality(int quality, string? qualityType)
+    {
+        var copy = Clone();
+        copy.Quality = quality;
+        copy.QualityType = qualityType;
+        return copy;
+    }
+
+    private double QualityFactor => 1 + Quality / 100.0;
+
+    /// <summary>The mod line as it works on the item: catalyst quality increases the values of matching mods (e.g. +3 skills → +4 at 34%).</summary>
+    public string EffectiveText(ItemMod mod) => QualityEnhances(mod) ? ModText.ScaleNumbers(mod.DisplayText(), QualityFactor) : mod.DisplayText();
+
+    /// <summary>The mod's values (<see cref="ItemMod.StatValues"/>) as they work on the item (catalyst quality applied, see <see cref="EffectiveText"/>).</summary>
+    public List<double> EffectiveValues(ItemMod mod) => QualityEnhances(mod) ? ModText.ScaleValues(mod.StatValues, QualityFactor) : mod.StatValues;
+
+    private IEnumerable<(ItemMod Mod, int Index)> Indexed(Func<ItemMod, bool> filter) => Mods.Select((m, i) => (m, i)).Where(t => filter(t.m));
 
     /// <summary>Corruption enchantments (Vaal Orb / Architect's Orb results, upgraded by Orbs of Sacrifice).</summary>
-    public IEnumerable<(ItemMod Mod, int Index)> CorruptionEnchants => Mods.Select((m, i) => (m, i)).Where(t => t.m.Kind == ModKind.CorruptedImplicit);
+    [JsonIgnore] public IEnumerable<(ItemMod Mod, int Index)> CorruptionEnchants => Indexed(m => m.Kind == ModKind.CorruptedImplicit);
+
+    [JsonIgnore] public IEnumerable<(ItemMod Mod, int Index)> UnrevealedMods => Indexed(m => m.Unrevealed);
+
+    /// <summary>The enchantment "Allocates Notable" instilled with Liquid Emotions (amulets), or null.</summary>
+    [JsonIgnore] public ItemMod? InstilledNotable => Mods.FirstOrDefault(m => m.Kind == ModKind.Enchant && InstillRecipe.NotableOf(m.DisplayText()) != null);
+
+    /// <summary>The name of the instilled notable, or null.</summary>
+    [JsonIgnore] public string? InstilledNotableName => InstilledNotable is { } enchant ? InstillRecipe.NotableOf(enchant.DisplayText()) : null;
 
     /// <summary>Items with desecrated modifiers (revealed or not) cannot be desecrated again.</summary>
-    public bool HasDesecratedMod => Affixes.Any(m => m.Kind == ModKind.Desecrated);
-    public IEnumerable<(ItemMod Mod, int Index)> UnrevealedMods => Mods.Select((m, i) => (m, i)).Where(t => t.m.Unrevealed);
+    [JsonIgnore] public bool HasDesecratedMod => Affixes.Any(m => m.Kind == ModKind.Desecrated);
 
     /// <summary>A fresh item of a base (no mods, sockets at the base's limit).</summary>
     /// <param name="withImplicit">Add the base implicit with mid-range values (for display and composed items).</param>
-    public static Item FromBase(BaseItem baseItem, Rarity rarity = Rarity.Normal, int itemLevel = 82, bool withImplicit = false)
+    public static Item FromBase(BaseItem baseItem, Rarity rarity = Rarity.Normal, int itemLevel = DefaultItemLevel, bool withImplicit = false)
     {
         var item = new Item
         {
@@ -143,6 +214,13 @@ public sealed class Item
         return mod;
     }
 
+    /// <summary>Replace the mod at <paramref name="index"/> in place (same position in the list), e.g. a revealed or upgraded modifier.</summary>
+    public ItemMod ReplaceMod(int index, ModDef def, ModKind kind, List<double>? values = null, string? source = null)
+    {
+        Mods.RemoveAt(index);
+        return AddMod(def, kind, values, source, index);
+    }
+
     /// <summary>A copy without its known affixes: implicits, enchantments, runes, quality, flags and unrevealed mods stay (e.g. to re-add edited affixes).</summary>
     public Item WithoutAffixes()
     {
@@ -162,7 +240,7 @@ public sealed class Item
     /// <summary>Re-attach ModDef/BaseItem references after deserialisation.</summary>
     public void Bind(GameData data)
     {
-        Base ??= data.FindBase(BaseName);
+        Base = data.FindBase(BaseName) ?? Base;
         // the game client uses plural class names ("Staves"), the data store singular ones ("Staff")
         if (Base != null) ItemClass = Base.ItemClass;
         foreach (var m in Mods)
@@ -172,5 +250,5 @@ public sealed class Item
         }
     }
 
-    public override string ToString() => $"{(Name != null ? Name + " " : "")}{BaseName} ({Rarity}, ilvl {ItemLevel}, {PrefixCount}P/{SuffixCount}S)";
+    public override string ToString() => $"{Title} ({Rarity}, ilvl {ItemLevel}, {PrefixCount}P/{SuffixCount}S)";
 }

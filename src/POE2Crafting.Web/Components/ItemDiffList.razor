@@ -1,0 +1,27 @@
+@* What changed between two item states: removed (red), added (green), changed (gold) — used by the planner guide and Hinekora's Lock. *@
+
+@if (_lines.Count == 0)
+{
+    <div class="diff-empty">No visible change.</div>
+}
+else
+{
+    <div class="diff-list">
+        @foreach (var line in _lines)
+        {
+            <div class="diff-line diff-@line.Kind.ToString().ToLowerInvariant()">
+                <span class="diff-sign">@(line.Kind switch { DiffKind.Removed => "−", DiffKind.Added => "+", _ => "~" })</span>
+                <span>@line.Text</span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public Item Before { get; set; } = null!;
+    [Parameter, EditorRequired] public Item After { get; set; } = null!;
+
+    private List<DiffLine> _lines = new();
+
+    protected override void OnParametersSet() => _lines = ItemDiff.Between(Before, After);
+}

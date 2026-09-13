@@ -1,79 +1,108 @@
+@* Planner: the target item (built from the current item, then edited) and "Path from Current Item". State lives in PlannerState. *@
+@inherits PlannerStateComponentBase
 @inject CraftingSession Session
-@inject GameData Data
 
 <div class="item-builder">
     <h3 class="pane-title">Target Item</h3>
 
     @if (Session.CurrentItem is { Base: not null } currentItem)
     {
-        <div class="builder-hint">
-            <button class="btn btn-sm" @onclick="() => _draft.LoadFrom(currentItem, copyValues: false)"
-                    title="Take base, rarity, item level and modifiers of the current item as the target, then edit it">
+        <div class="hint">
+            <button class="btn btn-sm" @onclick="() => LoadTarget(currentItem)"
+                    title="Take base, rarity, item level, modifiers, quality, augments and instill of the current item as the target, then edit it">
                 Load current item as target
             </button>
         </div>
     }
     else
     {
-        <p class="rarity-note">Import or compose an item on the left first; the target is built from that item.</p>
+        <p class="hint">Import or compose an item on the left first; the target is built from that item.</p>
     }
 
-    @if (_draft.Base != null)
+    @if (Draft.Base != null)
     {
-        <div class="builder-hint">Target base: <strong>@_draft.Base.Name</strong> (ilvl @_draft.ItemLevel)</div>
+        <div class="hint">Target base: <strong>@Draft.Base.Name</strong> (ilvl @Draft.ItemLevel)</div>
 
-        @if (_draft.Preview != null)
+        @if (Draft.Preview != null)
         {
             <div class="builder-preview">
-                <ItemDisplay Item="_draft.Preview" />
+                <ItemDisplay Item="Draft.Preview" />
             </div>
         }
 
-        <BaseItemForm Draft="_draft" RarityLabel="Target Rarity" ShowBase="false" OnChanged="StateHasChanged" />
-        <ModBrowser Draft="_draft" Title="Target Modifiers" ValueLabel="min" OnChanged="StateHasChanged" />
+        <BaseItemForm Draft="Draft" RarityLabel="Target Rarity" ShowBase="false" OnChanged="StateHasChanged" />
+        <ModBrowser Draft="Draft" Title="Target Modifiers" ValueLabel="min" AllowQualityValues="true" OnChanged="StateHasChanged" />
 
         <label class="checkbox-row" title="Count a roll of a better tier than the selected one as a hit">
-            <input type="checkbox" @bind="_allowBetterTiers" /> Better tiers also count as a hit
+            <input type="checkbox" @bind="Planner.AllowBetterTiers" /> Better tiers also count as a hit
         </label>
 
-        <div class="builder-actions sticky-actions">
+        <FinishingTargetForm Target="Planner.Finishing" Base="Draft.Base" OnChanged="StateHasChanged" />
+
+        @if (_error != null)
+        {
+            <div class="error-banner" role="alert">@_error</div>
+        }
+        <div class="sticky-actions">
             @{
-                var sameBase = Session.CurrentItem != null && ReferenceEquals(Session.CurrentItem.Base, _draft.Base);
+                var sameBase = Session.CurrentItem != null && ReferenceEquals(Session.CurrentItem.Base, Draft.Base);
             }
-            <button class="btn btn-primary btn-execute" @onclick="FindPaths" disabled="@(!sameBase)"
+            <button class="btn btn-primary btn-execute" @onclick="FindPaths" disabled="@(!sameBase || Planner.Planning)"
                     title="@(sameBase ? "Calculate the steps from the current item to this target" : "The item on the left has a different base: load it as target again")">
-                Path from Current Item
+                @(Planner.Planning ? "Planning…" : "Path from Current Item")
             </button>
         </div>
     }
 </div>
 
 @code {
-    [Parameter] public EventCallback<PlannerResult> OnPathsFound { get; set; }
+    private readonly CancellationTokenSource _disposed = new();
+    private string? _error;
 
-    private ItemDraft _draft = null!;
-    private bool _allowBetterTiers = true;
+    private ItemDraft Draft => Planner.Draft;
 
-    protected override void OnInitialized() => _draft = new ItemDraft(Data);
+    private void LoadTarget(Item item)
+    {
+        Draft.LoadFrom(item, copyValues: false);
+        Planner.Finishing.LoadFrom(item, Session.Engine.Data);
+    }
 
     private async Task FindPaths()
     {
         if (Session.CurrentItem is not { } start) return;
         var spec = new TargetItemSpec
         {
-            BaseName = start.BaseName,
-            ItemClass = start.ItemClass,
-            ItemLevel = start.ItemLevel,
-            TargetRarity = _draft.Rarity,
-            TargetMods = _draft.Selection.ToTargetMods(Session.Engine.Pool, start, _allowBetterTiers),
+            TargetRarity = Draft.Rarity,
+            TargetMods = Draft.Selection.ToTargetMods(Session.Engine.Pool, start, Planner.AllowBetterTiers),
         };
-        var plan = new CraftingPathFinder(Data, Session.Engine.Pool).FindPathsFromItem(start, spec);
-        await OnPathsFound.InvokeAsync(new PlannerResult { Plan = plan, SourceItemDescription = start.ToString() });
+        Planner.Finishing.ApplyTo(spec);
+        var snapshot = start.Clone();
+        _error = null;
+        Planner.SetPlanning(true);
+        try
+        {
+            // the search evaluates many item states (a few seconds for multi-step techniques): keep the page responsive
+            var plan = await Task.Run(() => new CraftingPathFinder(Session.Engine).FindPathsFromItem(snapshot, spec), _disposed.Token);
+            Planner.ShowResult(new PlannerResult(plan, snapshot));
+        }
+        catch (OperationCanceledException)
+        {
+            // the page was closed while planning
+        }
+        catch (Exception ex)
+        {
+            _error = $"Planning failed: {ex.Message}";
+        }
+        finally
+        {
+            Planner.SetPlanning(false);
+        }
     }
 
-    public sealed class PlannerResult
+    public override void Dispose()
     {
-        public PlanResult Plan { get; init; } = new();
-        public string SourceItemDescription { get; init; } = "";
+        base.Dispose();
+        _disposed.Cancel();
+        _disposed.Dispose();
     }
 }

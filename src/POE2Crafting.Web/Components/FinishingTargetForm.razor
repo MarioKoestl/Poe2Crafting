@@ -1,0 +1,107 @@
+@* Planner target beyond modifiers: quality (catalyst type on jewellery), socketed augments and an instilled notable (amulets). *@
+@inherits ChangingComponentBase
+@inject GameData Data
+
+<div class="target-mods-section finishing-target">
+    <h4>Quality, Augments &amp; Instill</h4>
+
+    <div class="builder-form">
+        <div class="form-row">
+            <label for="min-quality">Min. quality %</label>
+            <input id="min-quality" type="number" min="0" max="@Data.HighestReachableQuality" placeholder="any" value="@Target.MinQuality"
+                   @onchange="e => Change(() => Target.MinQuality = int.TryParse(e.Value?.ToString(), out var q) && q > 0 ? q : null)" />
+        </div>
+        @if (_catalystTypes.Count > 0)
+        {
+            <div class="form-row">
+                <label for="quality-type">Catalyst quality type</label>
+                <select id="quality-type" value="@(Target.QualityType ?? "")" @onchange="e => Change(() => Target.QualityType = string.IsNullOrEmpty(e.Value?.ToString()) ? null : e.Value!.ToString())">
+                    <option value="">any</option>
+                    @foreach (var type in _catalystTypes)
+                    {
+                        <option value="@type">@type</option>
+                    }
+                </select>
+            </div>
+        }
+    </div>
+
+    @if (SocketLimit > 0)
+    {
+        <div class="finishing-block">
+            <div class="section-title">Augments (@Target.Augments.Count / @SocketLimit sockets)</div>
+            @for (int i = 0; i < Target.Augments.Count; i++)
+            {
+                var index = i;
+                <div class="target-mod-row">
+                    <span class="tm-name"><CraftItemLink Name="@Target.Augments[index]" /></span>
+                    <span class="tm-text">@EffectOf(Target.Augments[index])</span>
+                    <button class="icon-remove" title="Remove augment" aria-label="Remove augment" @onclick="() => Change(() => Target.Augments.RemoveAt(index))">✕</button>
+                </div>
+            }
+            @if (Target.Augments.Count < SocketLimit)
+            {
+                <div class="search-filter">
+                    <select @bind="_augmentToAdd" aria-label="Augment to add">
+                        <option value="">Choose a rune, soul core or idol...</option>
+                        @foreach (var group in _augments.GroupBy(a => a.Kind))
+                        {
+                            <optgroup label="@group.Key">
+                                @foreach (var augment in group)
+                                {
+                                    <option value="@augment.Name">@augment.Name — @Data.AugmentEffectText(augment, Base, Base.ItemClass)</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                    <button class="btn btn-sm" disabled="@string.IsNullOrEmpty(_augmentToAdd)" @onclick="AddAugment">Add</button>
+                </div>
+            }
+        </div>
+    }
+
+    @if (GameData.CanInstill(Base.ItemClass))
+    {
+        <div class="finishing-block">
+            <div class="section-title">Instilled notable</div>
+            @if (Target.InstillNotable != null)
+            {
+                <div class="target-mod-row">
+                    <span class="tm-name">@InstillRecipe.EnchantTextFor(Target.InstillNotable)</span>
+                    <button class="icon-remove" title="Remove instill" aria-label="Remove instill" @onclick="() => Change(() => Target.InstillNotable = null)">✕</button>
+                </div>
+            }
+            <InstillPicker ActionLabel="Target" OnPick="r => Change(() => Target.InstillNotable = r.Notable)" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public FinishingTarget Target { get; set; } = null!;
+    [Parameter, EditorRequired] public BaseItem Base { get; set; } = null!;
+
+    private string _augmentToAdd = "";
+    private BaseItem? _loadedFor;
+    private List<AugmentDef> _augments = new();
+    private List<string> _catalystTypes = new();
+
+    private int SocketLimit => Base.SocketLimit ?? 0;
+
+    /// <summary>Augments and catalyst types depend only on the base.</summary>
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(Base, _loadedFor)) return;
+        _loadedFor = Base;
+        _augments = Data.AugmentsFor(Base, Base.ItemClass).OrderBy(a => a.Kind).ThenBy(a => a.Name).ToList();
+        _catalystTypes = Data.CatalystQualityTypesFor(Base).ToList();
+    }
+
+    private string? EffectOf(string augmentName) =>
+        Data.FindCurrency(augmentName)?.Augment is { } augment ? Data.AugmentEffectText(augment, Base, Base.ItemClass) : null;
+
+    private Task AddAugment() => Change(() =>
+    {
+        Target.Augments.Add(_augmentToAdd);
+        _augmentToAdd = "";
+    });
+}

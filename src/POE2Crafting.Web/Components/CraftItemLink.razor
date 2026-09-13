@@ -1,46 +1,39 @@
-@* Name of a currency, essence, alloy, catalyst or omen, highlighted; hovering it opens a box with icon, kind and description.
-   Clicks pass through (e.g. a currency tile is still selected). Unknown names render as plain text. *@
+@* Name of a currency, essence, alloy, catalyst or omen, highlighted; hovering it shows a box with icon, kind and description.
+   The box is plain CSS hover (placed by site.js positionPopover), so hovering never talks to the server. Clicks pass through
+   (e.g. a currency tile is still selected). Unknown names render as plain text. *@
 @inject GameData Data
-@inject IJSRuntime JS
-@implements IDisposable
 
-@if (_info == null)
+@if (Data.FindCraftItem(Name) is not { } info)
 {
     @Name
 }
 else
 {
-    <span class="craft-link-wrap" @onmouseenter="Show" @onmouseleave="HideSoon">
-        <span @ref="_anchor" class="craft-link">
-            @if (ShowIcon && _info.IconUrl != null)
+    <span class="craft-link-wrap" onmouseenter="positionPopover(this)">
+        <span class="craft-link">
+            @if (ShowIcon)
             {
-                <img src="@_info.IconUrl" alt="" class="craft-link-icon" loading="lazy" onerror="this.style.display='none'" />
+                <CraftIcon Url="@info.IconUrl" Class="craft-link-icon" />
             }
-            @_info.Name
+            @info.Name
         </span>
-        @if (_open)
-        {
-            <span @ref="_popover" class="craft-popover" role="tooltip">
-                <span class="craft-popover-head">
-                    @if (_info.IconUrl != null)
-                    {
-                        <img src="@_info.IconUrl" alt="" class="craft-popover-icon" onerror="this.style.display='none'" />
-                    }
-                    <span>
-                        <span class="craft-popover-name">@_info.Name</span>
-                        <span class="craft-popover-kind">@_info.Kind</span>
-                    </span>
+        <span class="craft-popover" role="tooltip">
+            <span class="craft-popover-head">
+                <CraftIcon Url="@info.IconUrl" Class="craft-popover-icon" />
+                <span>
+                    <span class="craft-popover-name">@info.Name</span>
+                    <span class="craft-popover-kind">@info.Kind</span>
                 </span>
-                @foreach (var line in _info.Description)
-                {
-                    <span class="craft-popover-line">@line</span>
-                }
-                @foreach (var fact in _info.Facts)
-                {
-                    <span class="craft-popover-fact">@fact</span>
-                }
             </span>
-        }
+            @foreach (var line in info.Description)
+            {
+                <span class="craft-popover-line">@line</span>
+            }
+            @foreach (var fact in info.Facts)
+            {
+                <span class="craft-popover-fact">@fact</span>
+            }
+        </span>
     </span>
 }
 
@@ -48,38 +41,4 @@ else
     [Parameter, EditorRequired] public string Name { get; set; } = "";
     /// <summary>False where the icon is already shown next to the name (currency tiles).</summary>
     [Parameter] public bool ShowIcon { get; set; } = true;
-
-    /// <summary>Delay before closing, so the pointer can move from the name into the box.</summary>
-    private const int HideDelayMs = 150;
-
-    private CraftItemInfo? _info;
-    private bool _open, _positioned;
-    private int _hoverVersion;
-    private ElementReference _anchor, _popover;
-
-    protected override void OnParametersSet() => _info = Data.FindCraftItem(Name);
-
-    private void Show()
-    {
-        _hoverVersion++;
-        _open = true;
-    }
-
-    private async Task HideSoon()
-    {
-        int version = ++_hoverVersion;
-        await Task.Delay(HideDelayMs);
-        if (version != _hoverVersion) return; // pointer came back
-        _open = false;
-        StateHasChanged();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (_open == _positioned) return;
-        _positioned = _open;
-        if (_open) await JS.InvokeVoidAsync("positionPopover", _anchor, _popover);
-    }
-
-    public void Dispose() => _hoverVersion++;
 }

@@ -1,11 +1,13 @@
+using POE2Crafting.Core.Data;
+
 namespace POE2Crafting.Core.Engine.Operations;
 
 /// <summary>Orb of Extraction: destroys an equipment item and returns its non socket-bound augments (runes, soul cores).</summary>
-public sealed class ExtractOperation : CraftOperation
+internal sealed class ExtractOperation : CraftOperation
 {
-    public ExtractOperation(CraftingEngine engine) : base(engine, "extract") { }
+    public ExtractOperation(CraftingEngine engine) : base(engine, CurrencyOps.Extract) { }
 
-    public override string? DefaultClassTarget => "equipment";
+    public override string? DefaultClassTarget => ClassTargets.Equipment;
 
     // augments can be socketed into corrupted items, so extracting them is assumed to work as well
     public override bool WorksOnCorrupted => true;

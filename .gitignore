@@ -68,3 +68,6 @@ research/poe2db/*.json
 research/*.zip
 
 .claude/settings.local.json
+
+# personal crafting projects (saved automatically by the app)
+projects/

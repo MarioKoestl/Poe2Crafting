@@ -13,12 +13,20 @@ import json
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
 BASE = "https://poe2db.tw/us/"
-LIST_PAGES = ["Stackable_Currency", "Omen", "Essence", "Catalysts"]
+LIST_PAGES = ["Stackable_Currency", "Omen", "Essence", "Catalysts", "Augment"]
 DATA_FILES = ["currencies.json", "omens.json", "essences.json", "alloys.json", "catalysts.json"]
+# augments (runes, soul cores, idols) have no data file of their own: their names come from the "socketable" mods
+AUGMENT_CATEGORY = "socketable"
+
+
+def augment_slug(name):
+    """Same rule as GameData: "Soul Core of Tacati" -> "Soul_Core_of_Tacati", "Aldur's Legacy" -> "Aldurs_Legacy"."""
+    return name.replace("'", "").replace(" ", "_")
 ART_PREFIX = "Art/2DItems/"
 SOURCES = ["https://repoe-fork.github.io/poe2/", "https://cdn.poe2db.tw/image/"]
 LINK_ICON = re.compile(r'href="([^"#?]+)"><img[^>]*?src="https://cdn\.poe2db\.tw/image/(Art/2DItems/[^"]+\.webp)"')
@@ -27,6 +35,7 @@ HEADERS = {"User-Agent": "POE2Crafting icon collector"}
 
 
 def fetch(url):
+    url = urllib.parse.quote(url, safe=":/")  # names like "Legacy of Mjölner"
     with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=30) as resp:
         return resp.read()
 
@@ -71,7 +80,10 @@ def main():
     root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent.parent
     data_dir = root / "data"
     icons_dir = root / "src" / "POE2Crafting.Web" / "wwwroot" / "img" / "icons"
-    slugs = sorted({e["slug"].replace("/us/", "") for f in DATA_FILES for e in json.loads((data_dir / f).read_text(encoding="utf-8")) if e.get("slug")})
+    slugs = {e["slug"].replace("/us/", "") for f in DATA_FILES for e in json.loads((data_dir / f).read_text(encoding="utf-8")) if e.get("slug")}
+    mods = json.loads((data_dir / "mods.json").read_text(encoding="utf-8"))
+    slugs |= {augment_slug(m["name"]) for m in mods if m.get("category") == AUGMENT_CATEGORY}
+    slugs = sorted(slugs)
 
     icons = {}
     for slug, path in art_paths(slugs).items():

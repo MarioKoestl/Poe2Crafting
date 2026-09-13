@@ -1,21 +1,26 @@
+using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Core.Engine.Operations;
 
-/// <summary>Fracturing Orb: lock one random non-fractured mod on a rare with at least 4 mods.</summary>
-public sealed class FractureOperation : CraftOperation
+/// <summary>
+/// Fracturing Orb: lock one random mod on a rare with at least 4 mods; an item can only hold one fractured modifier.
+/// Desecrated mods (revealed or not) count towards the 4 mods but cannot be fractured, so they raise the chance for the others.
+/// </summary>
+internal sealed class FractureOperation : CraftOperation
 {
-    public FractureOperation(CraftingEngine engine) : base(engine, "fracture") { }
+    public FractureOperation(CraftingEngine engine) : base(engine, CurrencyOps.Fracture) { }
 
     private static List<RemovalCandidate> Fracturable(Item item) =>
-        RemovalCandidate.Uniform(item.Mods.Select((m, i) => new RemovalCandidate { Index = i, Mod = m }).Where(r => r.Mod.IsAffix && !r.Mod.Fractured).ToList());
+        RemovalCandidate.UniformOf(item, m => m.IsAffix && !m.Fractured && m.Kind != ModKind.Desecrated);
 
     public override Applicability? Check(CraftContext ctx)
     {
-        int minMods = ctx.Currency.MinMods ?? 4;
+        int minMods = ctx.Currency.MinMods ?? Assumptions.FractureMinMods;
         if (ctx.Item.AffixCount < minMods) return Applicability.No($"Fracturing Orb needs at least {minMods} modifiers.");
-        if (Fracturable(ctx.Item).Count == 0) return Applicability.No("All modifiers are already fractured.");
-        if (ctx.Item.Affixes.Any(m => m.Fractured)) ctx.Notes.Add("Assumption: an item can hold more than one fractured modifier (UNVERIFIED).");
+        if (ctx.Item.Affixes.Any(m => m.Fractured)) return Applicability.No("The item already has a fractured modifier (only one per item).");
+        if (Fracturable(ctx.Item).Count == 0) return Applicability.No("No modifier can be fractured (desecrated modifiers cannot be fractured).");
+        if (ctx.Item.HasDesecratedMod) ctx.Notes.Add("Desecrated modifiers cannot be fractured: the fracture lands on one of the other modifiers.");
         return null;
     }
 
@@ -28,11 +33,9 @@ public sealed class FractureOperation : CraftOperation
 
     public override void Execute(ExecuteContext ctx)
     {
-        var candidates = Fracturable(ctx.Result);
         var chosen = CraftingEngine.ChosenRemovals(ctx).FirstOrDefault();
-        var pick = chosen != null
-            ? candidates.FirstOrDefault(c => ReferenceEquals(c.Mod, chosen)) ?? throw new InvalidOperationException("The chosen modifier cannot be fractured.")
-            : candidates[ctx.Rng.Next(candidates.Count)];
+        var pick = CraftingEngine.Pick(ctx.Rng, Fracturable(ctx.Result), c => c.Probability, chosen != null ? c => ReferenceEquals(c.Mod, chosen) : null,
+            "The chosen modifier cannot be fractured.");
         pick.Mod.Fractured = true;
         ctx.Details.Add($"Fractured: {pick.Mod.DisplayText()}");
     }

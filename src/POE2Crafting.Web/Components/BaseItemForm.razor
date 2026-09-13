@@ -1,72 +1,67 @@
 @* Item class / base / rarity / item level selectors of an ItemDraft, shared by the Item Composer and the Planner. *@
+@inherits ChangingComponentBase
 @inject GameData Data
 
 <div class="builder-form">
     @if (ShowBase)
     {
-    <div class="form-row">
-        <label>Item Class:</label>
-        <select value="@Draft.ItemClass" @onchange="OnClassChanged">
-            <option value="">-- Select --</option>
-            @foreach (var cls in Data.ItemClasses.OrderBy(c => c.Name))
-            {
-                <option value="@cls.Name">@cls.Name (@cls.BaseCount bases)</option>
-            }
-        </select>
-    </div>
-
-    @if (!string.IsNullOrEmpty(Draft.ItemClass))
-    {
         <div class="form-row">
-            <label>Base Item:</label>
-            <select value="@Draft.BaseName" @onchange="e => Update(() => Draft.BaseName = Text(e))">
+            <label for="item-class">Item Class:</label>
+            <select id="item-class" value="@Draft.ItemClass" @onchange="OnClassChanged">
                 <option value="">-- Select --</option>
-                @foreach (var b in Data.BasesOfClass(Draft.ItemClass).Where(b => !b.Hidden).OrderBy(b => b.Name))
+                @foreach (var cls in Data.ItemClasses.OrderBy(c => c.Name))
                 {
-                    <option value="@b.Name">@b.Name@(string.IsNullOrEmpty(b.Implicit) ? "" : $" — {b.Implicit}")</option>
+                    <option value="@cls.Name">@cls.Name (@UiFormat.Plural(cls.BaseCount, "base"))</option>
                 }
             </select>
         </div>
-    }
+
+        @if (!string.IsNullOrEmpty(Draft.ItemClass))
+        {
+            <div class="form-row">
+                <label for="base-item">Base Item:</label>
+                <select id="base-item" value="@Draft.BaseName" @onchange="e => Change(() => Draft.BaseName = Text(e))">
+                    <option value="">-- Select --</option>
+                    @foreach (var b in Data.BasesOfClass(Draft.ItemClass).Where(b => !b.Hidden).OrderBy(b => b.Name))
+                    {
+                        <option value="@b.Name">@b.Name@(string.IsNullOrEmpty(b.Implicit) ? "" : $" — {b.Implicit}")</option>
+                    }
+                </select>
+            </div>
+        }
     }
 
     <div class="form-row">
-        <label>@RarityLabel:</label>
-        <select value="@Draft.Rarity" @onchange="e => Update(() => { if (Enum.TryParse<Rarity>(Text(e), out var r)) Draft.Rarity = r; })">
-            <option value="@Rarity.Normal">Normal</option>
-            <option value="@Rarity.Magic">Magic</option>
-            <option value="@Rarity.Rare">Rare</option>
+        <label for="rarity">@RarityLabel:</label>
+        <select id="rarity" value="@Draft.Rarity" @onchange="e => Change(() => { if (Enum.TryParse<Rarity>(Text(e), out var r)) Draft.Rarity = r; })">
+            @foreach (var rarity in new[] { Rarity.Normal, Rarity.Magic, Rarity.Rare })
+            {
+                <option value="@rarity">@rarity</option>
+            }
         </select>
     </div>
 
     @if (ShowBase)
     {
         <div class="form-row">
-            <label>Item Level:</label>
-            <input type="number" min="1" max="100" value="@Draft.ItemLevel"
-                   @onchange="e => Update(() => { if (int.TryParse(Text(e), out var v)) Draft.ItemLevel = v; })" />
+            <label for="item-level">Item Level:</label>
+            <input id="item-level" type="number" min="1" max="100" value="@Draft.ItemLevel"
+                   @onchange="e => Change(() => { if (int.TryParse(Text(e), out var v)) Draft.ItemLevel = v; })" />
         </div>
     }
 </div>
 
 @code {
     [Parameter, EditorRequired] public ItemDraft Draft { get; set; } = null!;
-    [Parameter] public EventCallback OnChanged { get; set; }
     [Parameter] public string RarityLabel { get; set; } = "Rarity";
     /// <summary>False when base and item level are fixed (Planner: the target always has the current item's base).</summary>
     [Parameter] public bool ShowBase { get; set; } = true;
 
     private static string Text(ChangeEventArgs e) => e.Value?.ToString() ?? "";
 
-    private Task OnClassChanged(ChangeEventArgs e) => Update(() =>
+    private Task OnClassChanged(ChangeEventArgs e) => Change(() =>
     {
         Draft.ItemClass = Text(e);
         Draft.BaseName = "";
     });
-
-    private Task Update(Action change)
-    {
-        change();
-        return OnChanged.InvokeAsync();
-    }
 }

@@ -8,26 +8,26 @@ namespace POE2Crafting.Core.Engine.Operations;
 /// modifiers of the flux's element (Void: Fire, Cold and Lightning into Chaos). Equivalent = the target resistance tier with the
 /// highest level not above the source mod's level; the rolled value keeps its relative position in the range.
 /// </summary>
-public sealed class FluxOperation : CraftOperation
+internal sealed class FluxOperation : CraftOperation
 {
     private static readonly string[] Elements = { "Fire", "Cold", "Lightning" };
     private static string ResistanceFamily(string element) => element + "Resistance";
 
-    public FluxOperation(CraftingEngine engine) : base(engine, "flux") { }
+    public FluxOperation(CraftingEngine engine) : base(engine, CurrencyOps.Flux) { }
 
-    private static IEnumerable<string> SourceFamilies(CurrencyDef flux) =>
-        Elements.Where(e => e != flux.Element).Select(ResistanceFamily);
+    private static IEnumerable<string> SourceElements(CurrencyDef flux) => Elements.Where(e => e != flux.Element);
+
+    private sealed record Transformation(int Index, ItemMod Mod, ModDef Replacement);
 
     /// <summary>Affixes to transform, each with its replacement on this base.</summary>
-    private List<(int Index, ItemMod Mod, ModDef Replacement)> Transformations(Item item, CurrencyDef flux)
+    private List<Transformation> Transformations(Item item, CurrencyDef flux)
     {
-        var sources = SourceFamilies(flux).ToHashSet();
+        var sources = SourceElements(flux).Select(ResistanceFamily).ToHashSet();
         var targets = Engine.Pool.AllForBase(item).Where(m => m.Family == ResistanceFamily(flux.Element!)).ToList();
         return item.Mods.Select((m, i) => (Index: i, Mod: m))
             .Where(t => t.Mod.IsAffix && t.Mod.Def?.Family is { } f && sources.Contains(f))
-            .Select(t => (t.Index, t.Mod, Replacement: EquivalentTier(targets.Where(r => r.AffixType == t.Mod.Affix), t.Mod.Def!.Level)))
-            .Where(t => t.Replacement != null)
-            .Select(t => (t.Index, t.Mod, t.Replacement!))
+            .Select(t => EquivalentTier(targets.Where(r => r.AffixType == t.Mod.Affix), t.Mod.Def!.Level) is { } replacement ? new Transformation(t.Index, t.Mod, replacement) : null)
+            .OfType<Transformation>()
             .ToList();
     }
 
@@ -42,7 +42,7 @@ public sealed class FluxOperation : CraftOperation
     {
         if (ctx.Currency.Element == null) return Applicability.No("Flux element missing in the data.");
         if (Transformations(ctx.Item, ctx.Currency).Count == 0)
-            return Applicability.No($"The item has no {string.Join("/", SourceFamilies(ctx.Currency).Select(f => f.Replace("Resistance", "")))} resistance modifier to transform.");
+            return Applicability.No($"The item has no {string.Join("/", SourceElements(ctx.Currency))} resistance modifier to transform.");
         ctx.Notes.Add("Assumption: \"equivalent\" = highest target tier not above the source mod's level, value at the same relative position (UNVERIFIED).");
         return null;
     }
@@ -62,8 +62,7 @@ public sealed class FluxOperation : CraftOperation
         foreach (var t in Transformations(ctx.Result, ctx.Currency))
         {
             var before = t.Mod.DisplayText();
-            ctx.Result.Mods.RemoveAt(t.Index);
-            var added = ctx.Result.AddMod(t.Replacement, t.Mod.Kind, Rescaled(t.Mod, t.Replacement), t.Mod.SourceName, t.Index);
+            var added = ctx.Result.ReplaceMod(t.Index, t.Replacement, t.Mod.Kind, Rescaled(t.Mod, t.Replacement), t.Mod.SourceName);
             added.Fractured = t.Mod.Fractured;
             ctx.Details.Add($"{before}  →  {added.DisplayText()}");
         }

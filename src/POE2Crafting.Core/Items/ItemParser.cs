@@ -13,6 +13,7 @@ namespace POE2Crafting.Core.Items;
 ///   - Stat lines with optional (min-max) ranges and trailing markers (implicit), (rune), (enchant), (crafted), (desecrated), (fractured)
 ///   - Footer flags (Corrupted, Mirrored, Sanctified, Unidentified, Fractured Item)
 /// With game data, mods are resolved against the base's own mod pool by affix name, text template and value ranges.
+/// The reverse direction is <see cref="ItemTextWriter"/>.
 /// </summary>
 public static class ItemParser
 {
@@ -31,7 +32,7 @@ public static class ItemParser
     /// <summary>Parse an item text. Optionally bind to game data for base and ModDef resolution.</summary>
     public static Item Parse(string text, GameData? data = null)
     {
-        var sections = SplitSections(text ?? "");
+        var sections = SplitSections(text);
         if (sections.Count == 0) throw new FormatException("No item text to parse.");
 
         var item = new Item();
@@ -44,6 +45,8 @@ public static class ItemParser
         if (data != null)
         {
             item.Bind(data);
+            // the game prints "Quality: +20% (Life Modifiers)"; items store the catalyst's own type ("Life")
+            if (item.QualityType != null) item.QualityType = data.CanonicalQualityType(item.QualityType);
             foreach (var mod in item.Mods.Where(m => m.Def == null && m.RawText != null))
                 TryResolveMod(mod, item, data);
         }
@@ -54,14 +57,14 @@ public static class ItemParser
     {
         var sections = new List<List<string>>();
         var current = new List<string>();
-        foreach (var raw in text.Split('\n').Select(l => l.TrimEnd('\r').Trim()))
+        foreach (var line in text.Split('\n').Select(l => l.Trim()))
         {
-            if (SectionSep.IsMatch(raw))
+            if (SectionSep.IsMatch(line))
             {
                 if (current.Count > 0) sections.Add(current);
                 current = new List<string>();
             }
-            else if (raw.Length > 0) current.Add(raw);
+            else if (line.Length > 0) current.Add(line);
         }
         if (current.Count > 0) sections.Add(current);
         return sections;
@@ -69,22 +72,14 @@ public static class ItemParser
 
     private static void ParseHeaderSection(Item item, List<string> lines, GameData? data)
     {
+        const string classLabel = "Item Class:", rarityLabel = "Rarity:";
         var remaining = new List<string>();
         foreach (var line in lines)
         {
-            if (line.StartsWith("Item Class:", StringComparison.OrdinalIgnoreCase)) { item.ItemClass = line["Item Class:".Length..].Trim(); continue; }
-            if (line.StartsWith("Rarity:", StringComparison.OrdinalIgnoreCase))
-            {
-                item.Rarity = line["Rarity:".Length..].Trim().ToLowerInvariant() switch
-                {
-                    "magic" => Rarity.Magic,
-                    "rare" => Rarity.Rare,
-                    "unique" => Rarity.Unique,
-                    _ => Rarity.Normal,
-                };
-                continue;
-            }
-            remaining.Add(line);
+            if (line.StartsWith(classLabel, StringComparison.OrdinalIgnoreCase)) item.ItemClass = line[classLabel.Length..].Trim();
+            else if (line.StartsWith(rarityLabel, StringComparison.OrdinalIgnoreCase))
+                item.Rarity = Enum.TryParse<Rarity>(line[rarityLabel.Length..].Trim(), ignoreCase: true, out var rarity) ? rarity : Rarity.Normal;
+            else remaining.Add(line);
         }
 
         if (item.Rarity is Rarity.Rare or Rarity.Unique && remaining.Count >= 2)
@@ -104,26 +99,30 @@ public static class ItemParser
 
     private static void ParseSection(Item item, List<string> lines)
     {
-        if (lines.Count == 1)
-        {
-            switch (lines[0])
-            {
-                case "Corrupted": item.Corrupted = true; return;
-                case "Twice Corrupted": item.Corrupted = item.TwiceCorrupted = true; return;
-                case "Mirrored": item.Mirrored = true; return;
-                case "Unidentified": item.Identified = false; return;
-                case "Sanctified": item.Sanctified = true; return;
-                case "Fractured Item": return;
-            }
-        }
+        if (lines.Count == 1 && ApplyFlag(item, lines[0])) return;
 
         bool hasHeader = lines.Any(l => ModHeader.IsMatch(l));
-        if (!hasHeader && lines.All(l => PropertyRx.IsMatch(l) && !l.StartsWith("Grants Skill:", StringComparison.Ordinal)))
+        if (!hasHeader && lines.All(l => PropertyRx.IsMatch(l) && !l.StartsWith(ItemTextFormat.GrantsSkill, StringComparison.Ordinal)))
         {
             ParseProperties(item, lines);
             return;
         }
-        ParseModSection(item, lines);
+        new ModSectionParser(item).Parse(lines);
+    }
+
+    /// <summary>Footer flags; returns false for any other line.</summary>
+    private static bool ApplyFlag(Item item, string line)
+    {
+        switch (line)
+        {
+            case "Corrupted": item.Corrupted = true; return true;
+            case "Twice Corrupted": item.Corrupted = item.TwiceCorrupted = true; return true;
+            case "Mirrored": item.Mirrored = true; return true;
+            case "Unidentified": item.Identified = false; return true;
+            case "Sanctified": item.Sanctified = true; return true;
+            case "Fractured Item": return true;
+            default: return false;
+        }
     }
 
     private static void ParseProperties(Item item, List<string> lines)
@@ -150,75 +149,76 @@ public static class ItemParser
         }
     }
 
-    private static void ParseModSection(Item item, List<string> lines)
+    /// <summary>One section of modifier lines: headers start a mod whose stat lines follow; header-less lines are mods of their own.</summary>
+    private sealed class ModSectionParser
     {
-        ItemMod? current = null;
-        var statTexts = new List<string>();
+        private readonly Item _item;
+        private ItemMod? _current;
+        private readonly List<string> _statTexts = new();
 
-        void Flush()
+        public ModSectionParser(Item item) => _item = item;
+
+        public void Parse(List<string> lines)
         {
-            if (current == null) return;
-            current.RawText = string.Join("\n", statTexts);
-            current.Values = ModText.RolledTokens(current.RawText).Select(t => t.Value).ToList();
-            if (statTexts.Count > 0 || current.ModId.Length > 0) item.Mods.Add(current);
-            current = null;
-            statTexts.Clear();
+            foreach (var line in lines)
+            {
+                if (ModHeader.Match(line) is { Success: true } header)
+                {
+                    Flush();
+                    _current = FromHeader(header);
+                }
+                else if (IsReminderText(line)) continue;
+                else if (MarkerRx.Match(line) is { Success: true } marker) AddMarkedLine(line[..marker.Index], marker.Groups[1].Value.ToLowerInvariant());
+                else if (_current == null) AddMarkedLine(line, "");
+                else _statTexts.Add(line);
+            }
+            Flush();
         }
 
-        foreach (var line in lines)
+        private static ItemMod FromHeader(Match header)
         {
-            var hm = ModHeader.Match(line);
-            if (hm.Success)
+            var flags = header.Groups["flags"].Value;
+            return new ItemMod
             {
-                Flush();
-                var flags = hm.Groups["flags"].Value;
-                var kind = flags.Contains("Corrupted") ? ModKind.CorruptedImplicit
-                         : flags.Contains("Implicit") ? ModKind.Implicit
-                         : flags.Contains("Enchant") ? ModKind.Enchant
-                         : flags.Contains("Crafted") ? ModKind.Crafted
-                         : flags.Contains("Desecrated") || flags.Contains("Unrevealed") ? ModKind.Desecrated
-                         : ModKind.Explicit;
-                current = new ItemMod
-                {
-                    ModId = hm.Groups["name"].Value,
-                    Kind = kind,
-                    Affix = hm.Groups["affix"].Value switch { "Prefix" => AffixType.Prefix, "Suffix" => AffixType.Suffix, _ => AffixType.Other },
-                    Fractured = flags.Contains("Fractured"),
-                    Unrevealed = flags.Contains("Unrevealed"),
-                };
-                continue;
-            }
-
-            // reminder text, e.g. "(Consecrated Ground ...)"
-            if (line.StartsWith('(') && line.EndsWith(')') && ModText.RolledTokens(line).Count == 0) continue;
-
-            var marker = MarkerRx.Match(line);
-            if (current == null || marker.Success)
-            {
-                // a header-less line is its own mod
-                var stat = marker.Success ? line[..marker.Index] : line;
-                var tag = marker.Success ? marker.Groups[1].Value.ToLowerInvariant() : "";
-                if (tag == "rune") { item.Runes.Add(stat); continue; }
-                Flush();
-                current = new ItemMod
-                {
-                    Kind = tag switch
-                    {
-                        "implicit" => ModKind.Implicit,
-                        "enchant" => ModKind.Enchant,
-                        "crafted" => ModKind.Crafted,
-                        "desecrated" => ModKind.Desecrated,
-                        _ => stat.StartsWith("Grants Skill:", StringComparison.Ordinal) ? ModKind.Implicit : ModKind.Explicit,
-                    },
-                    Fractured = tag == "fractured",
-                };
-                statTexts.Add(stat);
-                Flush();
-                continue;
-            }
-            statTexts.Add(line);
+                ModId = header.Groups["name"].Value,
+                Kind = ItemTextFormat.KindOfHeaderFlags(flags),
+                Affix = Enum.TryParse<AffixType>(header.Groups["affix"].Value, out var affix) ? affix : AffixType.Other,
+                Fractured = flags.Contains("Fractured"),
+                Unrevealed = flags.Contains("Unrevealed"),
+            };
         }
-        Flush();
+
+        /// <summary>Reminder text such as "(Consecrated Ground ...)" carries no numbers and belongs to no mod.</summary>
+        private static bool IsReminderText(string line) => line.StartsWith('(') && line.EndsWith(')') && ModText.RolledTokens(line).Count == 0;
+
+        /// <summary>A line with its own marker (or without a header) is a mod of its own; runes are item augments.</summary>
+        private void AddMarkedLine(string stat, string marker)
+        {
+            if (marker == ItemTextFormat.RuneMarker)
+            {
+                _item.Runes.Add(stat);
+                return;
+            }
+            Flush();
+            _current = new ItemMod
+            {
+                Kind = marker.Length > 0 ? ItemTextFormat.KindOfMarker(marker)
+                    : stat.StartsWith(ItemTextFormat.GrantsSkill, StringComparison.Ordinal) ? ModKind.Implicit : ModKind.Explicit,
+                Fractured = marker == ItemTextFormat.FracturedMarker,
+            };
+            _statTexts.Add(stat);
+            Flush();
+        }
+
+        private void Flush()
+        {
+            if (_current == null) return;
+            _current.RawText = string.Join("\n", _statTexts);
+            _current.Values = ModText.RolledTokens(_current.RawText).Select(t => t.Value).ToList();
+            if (_statTexts.Count > 0 || _current.ModId.Length > 0 || _current.Unrevealed) _item.Mods.Add(_current);
+            _current = null;
+            _statTexts.Clear();
+        }
     }
 
     // ------------------------------------------------------------------ mod resolution
@@ -226,7 +226,7 @@ public static class ItemParser
     /// <summary>Match an unresolved mod to a ModDef from the item's own pool: same affix type, affix name, text template, then value ranges.</summary>
     private static void TryResolveMod(ItemMod mod, Item item, GameData data)
     {
-        if (string.IsNullOrWhiteSpace(mod.RawText)) return;
+        if (mod.Unrevealed || string.IsNullOrWhiteSpace(mod.RawText)) return;
         // "(enchant)" lines on corrupted items are corruption enchantments; other implicits/enchants are shown as text
         if (mod.Kind == ModKind.Implicit || mod.Kind == ModKind.Enchant && !item.Corrupted) return;
 
@@ -235,10 +235,10 @@ public static class ItemParser
         var itemRanges = ModText.RolledTokens(mod.RawText).Where(t => t.Range != null).Select(t => t.Range!).ToList();
 
         var candidates = data.Mods.Where(def =>
-            CategoryFits(def.Category, mod.Kind) &&
+            ModCategories.CanAppearAs(def.Category, mod.Kind) &&
             (mod.Affix == AffixType.Other || def.AffixType == mod.Affix) &&
-            def.Weights.Keys.Any(pages.Contains) &&
-            (ModText.StatSignature(def.Text) == signature || def.AltTexts.Any(t => ModText.StatSignature(t) == signature))).ToList();
+            def.IsOnAnyPage(pages) &&
+            (def.StatSignature == signature || def.AltTexts.Any(t => ModText.StatSignature(t) == signature))).ToList();
         if (candidates.Count == 0) return;
 
         var name = mod.ModId;
@@ -257,14 +257,6 @@ public static class ItemParser
         mod.Values = AlignValues(best, mod.RawText);
     }
 
-    private static bool CategoryFits(string category, ModKind kind) => kind switch
-    {
-        ModKind.Crafted => ModCategories.EssenceResults.Contains(category),
-        ModKind.Desecrated => category == ModCategories.Desecrated,
-        ModKind.CorruptedImplicit or ModKind.Enchant => category is ModCategories.Corrupted or ModCategories.CorruptionUpgrade,
-        _ => category is not (ModCategories.Corrupted or ModCategories.CorruptionUpgrade or ModCategories.Socketable or ModCategories.Bonded) && !ModCategories.EssenceResults.Contains(category),
-    };
-
     private static bool RangesEqual(List<double[]> defRanges, List<double[]> itemRanges)
     {
         var defOnly = defRanges.Where(r => r[0] != r[1]).ToList();
@@ -280,13 +272,16 @@ public static class ItemParser
         if (values.Count != def.Ranges.Count || values.Count == 0) return false;
         for (int i = 0; i < values.Count; i++)
         {
-            double lo = Math.Min(def.Ranges[i][0], def.Ranges[i][1]), hi = Math.Max(def.Ranges[i][0], def.Ranges[i][1]);
-            if (Math.Abs(values[i]) < lo - 0.001 || Math.Abs(values[i]) > hi + 0.001) return false;
+            var (lo, hi) = ModText.Bounds(def.Ranges[i]);
+            if (values[i] < lo - 0.001 || values[i] > hi + 0.001) return false;
         }
         return true;
     }
 
-    /// <summary>Pick the rolled numbers that correspond to the template's ranges (skipping fixed numbers like "+1 to Level").</summary>
+    /// <summary>
+    /// Pick the rolled numbers that correspond to the template's ranges (skipping fixed numbers like "+1 to Level").
+    /// When the item line has a different number of numbers than the template, the first ones are taken (best effort).
+    /// </summary>
     private static List<double> AlignValues(ModDef def, string rawText)
     {
         var itemTokens = ModText.RolledTokens(rawText).Select(t => t.Value).ToList();
@@ -294,50 +289,5 @@ public static class ItemParser
         if (itemTokens.Count == templateTokens.Count)
             return itemTokens.Where((_, i) => templateTokens[i]).ToList();
         return itemTokens.Take(def.Ranges.Count).ToList();
-    }
-
-    // ------------------------------------------------------------------ export
-
-    /// <summary>Serialize an item back to the Ctrl+Alt+C text format (for display/export).</summary>
-    /// <param name="tierOf">Tier to print for a mod (e.g. ModPool.DisplayTier); defaults to the global tier.</param>
-    public static string ToText(Item item, Func<ModDef, int>? tierOf = null)
-    {
-        tierOf ??= d => d.Tier;
-        var sb = new System.Text.StringBuilder();
-        if (!string.IsNullOrEmpty(item.ItemClass)) sb.AppendLine($"Item Class: {item.ItemClass}");
-        sb.AppendLine($"Rarity: {item.Rarity}");
-        if (item.Name != null) sb.AppendLine(item.Name);
-        sb.AppendLine(item.BaseName);
-        sb.AppendLine("--------");
-        if (item.Quality > 0) sb.AppendLine($"Quality: +{item.Quality}%{(item.QualityType != null ? $" ({item.QualityType})" : "")}");
-        if (item.Sockets > 0) sb.AppendLine($"Sockets: {string.Join(" ", Enumerable.Repeat("S", item.Sockets))}");
-        sb.AppendLine($"Item Level: {item.ItemLevel}");
-
-        if (item.Runes.Count > 0)
-        {
-            sb.AppendLine("--------");
-            foreach (var r in item.Runes) sb.AppendLine($"{r} (rune)");
-        }
-        var implicits = item.Mods.Where(m => m.Kind is ModKind.Implicit or ModKind.CorruptedImplicit or ModKind.Enchant).ToList();
-        if (implicits.Count > 0)
-        {
-            sb.AppendLine("--------");
-            foreach (var m in implicits) sb.AppendLine(m.DisplayText() + (m.Kind is ModKind.Enchant or ModKind.CorruptedImplicit ? " (enchant)" : m.Kind == ModKind.Implicit && !m.DisplayText().StartsWith("Grants Skill:") ? " (implicit)" : ""));
-        }
-        var affixes = item.Mods.Where(m => m.IsAffix).OrderBy(m => m.Affix).ToList();
-        if (affixes.Count > 0)
-        {
-            sb.AppendLine("--------");
-            foreach (var mod in affixes)
-            {
-                var flags = (mod.Fractured ? "Fractured " : "") + mod.Kind switch { ModKind.Crafted => "Crafted ", ModKind.Desecrated => "Desecrated ", _ => "" };
-                var tier = mod.Def != null && mod.Kind == ModKind.Explicit ? $" (Tier: {tierOf(mod.Def)})" : "";
-                sb.AppendLine($"{{ {flags}{mod.Affix} Modifier \"{mod.Def?.Name ?? mod.ModId}\"{tier} }}");
-                sb.AppendLine(mod.DisplayText());
-            }
-        }
-        if (item.Corrupted) { sb.AppendLine("--------"); sb.AppendLine(item.TwiceCorrupted ? "Twice Corrupted" : "Corrupted"); }
-        if (item.Mirrored) { sb.AppendLine("--------"); sb.AppendLine("Mirrored"); }
-        return sb.ToString().TrimEnd();
     }
 }

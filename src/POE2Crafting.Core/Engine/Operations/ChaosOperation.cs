@@ -1,9 +1,11 @@
+using POE2Crafting.Core.Data;
+
 namespace POE2Crafting.Core.Engine.Operations;
 
 /// <summary>Chaos Orb (incl. Greater/Perfect): remove one random mod, then add one (Whittling, Sinistral/Dextral Erasure restrict the removal).</summary>
-public sealed class ChaosOperation : CraftOperation
+internal sealed class ChaosOperation : CraftOperation
 {
-    public ChaosOperation(CraftingEngine engine) : base(engine, "chaos") { }
+    public ChaosOperation(CraftingEngine engine) : base(engine, CurrencyOps.Chaos) { }
 
     public override Applicability? Check(CraftContext ctx) =>
         CraftingEngine.Removable(ctx.Item, ctx.Omens).Count == 0 ? Applicability.No("No modifier can be removed (all fractured or omen restriction).") : null;
@@ -12,8 +14,14 @@ public sealed class ChaosOperation : CraftOperation
     {
         var removals = CraftingEngine.Removable(ctx.Item, ctx.Omens);
         var considered = forcedRemovalIndex is { } fi ? removals.Where(r => r.Index == fi).ToList() : removals;
+        var notes = new List<string>();
+        if (ctx.OmenIs(OmenEffects.RemoveLowestLevel)) notes.Add("Omen of Whittling: removes the modifier with the lowest modifier level (assumption: ties are broken randomly).");
+        if (considered.Count == 0)
+            return new StepPreview { RemoveCount = 1, AddCount = 1, Removals = removals, Notes = { "The chosen modifier cannot be removed by this Chaos Orb." }, TwoStepChoice = true };
+
         // marginal distribution of the added mod over the (considered) removal outcomes
-        var acc = new Dictionary<string, ModCandidate>();
+        var probability = new Dictionary<string, double>();
+        var candidates = new Dictionary<string, ModCandidate>();
         double pPrefix = 0, weightSum = considered.Sum(r => r.Probability);
         foreach (var r in considered)
         {
@@ -22,16 +30,15 @@ public sealed class ChaosOperation : CraftOperation
             pPrefix += pP * pr;
             foreach (var x in additions)
             {
-                if (!acc.TryGetValue(x.Mod.Id, out var e)) acc[x.Mod.Id] = e = new ModCandidate { Mod = x.Mod, Weight = x.Weight };
-                e.Probability += x.Probability * pr;
+                candidates.TryAdd(x.Mod.Id, x);
+                probability[x.Mod.Id] = probability.GetValueOrDefault(x.Mod.Id) + x.Probability * pr;
             }
         }
-        var notes = new List<string>();
-        if (ctx.OmenIs(OmenEffects.RemoveLowestLevel)) notes.Add("Omen of Whittling: removes the modifier with the lowest modifier level (assumption: ties are broken randomly).");
         return new StepPreview
         {
             RemoveCount = 1, AddCount = 1, Removals = removals,
-            Additions = acc.Values.OrderByDescending(x => x.Probability).ToList(),
+            Additions = candidates.Values.Select(c => new ModCandidate { Mod = c.Mod, Weight = c.Weight, Probability = probability[c.Mod.Id] })
+                .OrderByDescending(x => x.Probability).ToList(),
             PrefixProbability = pPrefix, SuffixProbability = 1 - pPrefix, Notes = notes, TwoStepChoice = true,
         };
     }
@@ -45,8 +52,8 @@ public sealed class ChaosOperation : CraftOperation
         {
             var modId = ctx.Choice.AddModIds[0];
             candidates = RemovalCandidate.Uniform(candidates
-                .Where(r => Engine.AdditionsAfterRemoval(ctx.Result, r.Index, ctx.MinModLevel).Additions.Any(a => a.Mod.Id == modId)).ToList());
-            if (candidates.Count == 0) throw new InvalidOperationException("The chosen modifier cannot be added after any possible removal.");
+                .Where(r => Engine.AdditionsAfterRemoval(ctx.Result, r.Index, ctx.MinModLevel).Additions.Any(a => a.Mod.Id == modId)));
+            if (candidates.Count == 0) throw new InvalidChoiceException("The chosen modifier cannot be added after any possible removal.");
         }
         Engine.RemoveOne(ctx, candidates, chosen);
         Engine.AddMods(ctx, 1, OmenEffects.None); // chaos omens only restrict the removal

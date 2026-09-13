@@ -1,15 +1,23 @@
+using POE2Crafting.Core.Items;
+
 namespace POE2Crafting.Core.Engine;
 
 /// <summary>Seedable random source so crafting sessions can be reproduced.</summary>
 public sealed class Rng
 {
     private readonly Random _random;
-    public int Seed { get; }
 
-    public Rng(int? seed = null)
+    public Rng(int? seed = null) => _random = new Random(seed ?? Random.Shared.Next());
+
+    /// <summary>A seed derived from a base seed and a text (stable across processes, unlike string.GetHashCode).</summary>
+    public static int Derive(int seed, string text)
     {
-        Seed = seed ?? Random.Shared.Next();
-        _random = new Random(Seed);
+        unchecked
+        {
+            uint hash = 2166136261 ^ (uint)seed;
+            foreach (char c in text) hash = (hash ^ c) * 16777619;
+            return (int)(hash & 0x7FFFFFFF);
+        }
     }
 
     public double NextDouble() => _random.NextDouble();
@@ -20,7 +28,7 @@ public sealed class Rng
     {
         double total = 0;
         foreach (var w in weights) total += w;
-        if (total <= 0) throw new InvalidOperationException("No candidates with positive weight.");
+        if (total <= 0) throw new ArgumentException("No candidates with positive weight.", nameof(weights));
         double r = _random.NextDouble() * total;
         for (int i = 0; i < weights.Count; i++)
         {
@@ -44,11 +52,11 @@ public sealed class Rng
         return picked;
     }
 
-    /// <summary>Roll a value inside a range; integer ranges give integers, fractional ranges keep two decimals.</summary>
-    public double RollRange(double min, double max)
+    /// <summary>Roll a value inside a range; integer ranges give integers, fractional ranges keep two decimals (<see cref="ModText.PossibleRolls"/>).</summary>
+    public double RollRange(double[] range)
     {
-        if (max < min) (min, max) = (max, min);
-        if (Items.ModText.IsIntegerRange(min, max)) return _random.Next((int)min, (int)max + 1);
+        var (min, max) = ModText.Bounds(range);
+        if (ModText.IsIntegerRange(min, max)) return _random.Next((int)min, (int)max + 1);
         return Math.Round(min + _random.NextDouble() * (max - min), 2);
     }
 }

@@ -1,6 +1,5 @@
 @page "/"
 @inject CraftingSession Session
-@inject GameData Data
 
 @* Desktop: every column/pane is its own (single) scroll area; narrow screens stack everything and the page scrolls. *@
 <div class="crafting-page @(_composing ? "composing" : "")">
@@ -21,15 +20,19 @@
                     }
                     <button class="btn btn-sm" @onclick="() => StartCompose(edit: false)" title="Compose a new item from a base">New</button>
                     <button class="btn btn-sm" @onclick="ShowImport">Import</button>
-                    <button class="btn btn-sm" @onclick="ShowSaveLoad">Save / Load</button>
                 }
             </div>
         </div>
 
         <div class="panel-body">
+            @if (!_composing)
+            {
+                <ProjectPanel OnChanged="OnItemReplaced" />
+            }
+
             @if (Session.LastError != null)
             {
-                <div class="error-banner">@Session.LastError</div>
+                <div class="error-banner" role="alert">@Session.LastError</div>
             }
 
             @if (_composing)
@@ -44,11 +47,7 @@
                 }
                 else
                 {
-                    <div class="empty-state">
-                        <div class="empty-icon">◇</div>
-                        <p>No item loaded.</p>
-                        <p class="empty-hint">Import an item from the game (Ctrl+Alt+C text) or compose one with modifiers.</p>
-                    </div>
+                    <EmptyState Hint="Import an item from the game (Ctrl+Alt+C text) or compose one with modifiers.">No item loaded.</EmptyState>
                 }
 
                 @if (Session.History.Count > 0)
@@ -59,9 +58,10 @@
                             <button class="btn btn-xs" @onclick="Undo" disabled="@(Session.History.Count <= 1)">Undo</button>
                         </h3>
                         <div class="history-list">
-                            @foreach (var entry in Session.History.AsEnumerable().Reverse())
+                            @for (int i = Session.History.Count - 1; i >= 0; i--)
                             {
-                                <div class="history-entry">
+                                var entry = Session.History[i];
+                                <div class="history-entry" @key="entry">
                                     <span class="history-action"><CraftText Text="@entry.Action" /></span>
                                     <span class="history-summary" title="@entry.Summary">@entry.Summary</span>
                                 </div>
@@ -75,19 +75,22 @@
 
     @* ---- RIGHT: Mode Tabs + two panes ---- *@
     <section class="crafting-panel panel">
-        <div class="mode-tabs">
-            <button class="mode-tab @(_mode == Mode.Simulator ? "active" : "")" @onclick="() => _mode = Mode.Simulator">Simulator</button>
-            <button class="mode-tab @(_mode == Mode.Planner ? "active" : "")" @onclick="() => _mode = Mode.Planner">Crafting Planner</button>
+        <div class="mode-tabs" role="tablist">
+            @foreach (var mode in Enum.GetValues<Mode>())
+            {
+                var m = mode;
+                <button role="tab" aria-selected="@(_mode == m ? "true" : "false")" class="mode-tab @(_mode == m ? "active" : "")" @onclick="() => _mode = m">@TabLabel(m)</button>
+            }
         </div>
 
-        @if (_mode == Mode.Simulator)
-        {
-            @if (Session.CurrentItem != null)
+        <div class="workspace">
+            @switch (_mode)
             {
-                <div class="workspace">
+                case Mode.Simulator when Session.CurrentItem != null:
                     <div class="pane">
                         <RevealPanel OnChanged="StateHasChanged" />
-                        <CurrencySelector OnCurrencySelected="OnCurrencySelected" />
+                        <InstillPanel OnChanged="StateHasChanged" />
+                        <CurrencySelector @bind-Selected="_selectedAction" />
                     </div>
                     <div class="pane">
                         @if (_selectedAction != null)
@@ -96,30 +99,23 @@
                         }
                         else
                         {
-                            <div class="empty-state">
-                                <div class="empty-icon">⟡</div>
-                                <p>Select a currency</p>
-                                <p class="empty-hint">Its probabilities appear here; roll randomly or choose the outcome.</p>
-                            </div>
+                            <EmptyState Icon="⟡" Hint="Its probabilities appear here; roll randomly or choose the outcome.">Select a currency</EmptyState>
                         }
                     </div>
-                </div>
+                    break;
+                case Mode.Simulator:
+                    <div class="pane"><EmptyState>Load an item to see available currencies.</EmptyState></div>
+                    break;
+                case Mode.Planner:
+                    <div class="pane"><ItemBuilder /></div>
+                    <div class="pane"><PlannerPanel /></div>
+                    break;
+                default:
+                    <div class="pane"><GuideList /></div>
+                    <div class="pane"><GuideDetail OnStartItemLoaded="OnGuideItemLoaded" /></div>
+                    break;
             }
-            else
-            {
-                <div class="empty-state">
-                    <div class="empty-icon">◇</div>
-                    <p>Load an item to see available currencies.</p>
-                </div>
-            }
-        }
-        else @* Planner Mode *@
-        {
-            <div class="workspace">
-                <div class="pane"><ItemBuilder OnPathsFound="OnPathsFound" /></div>
-                <div class="pane"><PlannerPanel @ref="_plannerPanel" /></div>
-            </div>
-        }
+        </div>
     </section>
 </div>
 
@@ -127,8 +123,8 @@
 @if (_showImport)
 {
     <div class="modal-backdrop" @onclick="CloseModals">
-        <div class="modal" @onclick:stopPropagation>
-            <h3>Import Item</h3>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="import-title" @onclick:stopPropagation @onkeydown="OnModalKey">
+            <h3 id="import-title">Import Item</h3>
             <p>Paste the in-game Ctrl+Alt+C text:</p>
             <textarea @bind="_importText" @bind:event="oninput" rows="20" placeholder="Item Class: Staves&#10;Rarity: Rare&#10;..."></textarea>
             <div class="modal-actions">
@@ -139,40 +135,24 @@
     </div>
 }
 
-@if (_showSaveLoad)
-{
-    <div class="modal-backdrop" @onclick="CloseModals">
-        <div class="modal modal-wide" @onclick:stopPropagation>
-            <h3>Save / Load Project</h3>
-            <div class="save-section">
-                <h4>Save Current</h4>
-                <input type="text" @bind="Session.ProjectName" placeholder="Project name" />
-                <button class="btn btn-primary" @onclick="DoSave">Download Project JSON</button>
-            </div>
-            <div class="load-section">
-                <h4>Load Project</h4>
-                <InputFile OnChange="DoLoad" accept=".json" />
-            </div>
-            <div class="modal-actions">
-                <button class="btn" @onclick="CloseModals">Close</button>
-            </div>
-        </div>
-    </div>
-}
-
 @code {
-    private enum Mode { Simulator, Planner }
+    private enum Mode { Simulator, Planner, Guides }
+
+    private static string TabLabel(Mode mode) => mode == Mode.Planner ? "Crafting Planner" : mode.ToString();
 
     private Mode _mode = Mode.Simulator;
-    private bool _showImport, _showSaveLoad;
+    private bool _showImport;
     private bool _composing, _editing;
     private string _importText = "";
     private CraftAction? _selectedAction;
-    private PlannerPanel? _plannerPanel;
 
     private void ShowImport() { CloseModals(); _showImport = true; }
-    private void ShowSaveLoad() { CloseModals(); _showSaveLoad = true; }
-    private void CloseModals() { _showImport = false; _showSaveLoad = false; }
+    private void CloseModals() => _showImport = false;
+
+    private void OnModalKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") CloseModals();
+    }
 
     /// <summary>Open the composer: a new item, or the current item for editing.</summary>
     private void StartCompose(bool edit)
@@ -182,7 +162,7 @@
         _composing = true;
     }
 
-    /// <summary>A different item (compose, edit, import, load, undo) invalidates the selected currency preview.</summary>
+    /// <summary>A different item (compose, edit, import, load, undo, guide) invalidates the selected currency and omens.</summary>
     private void OnItemReplaced()
     {
         _composing = false;
@@ -200,8 +180,6 @@
         OnItemReplaced();
     }
 
-    private void OnCurrencySelected(CraftAction action) => _selectedAction = action;
-
     private void OnExecute(ManualChoice? choice)
     {
         if (_selectedAction != null) Session.Execute(_selectedAction, choice);
@@ -213,32 +191,10 @@
         OnItemReplaced();
     }
 
-    private void OnPathsFound(ItemBuilder.PlannerResult result)
+    /// <summary>A guide's starting item is now the current item: craft along in the simulator.</summary>
+    private void OnGuideItemLoaded()
     {
-        _plannerPanel?.ShowResults(result);
-    }
-
-    [Inject] IJSRuntime JS { get; set; } = null!;
-
-    private async Task DoSave()
-    {
-        var project = Session.ToProject();
-        var json = System.Text.Json.JsonSerializer.Serialize(project, GameData.JsonOptions);
-        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-        var base64 = Convert.ToBase64String(bytes);
-        var fileName = $"{(Session.ProjectName ?? "project").Replace(" ", "_")}.json";
-        await JS.InvokeVoidAsync("downloadFile", fileName, base64);
-    }
-
-    private async Task DoLoad(InputFileChangeEventArgs e)
-    {
-        try
-        {
-            using var stream = e.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-            var project = await System.Text.Json.JsonSerializer.DeserializeAsync<CraftingProject>(stream, GameData.JsonOptions);
-            if (project != null) { Session.LoadProject(project); OnItemReplaced(); }
-            else Session.SetError("Load failed: the file is empty.");
-        }
-        catch (Exception ex) { Session.SetError($"Load failed: {ex.Message}"); }
+        OnItemReplaced();
+        _mode = Mode.Simulator;
     }
 }

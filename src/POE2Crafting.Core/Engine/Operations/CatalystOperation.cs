@@ -1,25 +1,25 @@
+using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Core.Engine.Operations;
 
 /// <summary>
-/// Catalysts (synthetic currencies, Op "catalyst"): add quality of the catalyst's type to a ring/amulet (Refined: jewel).
+/// Catalysts (synthetic currencies, Op catalyst): add quality of the catalyst's type to a ring/amulet (Refined: jewel).
 /// "Replaces other quality types": the type changes, the quality amount is kept (assumption).
 /// </summary>
-public sealed class CatalystOperation : CraftOperation
+internal sealed class CatalystOperation : CraftOperation
 {
-    public CatalystOperation(CraftingEngine engine) : base(engine, "catalyst") { }
-
-    private int Cap(Item item) => item.MaxQuality(Engine.A.DefaultMaxQuality);
+    public CatalystOperation(CraftingEngine engine) : base(engine, CurrencyOps.Catalyst) { }
 
     public override Applicability? Check(CraftContext ctx)
     {
         var catalyst = ctx.Currency.Catalyst;
         if (catalyst == null) return Applicability.No("Catalyst data missing.");
         var item = ctx.Item;
+        int cap = Engine.MaxQuality(item);
         bool sameType = item.QualityType == catalyst.QualityType;
-        if (sameType && item.Quality >= Cap(item)) return Applicability.No($"{catalyst.QualityType} quality is already at the maximum of {Cap(item)}%.");
-        ctx.Notes.Add($"Assumption: +{Engine.A.CatalystQualityPerUse}% per catalyst (config catalystQualityPerUse), maximum {Cap(item)}%.");
+        if (sameType && item.Quality >= cap) return Applicability.No($"{catalyst.QualityType} quality is already at the maximum of {cap}%.");
+        ctx.Notes.Add($"Assumption: +{Assumptions.CatalystQualityPerUse}% per catalyst (config catalystQualityPerUse), maximum {cap}%.");
         if (!sameType && item.Quality > 0)
             ctx.Notes.Add($"Replaces the {item.QualityType ?? "current"} quality type; assumption: the {item.Quality}% quality is kept (UNVERIFIED).");
         return null;
@@ -28,7 +28,7 @@ public sealed class CatalystOperation : CraftOperation
     public override StepPreview Preview(CraftContext ctx, int? forcedRemovalIndex)
     {
         var catalyst = ctx.Currency.Catalyst!;
-        var enhanced = ctx.Item.Mods.Where(m => m.Def?.ModTags.Contains(catalyst.ModTag!) == true).Select(m => m.DisplayText()).ToList();
+        var enhanced = ctx.Item.Mods.Where(m => catalyst.Enhances(m.Def)).Select(m => m.DisplayText()).ToList();
         return new StepPreview
         {
             Notes =
@@ -39,7 +39,7 @@ public sealed class CatalystOperation : CraftOperation
         };
     }
 
-    private int NewQuality(Item item) => Math.Min(Cap(item), item.Quality + Engine.A.CatalystQualityPerUse);
+    private int NewQuality(Item item) => Math.Min(Engine.MaxQuality(item), item.Quality + Assumptions.CatalystQualityPerUse);
 
     public override void Execute(ExecuteContext ctx)
     {

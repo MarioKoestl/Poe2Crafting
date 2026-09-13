@@ -1,0 +1,54 @@
+@* Search the Liquid Emotions recipes by notable name or effect; each result shows the three emotions (in order) and an action button. *@
+@inject GameData Data
+
+<div class="instill-picker">
+    <SearchBox @bind-Value="_filter" Placeholder="Search notables (name or effect, e.g. fire, life)..." />
+    @if (!string.IsNullOrWhiteSpace(_filter))
+    {
+        var matches = Matches().ToList();
+        @if (matches.Count == 0)
+        {
+            <p class="hint">No notable found.</p>
+        }
+        @foreach (var recipe in matches.Take(MaxResults))
+        {
+            var problem = ProblemFor?.Invoke(recipe);
+            <div class="instill-row" @key="recipe.Notable">
+                <div class="instill-head">
+                    <span class="instill-name">@recipe.Notable</span>
+                    <button class="btn btn-xs" disabled="@(problem != null)" title="@problem" @onclick="() => OnPick.InvokeAsync(recipe)">@ActionLabel</button>
+                </div>
+                <div class="instill-emotions">
+                    @for (int i = 0; i < recipe.Emotions.Count; i++)
+                    {
+                        var emotion = recipe.Emotions[i];
+                        @if (i > 0) { <span class="instill-arrow">→</span> }
+                        <CraftItemLink Name="@(Data.EmotionCurrency(emotion)?.Name ?? emotion)" />
+                    }
+                </div>
+                @foreach (var effect in recipe.Effects)
+                {
+                    <div class="instill-effect">@effect</div>
+                }
+            </div>
+        }
+        @if (matches.Count > MaxResults)
+        {
+            <p class="hint">@(matches.Count - MaxResults) more — refine the search.</p>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<InstillRecipe> OnPick { get; set; }
+    [Parameter] public string ActionLabel { get; set; } = "Select";
+    /// <summary>Why a recipe can't be picked right now (button disabled with this tooltip), or null.</summary>
+    [Parameter] public Func<InstillRecipe, string?>? ProblemFor { get; set; }
+
+    private const int MaxResults = 12;
+    private string _filter = "";
+
+    private IEnumerable<InstillRecipe> Matches() =>
+        Data.Instills.Where(r => TextSearch.Matches(_filter, r.Effects.Prepend(r.Notable)))
+            .OrderByDescending(r => r.Notable.StartsWith(_filter.Trim(), StringComparison.OrdinalIgnoreCase));
+}

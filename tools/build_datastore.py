@@ -357,8 +357,8 @@ print("omens:", len(omens), "crafting omens:", sum(1 for o in omens if o["crafti
 # ----------------------------------------------------------------------------
 # 4. Config with documented assumptions (editable by the user)
 # ----------------------------------------------------------------------------
+# only a starting point: data/config.json is maintained by hand afterwards; keys must match SimAssumptions (src/POE2Crafting.Core/Data/SimConfig.cs)
 config = OrderedDict(
-    schemaVersion=1,
     gameVersion="0.5.x (data exported 2026-09-11 from poe2db.tw)",
     assumptions=OrderedDict(
         weightsSource="poe2db.tw DropChance estimates (poe2db: 'Modifier weight information cannot be obtained from game files')",
@@ -366,14 +366,11 @@ config = OrderedDict(
         magicMaxPrefixes=1, magicMaxSuffixes=1, rareMaxPrefixes=3, rareMaxSuffixes=3,
         alchemyModCount=4,
         alchemyOnMagicKeepsExistingMods=True,
-        whittlingRule="lowest_mod_level_then_random",
-        homogenisingRule="shares_any_mod_tag_with_random_existing_mod",
-        restrictedOmenWhenNoSlot="currency_not_applicable",
         vaalOutcomes=OrderedDict(no_change=0.25, corrupted_implicit=0.25, reroll_mods=0.25, add_socket_or_quality=0.25),
         vaalOutcomesNote="UNVERIFIED placeholder distribution; edit freely",
-        modLevelRequirementFactor=0.8,
+        chanceUniqueChance=0.05,
+        fractureMinMods=4,
         qualityPerUse=OrderedDict(Normal=5, Magic=2, Rare=1, Unique=1),
-        shardsPerOrb=10,
         onlyOneCraftedModPerItem=True,
     ),
 )

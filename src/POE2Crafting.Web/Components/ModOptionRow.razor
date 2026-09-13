@@ -4,7 +4,7 @@
 <div class="add-row @AffixUi.Css(Mod.AffixType, "-row")">
     @if (Probability is { } p)
     {
-        <span class="add-pct">@($"{p * 100:F2}") %</span>
+        <span class="add-pct">@UiFormat.Share(p)</span>
     }
     <span class="add-type @AffixUi.TypeCss(Mod.AffixType)">@AffixUi.Letter(Mod.AffixType)</span>
     <span class="add-tier">@(Pool.TryDisplayTier(Mod, Item) is { } tier ? $"T{tier}" : "")</span>

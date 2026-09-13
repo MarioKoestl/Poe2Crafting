@@ -1,19 +1,8 @@
-// File download helper for save/load
-window.downloadFile = function (fileName, base64) {
-    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-    const blob = new Blob([bytes], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-};
-
-// Place an info popover (position: fixed) next to its anchor, inside the viewport, so scroll containers don't clip it
-window.positionPopover = function (anchor, popover) {
+// Info popover of a crafting item name (CraftItemLink): shown by CSS on hover, placed here (position: fixed) next to its name
+// and inside the viewport, so scroll containers don't clip it. Called from the element's onmouseenter, no server round-trip.
+window.positionPopover = function (wrap) {
+    const anchor = wrap && wrap.querySelector('.craft-link');
+    const popover = wrap && wrap.querySelector('.craft-popover');
     if (!anchor || !popover) return;
     const a = anchor.getBoundingClientRect(), p = popover.getBoundingClientRect(), margin = 8;
     // directly adjacent to the anchor, so the pointer can move into the box without leaving the hover area
@@ -22,8 +11,29 @@ window.positionPopover = function (anchor, popover) {
     const left = Math.min(Math.max(margin, a.left), window.innerWidth - p.width - margin);
     popover.style.top = top + 'px';
     popover.style.left = left + 'px';
-    popover.style.visibility = 'visible';
 };
+
+// Mermaid: themed with the page's design tokens (site.css :root)
+(function () {
+    if (!window.mermaid) return;
+    const css = getComputedStyle(document.documentElement);
+    const token = name => css.getPropertyValue(name).trim();
+    mermaid.initialize({
+        startOnLoad: false,
+        theme: 'dark',
+        themeVariables: {
+            darkMode: true,
+            primaryColor: token('--bg-card'),
+            primaryBorderColor: token('--accent'),
+            primaryTextColor: token('--text'),
+            lineColor: token('--accent'),
+            secondaryColor: token('--bg-elevated'),
+            tertiaryColor: token('--bg-panel'),
+            background: token('--bg-dark'),
+        },
+        flowchart: { curve: 'basis', padding: 15, htmlLabels: true },
+    });
+})();
 
 // Mermaid diagram renderer for Blazor interop
 window.renderMermaid = async function (container, definition, id) {
@@ -32,7 +42,6 @@ window.renderMermaid = async function (container, definition, id) {
         const { svg } = await mermaid.render(id, definition);
         container.innerHTML = svg;
     } catch (e) {
-        container.innerHTML = '<pre class="mermaid-error-text">' +
-            e.message.replace(/</g, '&lt;') + '</pre>';
+        container.innerHTML = '<pre class="mermaid-error-text">' + e.message.replace(/</g, '&lt;') + '</pre>';
     }
 };

@@ -1,3 +1,4 @@
+using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Core.Engine.Operations;
@@ -6,17 +7,23 @@ namespace POE2Crafting.Core.Engine.Operations;
 /// Orb of Transmutation / Augmentation (magic slots), Regal Orb and Exalted Orb (rare slots), incl. Greater/Perfect variants:
 /// add one random mod (two with Omen of Greater Exaltation) and raise the rarity to the target rarity.
 /// </summary>
-public sealed class AddModOperation : CraftOperation
+internal sealed class AddModOperation : CraftOperation
 {
     private readonly Rarity _targetRarity;
+    private readonly bool _requiresNoAffixes;
 
-    public AddModOperation(CraftingEngine engine, string op, Rarity targetRarity) : base(engine, op) => _targetRarity = targetRarity;
+    /// <param name="requiresNoAffixes">Orb of Transmutation: only on items without modifiers.</param>
+    public AddModOperation(CraftingEngine engine, string op, Rarity targetRarity, bool requiresNoAffixes = false) : base(engine, op)
+    {
+        _targetRarity = targetRarity;
+        _requiresNoAffixes = requiresNoAffixes;
+    }
 
     private static int AddCount(CraftContext ctx) => ctx.OmenIs(OmenEffects.AddTwo) ? 2 : 1;
 
     public override Applicability? Check(CraftContext ctx)
     {
-        if (Op == "transmute") return ctx.Item.AffixCount != 0 ? Applicability.No("Normal item already has modifiers?") : null;
+        if (_requiresNoAffixes) return ctx.Item.AffixCount != 0 ? Applicability.No($"{ctx.Currency.Name} needs an item without modifiers.") : null;
 
         int need = AddCount(ctx);
         if (Engine.FreeSlots(ctx.Item, _targetRarity, ctx.RestrictedType) < need) return CraftingEngine.NoSlot(ctx.Omens, need);
@@ -25,7 +32,7 @@ public sealed class AddModOperation : CraftOperation
         if (ctx.OmenIs(OmenEffects.Catalysing))
         {
             if (ctx.Item.QualityTag == null) return Applicability.No($"{ctx.Omens.WithEffect(OmenEffects.Catalysing)!.Name} needs catalyst quality on the item.");
-            ctx.Notes.Add($"Catalysing Exaltation consumes the {ctx.Item.Quality}% {ctx.Item.QualityType} quality; assumption: {ctx.Item.QualityTag} mods get ×{1 + ctx.Item.Quality * Engine.A.CatalysingWeightBonusPerQuality:0.##} weight (config catalysingWeightBonusPerQuality).");
+            ctx.Notes.Add($"Catalysing Exaltation consumes the {ctx.Item.Quality}% {ctx.Item.QualityType} quality; assumption: {ctx.Item.QualityTag} mods get ×{1 + ctx.Item.Quality * Assumptions.CatalysingWeightBonusPerQuality:0.##} weight (config catalysingWeightBonusPerQuality).");
         }
         return null;
     }
@@ -35,7 +42,8 @@ public sealed class AddModOperation : CraftOperation
         var (pre, suf) = Engine.AdditionCandidates(ctx.Item, ctx.MinModLevel, ctx.Omens, _targetRarity);
         var combined = Engine.Combined(pre, suf, out var pP);
         var notes = new List<string>();
-        if (Engine.A.AffixTypeSelection == "weighted") notes.Add("Assumption: prefix vs. suffix is chosen proportionally to the total weight of each pool (config: affixTypeSelection).");
+        if (Assumptions.AffixTypeSelection == AffixTypeSelection.Weighted)
+            notes.Add("Assumption: prefix vs. suffix is chosen proportionally to the total weight of each pool (config: affixTypeSelection).");
         return new StepPreview { AddCount = AddCount(ctx), Additions = combined, PrefixProbability = pP, SuffixProbability = 1 - pP, Notes = notes };
     }
 

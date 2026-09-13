@@ -1,9 +1,11 @@
+@* Simulator: chances of the chosen action on the current item (removals, additions, outcomes), Hinekora's foreseen result,
+   and rolling or choosing the outcome manually (Chaos: removal first, then the addition). *@
 @inject CraftingSession Session
 
 <div class="preview-panel">
     @{
         var item = Session.CurrentItem;
-        var preview = Session.Preview(Action, _pendingRemoval);
+        var preview = _preview!;
     }
 
     <h3 class="pane-title"><CraftText Text="@Action.DisplayName" /></h3>
@@ -24,12 +26,33 @@
     }
     else
     {
-        @if (preview.Notes.Count > 0)
+        @if (_foreseen is { } foreseen)
+        {
+            <div class="foresee-section">
+                <h4>Hinekora's Lock — foreseen result</h4>
+                @if (foreseen.Destroyed)
+                {
+                    <div class="error-banner">This action would destroy the item.</div>
+                }
+                else
+                {
+                    <ItemDiffList Before="item" After="foreseen.Item" />
+                }
+                <p class="hint">This is exactly what applying does. Don't like it? Leave it — nothing is spent, and other currencies or omen combinations have their own foreseen results.</p>
+                <button class="btn btn-primary" @onclick="() => Choose(null)">Apply foreseen result</button>
+            </div>
+        }
+
+        @if (preview.Notes.Count > 0 || preview.WeightsNote != null)
         {
             <div class="notes-section">
                 @foreach (var note in preview.Notes)
                 {
                     <div class="note">@note</div>
+                }
+                @if (preview.WeightsNote != null)
+                {
+                    <div class="note note-muted">@preview.WeightsNote</div>
                 }
             </div>
         }
@@ -42,7 +65,7 @@
                     @foreach (var r in preview.Removals.OrderByDescending(x => x.Probability))
                     {
                         var pending = _pendingRemoval == r.Index;
-                        <DistributionRow Probability="r.Probability" Label="@r.Mod.DisplayText()" BarClass="removal" Highlighted="pending"
+                        <DistributionRow @key="r.Index" Probability="r.Probability" Label="@r.Mod.DisplayText()" BarClass="removal" Highlighted="pending"
                                          ChooseLabel="@(!_manualMode ? null : preview.TwoStepChoice ? (pending ? "Chosen" : "Pick") : "Choose")"
                                          OnChoose="() => ChooseRemoval(r.Index, preview.TwoStepChoice)" />
                     }
@@ -57,7 +80,7 @@
                         else
                         {
                             <text>Removal fixed. Now choose the added modifier below. </text>
-                            <button class="btn btn-xs" @onclick="() => _pendingRemoval = null">Reset</button>
+                            <button class="btn btn-xs" @onclick="() => SetPendingRemoval(null)">Reset</button>
                         }
                     </div>
                 }
@@ -72,17 +95,17 @@
                     @(preview.AdditionLabel ?? $"Addition ({preview.AddCount}x)")
                     @if (preview.PrefixProbability + preview.SuffixProbability > 0)
                     {
-                        <text> — P(@($"{preview.PrefixProbability:P0}")) / S(@($"{preview.SuffixProbability:P0}"))</text>
+                        <text> — P(@UiFormat.Probability(preview.PrefixProbability)) / S(@UiFormat.Probability(preview.SuffixProbability))</text>
                     }
                 </h4>
                 <div class="addition-list">
-                    @foreach (var c in preview.Additions.OrderByDescending(c => c.Probability).Take(_showAll ? int.MaxValue : 20))
+                    @foreach (var c in preview.Additions.OrderByDescending(c => c.Probability).Take(_showAll ? int.MaxValue : CollapsedAdditions))
                     {
                         var modId = c.Mod.Id;
-                        <ModOptionRow Mod="c.Mod" Item="item" Probability="c.Probability"
+                        <ModOptionRow @key="modId" Mod="c.Mod" Item="item" Probability="c.Probability"
                                       OnChoose="@(choosable ? EventCallback.Factory.Create(this, () => Choose(new ManualChoice { AddModIds = { modId } })) : default)" />
                     }
-                    @if (preview.Additions.Count > 20 && !_showAll)
+                    @if (preview.Additions.Count > CollapsedAdditions && !_showAll)
                     {
                         <button class="btn btn-xs show-all-btn" @onclick="() => _showAll = true">Show all @(preview.Additions.Count) candidates...</button>
                     }
@@ -94,17 +117,16 @@
         {
             <div class="distribution-section">
                 <h4>Outcomes</h4>
-                @foreach (var kv in preview.SpecialOutcomes)
+                @foreach (var (outcome, chance) in preview.SpecialOutcomes)
                 {
-                    var outcome = kv.Key;
-                    <DistributionRow Probability="kv.Value" Label="@outcome" BarClass="special" ChooseLabel="@(_manualMode ? "Choose" : null)"
+                    <DistributionRow @key="outcome" Probability="chance" Label="@outcome" BarClass="special" ChooseLabel="@(_manualMode ? "Choose" : null)"
                                      OnChoose="() => Choose(new ManualChoice { SpecialOutcome = outcome })" />
                 }
             </div>
         }
 
-        <div class="action-bar">
-            <button class="btn btn-primary btn-execute" @onclick="() => Choose(null)">Roll (Random)</button>
+        <div class="sticky-actions">
+            <button class="btn btn-primary btn-execute" @onclick="() => Choose(null)">@(item.Foreseeing ? "Apply (foreseen)" : "Roll (Random)")</button>
             <button class="btn @(_manualMode ? "btn-active" : "")" @onclick="ToggleManual">
                 @(_manualMode ? "Hide Choices" : "Choose Outcome")
             </button>
@@ -117,34 +139,47 @@
     /// <summary>Apply the action: null = roll randomly, otherwise the manual choice.</summary>
     [Parameter] public EventCallback<ManualChoice?> OnExecute { get; set; }
 
+    /// <summary>Additions listed before "Show all".</summary>
+    private const int CollapsedAdditions = 20;
+
     private bool _manualMode;
     private bool _showAll;
     private int? _pendingRemoval;
     private CraftAction? _lastAction;
-    private int _lastHistoryCount = -1;
+    private Item? _lastItem;
+    private StepPreview? _preview;
+    private CraftResult? _foreseen;
 
     protected override void OnParametersSet()
     {
         // a new action or a changed item invalidates half-made choices (mod indices refer to the old item)
-        if (!ReferenceEquals(Action, _lastAction) || Session.History.Count != _lastHistoryCount)
+        if (!ReferenceEquals(Action, _lastAction) || !ReferenceEquals(Session.CurrentItem, _lastItem))
         {
             _pendingRemoval = null;
             _showAll = false;
             _lastAction = Action;
-            _lastHistoryCount = Session.History.Count;
+            _lastItem = Session.CurrentItem;
+            _foreseen = Session.Foresee(Action);
         }
+        _preview = Session.Preview(Action, _pendingRemoval);
+    }
+
+    private void SetPendingRemoval(int? index)
+    {
+        _pendingRemoval = index;
+        _preview = Session.Preview(Action, _pendingRemoval);
     }
 
     private void ToggleManual()
     {
         _manualMode = !_manualMode;
-        _pendingRemoval = null;
+        SetPendingRemoval(null);
     }
 
     private Task ChooseRemoval(int index, bool twoStep)
     {
         if (!twoStep) return Choose(new ManualChoice { RemoveIndices = { index } });
-        _pendingRemoval = _pendingRemoval == index ? null : index;
+        SetPendingRemoval(_pendingRemoval == index ? null : index);
         return Task.CompletedTask;
     }
 

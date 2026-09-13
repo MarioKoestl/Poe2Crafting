@@ -1,0 +1,126 @@
+@* A strategy as a step-by-step crafting guide: progress, start → final item, materials, and the steps with explanation, mod changes,
+   chances and notes; steps can be ticked off while crafting. Used by the planner results and the curated crafting guides. *@
+
+@{
+    var steps = Strategy.Steps;
+}
+<div class="guide-progress" title="Tick steps off while you craft">
+    <div class="guide-progress-bar" style="width: @UiFormat.CssPercent(steps.Count == 0 ? 1 : (double)_done.Count / steps.Count)"></div>
+    <span>@_done.Count / @steps.Count done</span>
+</div>
+
+<div class="guide-overview">
+    <div>
+        <div class="section-title">Starting item</div>
+        <ItemDisplay Item="Start" />
+    </div>
+    <div>
+        <div class="section-title">Final item</div>
+        <ItemDisplay Item="steps.LastOrDefault()?.Result ?? Start" />
+    </div>
+</div>
+
+<details class="guide-materials" open>
+    <summary class="section-title">Materials required</summary>
+    <table class="materials-table">
+        <thead><tr><th>Item</th><th title="One successful run">Per run</th><th title="Expected including retries of the uncertain steps">≈ with retries</th></tr></thead>
+        <tbody>
+            @foreach (var material in steps.Materials())
+            {
+                <tr @key="material.Name">
+                    <td><CraftItemLink Name="@material.Name" /></td>
+                    <td>@material.PerRun</td>
+                    <td>@UiFormat.Attempts(material.Expected)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</details>
+
+<div class="step-list">
+    @for (int i = 0; i < steps.Count; i++)
+    {
+        var index = i;
+        var step = steps[i];
+        var before = i == 0 ? Start : steps[i - 1].Result;
+        var done = _done.Contains(index);
+        var open = _open.Contains(index);
+        <div class="step-row @UiFormat.StepClass(step) @(done ? "step-done" : "")" @key="step.Id">
+            <label class="step-check" title="Mark as done">
+                <input type="checkbox" checked="@done" aria-label="Step @(index + 1) done" @onchange="() => ToggleDone(index)" />
+            </label>
+            <div class="step-content">
+                <button type="button" class="step-header-row step-toggle" aria-expanded="@(open ? "true" : "false")" @onclick="() => _open.Toggle(index)">
+                    <span class="step-number">@(index + 1)</span>
+                    <span class="step-currency"><CraftText Text="@step.CurrencyName" /></span>
+                    <span class="step-prob @UiFormat.ProbabilityClass(step.SuccessProbability)">@UiFormat.Probability(step.SuccessProbability)</span>
+                </button>
+                <div class="step-desc">@step.Description</div>
+                @if (open)
+                {
+                    @if (step.Explanation != null)
+                    {
+                        <div class="step-explanation">@step.Explanation</div>
+                    }
+                    @if (step.BrickProbability is > 0)
+                    {
+                        <div class="step-brick-warning">⚠ @UiFormat.Probability(step.BrickProbability.Value) chance to destroy a wanted mod</div>
+                    }
+                    @if (before != null && step.Result != null)
+                    {
+                        <div class="section-title">Mod changes</div>
+                        <ItemDiffList Before="before" After="step.Result" />
+                    }
+                    @if (step.RestartLabel != null && step.SuccessProbability < 1.0)
+                    {
+                        <div class="step-restart">On fail: @step.RestartLabel</div>
+                    }
+                    @if (step.Notes.Count > 0)
+                    {
+                        <div class="step-notes">
+                            @foreach (var note in step.Notes)
+                            {
+                                <div class="step-note">@note</div>
+                            }
+                        </div>
+                    }
+                    @if (step.Result != null)
+                    {
+                        <details class="step-result">
+                            <summary>Item after this step</summary>
+                            <ItemDisplay Item="step.Result" />
+                        </details>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CraftingStrategy Strategy { get; set; } = null!;
+    [Parameter, EditorRequired] public Item Start { get; set; } = null!;
+
+    private CraftingStrategy? _shown;
+    private readonly HashSet<int> _done = new();
+    private readonly HashSet<int> _open = new();
+
+    /// <summary>Another strategy starts with nothing ticked and the first step open.</summary>
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_shown, Strategy)) return;
+        _shown = Strategy;
+        _done.Clear();
+        _open.Clear();
+        _open.Add(0);
+    }
+
+    /// <summary>Tick a step; the next open step unfolds.</summary>
+    private void ToggleDone(int index)
+    {
+        if (_done.Remove(index)) return;
+        _done.Add(index);
+        _open.Remove(index);
+        if (Enumerable.Range(0, Strategy.Steps.Count).FirstOrDefault(i => !_done.Contains(i), -1) is var next and >= 0) _open.Add(next);
+    }
+}

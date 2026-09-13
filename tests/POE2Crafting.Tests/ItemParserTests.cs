@@ -1,7 +1,3 @@
-using POE2Crafting.Core.Data;
-using POE2Crafting.Core.Items;
-using Xunit;
-
 namespace POE2Crafting.Tests;
 
 public class ItemParserTests
@@ -31,7 +27,7 @@ Adds 16(13-18) to 27(25-29) Fire Damage to Spells
         var item = ItemParser.Parse(RareStaff);
         Assert.Equal(Rarity.Rare, item.Rarity);
         Assert.Equal("Dusk Spire", item.Name);
-        Assert.Equal("Sanctified Staff", item.BaseName);
+        Assert.Equal(TestBases.Staff, item.BaseName);
         Assert.Equal("Staves", item.ItemClass);
     }
 
@@ -74,7 +70,7 @@ Siphoning Wand
 Item Level: 75";
         var item = ItemParser.Parse(text);
         Assert.Equal(Rarity.Normal, item.Rarity);
-        Assert.Equal("Siphoning Wand", item.BaseName);
+        Assert.Equal(TestBases.Wand, item.BaseName);
         Assert.Null(item.Name);
         Assert.Equal(75, item.ItemLevel);
         Assert.Empty(item.Mods);
@@ -115,10 +111,42 @@ Item Level: 80
     public void ToText_roundtrip_preserves_key_fields()
     {
         var item = ItemParser.Parse(RareStaff);
-        var text = ItemParser.ToText(item);
+        var text = ItemTextWriter.ToText(item);
         Assert.Contains("Rarity: Rare", text);
         Assert.Contains("Dusk Spire", text);
-        Assert.Contains("Sanctified Staff", text);
+        Assert.Contains(TestBases.Staff, text);
         Assert.Contains("Item Level: 82", text);
+    }
+
+    [Fact]
+    public void Crafted_prefix_header_keeps_affix_type_without_data()
+    {
+        var text = @"Item Class: Staves
+Rarity: Rare
+Test Staff
+Sanctified Staff
+--------
+Item Level: 80
+--------
+{ Crafted Prefix Modifier ""Celestial"" }
++150 to maximum Mana";
+        var mod = Assert.Single(ItemParser.Parse(text).Mods);
+        Assert.Equal(ModKind.Crafted, mod.Kind);
+        Assert.Equal(AffixType.Prefix, mod.Affix);
+    }
+
+    [Fact]
+    public void Written_text_parses_back_to_the_same_item()
+    {
+        var item = ItemParser.Parse(RareStaff);
+        item.Sanctified = true;
+        item.Identified = false;
+        item.Mods.Add(new ItemMod { Kind = ModKind.Desecrated, Affix = AffixType.Suffix, Unrevealed = true });
+
+        var again = ItemParser.Parse(ItemTextWriter.ToText(item));
+        Assert.Equal(item.Title, again.Title);
+        Assert.Equal((item.Quality, item.QualityType, item.Sockets, item.ItemLevel), (again.Quality, again.QualityType, again.Sockets, again.ItemLevel));
+        Assert.Equal((item.Sanctified, item.Identified, item.Corrupted), (again.Sanctified, again.Identified, again.Corrupted));
+        Assert.Equal(item.Mods.Select(m => (m.Kind, m.Affix, m.Unrevealed, m.DisplayText())), again.Mods.Select(m => (m.Kind, m.Affix, m.Unrevealed, m.DisplayText())));
     }
 }

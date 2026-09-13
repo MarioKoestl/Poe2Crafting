@@ -1,0 +1,16 @@
+@* Simulator: instill a notable on the current amulet with Liquid Emotions (only shown for amulets). *@
+@inherits ChangingComponentBase
+@inject CraftingSession Session
+
+@if (Session.CurrentItem is { } amulet && GameData.CanInstill(amulet.ItemClass))
+{
+    <div class="side-section">
+        <h3 class="pane-title">Instill (Liquid Emotions)</h3>
+        @if (amulet.InstilledNotable is { } current)
+        {
+            <p class="hint">Current: <strong>@current.DisplayText()</strong> — a new instill replaces it.</p>
+        }
+        <InstillPicker ActionLabel="Instill" ProblemFor="r => Session.CheckInstill(r) is { Ok: false } app ? app.Reason : null"
+                       OnPick="r => Change(() => Session.Instill(r))" />
+    </div>
+}

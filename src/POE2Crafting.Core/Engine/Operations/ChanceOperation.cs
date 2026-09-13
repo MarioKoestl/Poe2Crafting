@@ -1,24 +1,26 @@
+using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Core.Engine.Operations;
 
 /// <summary>Orb of Chance: Normal → Unique or destroyed (Omen of Chance: never destroyed).</summary>
-public sealed class ChanceOperation : CraftOperation
+internal sealed class ChanceOperation : CraftOperation
 {
     private const string Unique = "Upgrade to Unique", Destroyed = "Item destroyed", NoChange = "No change";
-    private const double UniqueChance = 0.05;
 
-    public ChanceOperation(CraftingEngine engine) : base(engine, "chance") { }
+    public ChanceOperation(CraftingEngine engine) : base(engine, CurrencyOps.Chance) { }
 
     public override Applicability? Check(CraftContext ctx)
     {
-        ctx.Notes.Add($"Assumption: {UniqueChance:P0} unique chance (UNVERIFIED); the resulting unique is not modelled (item becomes a placeholder unique).");
+        ctx.Notes.Add($"Assumption: {Assumptions.ChanceUniqueChance:P0} unique chance (config chanceUniqueChance, UNVERIFIED); the resulting unique is not modelled (item becomes a placeholder unique).");
         return null;
     }
 
-    private static Dictionary<string, double> Outcomes(CraftContext ctx) => ctx.OmenIs(OmenEffects.NoDestroy)
-        ? new() { [Unique] = UniqueChance, [NoChange] = 1 - UniqueChance }
-        : new() { [Unique] = UniqueChance, [Destroyed] = 1 - UniqueChance };
+    private Dictionary<string, double> Outcomes(CraftContext ctx) => new()
+    {
+        [Unique] = Assumptions.ChanceUniqueChance,
+        [ctx.OmenIs(OmenEffects.NoDestroy) ? NoChange : Destroyed] = 1 - Assumptions.ChanceUniqueChance,
+    };
 
     public override StepPreview Preview(CraftContext ctx, int? forcedRemovalIndex)
     {

@@ -1,0 +1,53 @@
+@* Compose a new item from a base, or edit the current item's modifiers (as a new history step). *@
+@inject CraftingSession Session
+@inject GameData Data
+
+<div class="item-composer">
+    @if (Edit)
+    {
+        <p class="hint">Change modifiers, values, rarity or item level. Quality, sockets, implicits and corruption of the item are kept; changing the base starts a new item.</p>
+    }
+
+    <BaseItemForm Draft="_draft" OnChanged="StateHasChanged" />
+
+    @if (_draft.Base != null)
+    {
+        @if (_draft.Preview != null)
+        {
+            <div class="composer-preview">
+                <ItemDisplay Item="_draft.Preview" />
+            </div>
+        }
+
+        <ModBrowser Draft="_draft" OnChanged="StateHasChanged" />
+
+        <div class="sticky-actions">
+            <button class="btn btn-primary btn-execute" @onclick="DoCompose">@(Edit ? "Apply Changes" : "Set as Current Item")</button>
+            <button class="btn" @onclick="() => OnCancelled.InvokeAsync()">Cancel</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback OnComposed { get; set; }
+    [Parameter] public EventCallback OnCancelled { get; set; }
+    /// <summary>Edit the current item (as a new history step) instead of composing a new one.</summary>
+    [Parameter] public bool Edit { get; set; }
+
+    private ItemDraft _draft = null!;
+
+    protected override void OnInitialized()
+    {
+        _draft = new ItemDraft(Data);
+        if (Edit && Session.CurrentItem is { } current) _draft.LoadFrom(current, copyValues: true);
+    }
+
+    private async Task DoCompose()
+    {
+        if (_draft.BuildItem() is not { } item) return;
+        if (Edit) Session.EditItem(item);
+        else Session.SetItem(item, "Composed");
+        // saving the project can fail (reported as LastError): stay in the composer then
+        if (Session.LastError == null) await OnComposed.InvokeAsync();
+    }
+}

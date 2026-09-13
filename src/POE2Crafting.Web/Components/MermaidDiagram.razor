@@ -1,8 +1,9 @@
+@* Renders a Mermaid flowchart definition via site.js renderMermaid (once per definition). *@
 @inject IJSRuntime JS
 
 <div class="mermaid-container">
     <div @ref="_container" class="mermaid-render"></div>
-    @if (_loading)
+    @if (_rendering)
     {
         <div class="mermaid-loading">Rendering diagram…</div>
     }
@@ -17,35 +18,29 @@
     [Parameter] public string? DiagramId { get; set; }
 
     private ElementReference _container;
-    private string _lastRendered = "";
-    private bool _loading;
+    /// <summary>The definition that was rendered (or attempted): never rendered twice, also not after an error.</summary>
+    private string _attempted = "";
+    private bool _rendering;
     private string? _error;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (string.IsNullOrWhiteSpace(Definition)) return;
-
-        if (Definition != _lastRendered)
+        if (string.IsNullOrWhiteSpace(Definition) || Definition == _attempted || _rendering) return;
+        _attempted = Definition;
+        _rendering = true;
+        _error = null;
+        try
         {
-            _loading = true;
-            _error = null;
+            await JS.InvokeVoidAsync("renderMermaid", _container, Definition, DiagramId ?? $"mermaid-{Guid.NewGuid():N}");
+        }
+        catch (JSException ex)
+        {
+            _error = $"Diagram render failed: {ex.Message}";
+        }
+        finally
+        {
+            _rendering = false;
             StateHasChanged();
-
-            try
-            {
-                var id = DiagramId ?? $"mermaid-{Guid.NewGuid():N}";
-                await JS.InvokeVoidAsync("renderMermaid", _container, Definition, id);
-                _lastRendered = Definition;
-            }
-            catch (Exception ex)
-            {
-                _error = $"Diagram render failed: {ex.Message}";
-            }
-            finally
-            {
-                _loading = false;
-                StateHasChanged();
-            }
         }
     }
 }

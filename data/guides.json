@@ -1,0 +1,188 @@
+[
+ {
+  "id": "fracture-abyss-mark",
+  "name": "Fracture +3 Skills at 1/3 (Abyss mark)",
+  "summary": "Get a fractured +3 to Level of all Melee Skills on a 4-mod amulet with a 1 in 3 instead of 1 in 4 chance: turn a prefix into a desecrated mod first, because desecrated mods cannot be fractured.",
+  "tags": ["Amulet", "Fracture", "Desecration", "Setup"],
+  "source": "YouTube: +4 skill amulet crafting tech (chapter \"Getting Fractures\")",
+  "keyIdeas": [
+   "A Fracturing Orb needs at least 4 modifiers and picks one of the fracturable ones at random.",
+   "Desecrated modifiers (revealed or not) count towards the 4 modifiers, but can never be fractured.",
+   "Essence of the Abyss adds \"Mark of the Abyssal Lord\"; the next bone consumes the mark and puts the unrevealed desecrated modifier into its slot.",
+   "So one of four modifiers becomes unfracturable: the fracture hits the wanted +3 with 1/3 instead of 1/4."
+  ],
+  "start": {
+   "base": "Gold Amulet",
+   "rarity": "Rare",
+   "mods": [
+    { "text": "to Spirit" },
+    { "text": "to maximum Energy Shield", "affix": "Prefix" },
+    { "text": "Level of all Melee Skills" },
+    { "text": "to Strength" }
+   ]
+  },
+  "steps": [
+   {
+    "title": "Mark a prefix",
+    "currency": "Essence of the Abyss",
+    "omens": ["Omen of Sinistral Crystallisation"],
+    "explanation": "The essence removes a random modifier and adds the Mark of the Abyssal Lord in its slot. Omen of Sinistral Crystallisation limits the removal to prefixes, so the +3 skills suffix is safe.",
+    "hit": { "select": "*" },
+    "onMiss": "Cannot miss: every prefix may go, the mark always lands on a prefix."
+   },
+   {
+    "title": "Desecrate the mark",
+    "currency": "Preserved Collarbone",
+    "explanation": "A bone on a marked item replaces the mark with an unrevealed desecrated modifier. The item still has 4 modifiers, but only 3 of them can be fractured now.",
+    "hit": {},
+    "onMiss": "Cannot miss."
+   },
+   {
+    "title": "Fracture the +3 skills",
+    "currency": "Fracturing Orb",
+    "explanation": "The fracture picks one of the 3 fracturable modifiers. A fractured +3 skills can't be removed by any later step, which makes the +4 technique safe.",
+    "hit": { "select": "Level of all Melee Skills" },
+    "onMiss": "Another mod got fractured: reveal the desecrated mod and sell the amulet (good spirit/defence fractures still have value), then start with a new base."
+   }
+  ],
+  "nextSteps": [
+   "Reveal the desecrated modifier at the Well of Souls — a good reveal adds value even when the fracture missed.",
+   "Continue with the guide \"+4 Melee Skills Amulet\"."
+  ]
+ },
+ {
+  "id": "plus-four-melee-amulet",
+  "name": "+4 Melee Skills Amulet",
+  "summary": "Turn a fractured +3 to Level of all Melee Skills into +4: Essence of the Breach raises the maximum quality to 40%, Reaver (attack) catalyst quality of 34% or more lifts +3 to +4, and Omen of Whittling removes the temporary Breach modifier again.",
+  "tags": ["Amulet", "Catalyst quality", "Blocker", "Whittling", "Essence of the Breach", "Catalysing Exaltation"],
+  "source": "YouTube: +4 skill amulet crafting tech (chapter \"4 Melee Amulet\")",
+  "keyIdeas": [
+   "Catalyst quality increases the values of modifiers with its tag: +3 melee skills (attack tag) × 1.34 = 4.02 → +4. At 33% it stays +3 (whole numbers round down).",
+   "Normal maximum quality is 20%. Essence of the Breach adds \"+20% to Maximum Quality\" (40% total).",
+   "Blocker: add a throwaway modifier on the same side as the fracture, so a side-restricted removal (Crystallisation) can only take that one.",
+   "The Breach modifier has level 1: Omen of Whittling (removes the lowest-level modifier) takes it off with certainty. The quality stays (as shown in the video; the simulator assumes it).",
+   "Optional bonus: while the quality is still free, defence catalysts + Omen of Catalysing Exaltation push a defensive prefix before the Reaver quality is applied."
+  ],
+  "start": {
+   "base": "Gold Amulet",
+   "rarity": "Rare",
+   "mods": [
+    { "text": "Level of all Melee Skills", "fractured": true },
+    { "text": "to Spirit" }
+   ]
+  },
+  "steps": [
+   {
+    "title": "Add a suffix blocker",
+    "currency": "Greater Exalted Orb",
+    "omens": ["Omen of Dextral Exaltation"],
+    "explanation": "The fracture is a suffix, so add a throwaway suffix. It is the only removable suffix now — the next side-restricted removal must take it. A lucky roll (rarity, resistances) can be kept instead and the plan adapted.",
+    "hit": { "add": "*" },
+    "onMiss": "Cannot miss."
+   },
+   {
+    "title": "+20% Maximum Quality",
+    "currency": "Essence of the Breach",
+    "omens": ["Omen of Dextral Crystallisation"],
+    "explanation": "The essence removes a suffix (only the blocker is removable — the +3 is fractured) and adds \"+20% to Maximum Quality\" as a prefix. The amulet can now hold 40% catalyst quality.",
+    "hit": { "select": "*" },
+    "onMiss": "Cannot miss."
+   },
+   {
+    "title": "Defence quality for Catalysing Exaltation (optional)",
+    "currency": "Carapace Catalyst",
+    "uses": 8,
+    "explanation": "40% defence quality makes defensive modifiers much more likely on the next Exalted Orb with Omen of Catalysing Exaltation. Skip steps 3 and 4 if you only want the +4.",
+    "hit": {},
+    "onMiss": "Cannot miss."
+   },
+   {
+    "title": "Defensive prefix",
+    "currency": "Perfect Exalted Orb",
+    "omens": ["Omen of Sinistral Exaltation", "Omen of Catalysing Exaltation"],
+    "explanation": "Sinistral Exaltation forces a prefix, Catalysing Exaltation consumes the defence quality and multiplies the weight of defence modifiers (strength of the bonus is an assumption in config). The quality is used up — the Reaver quality comes next.",
+    "hit": { "addTag": "defences" },
+    "onMiss": "A non-defence prefix: keep it if acceptable, otherwise remove it later (it is not the lowest level, so not with Whittling)."
+   },
+   {
+    "title": "Attack quality: +3 becomes +4",
+    "currency": "Reaver Catalyst",
+    "uses": 7,
+    "explanation": "Reaver catalysts add attack quality. At 34% or more the fractured +3 to Level of all Melee Skills works as +4 (7 uses → 35%).",
+    "hit": {},
+    "onMiss": "Cannot miss."
+   },
+   {
+    "title": "Whittle off the Breach modifier",
+    "currency": "Chaos Orb",
+    "omens": ["Omen of Whittling"],
+    "explanation": "Omen of Whittling makes the Chaos Orb remove the lowest-level modifier: the level-1 Breach modifier. The Chaos Orb then adds a random modifier. The +4 stays because the quality stays. If an unrevealed desecrated modifier were on the item, it would count as level 1 — reveal it first.",
+    "hit": { "select": "Maximum Quality" },
+    "onMiss": "Cannot miss while no unrevealed desecrated modifier is on the item."
+   }
+  ],
+  "nextSteps": [
+   "If the Chaos Orb added a suffix: Omen of Dextral Crystallisation + Perfect Essence of Enhancement turns it into a guaranteed defensive prefix modifier.",
+   "Suffixes: Preserved Collarbone, then blockers with high weight and low value (life regeneration, attributes) before rerolling; Omen of Light removes a bad desecrated mod.",
+   "Ancient Collarbone + Omen of Abyssal Echoes more than doubles the odds for a good desecrated suffix — worth it when it costs about twice a normal attempt."
+  ]
+ },
+ {
+  "id": "plus-four-spell-amulet",
+  "name": "+4 Spell Skills Amulet (fractured Spirit)",
+  "summary": "The inverse route: spirit is fractured, +3 to Level of all Spell Skills was chaos-spammed. Blocker on the prefix side, Essence of the Breach, Sibilant (caster) catalysts to 34%+, then whittle the Breach modifier off.",
+  "tags": ["Amulet", "Catalyst quality", "Blocker", "Whittling", "Essence of the Breach"],
+  "source": "YouTube: +4 skill amulet crafting tech (chapter \"4 Spell Amulet\")",
+  "keyIdeas": [
+   "Starting with a spirit fracture guarantees the spirit and lets you chaos for any of the +3 skills (melee, spell, minion, projectile ≈ 400 weight together).",
+   "Only spell (caster tag) and melee (attack tag) skills can be lifted by catalysts — minion and projectile skills can't.",
+   "The fracture is a prefix now, so the blocker and the crystallisation go on the prefix side."
+  ],
+  "start": {
+   "base": "Gold Amulet",
+   "rarity": "Rare",
+   "mods": [
+    { "text": "to Spirit", "fractured": true },
+    { "text": "Level of all Spell Skills" }
+   ]
+  },
+  "steps": [
+   {
+    "title": "Add a prefix blocker",
+    "currency": "Greater Exalted Orb",
+    "omens": ["Omen of Sinistral Exaltation"],
+    "explanation": "Spirit is the fractured prefix, so the throwaway modifier goes to the prefixes: afterwards it is the only removable prefix.",
+    "hit": { "add": "*" },
+    "onMiss": "Cannot miss."
+   },
+   {
+    "title": "+20% Maximum Quality",
+    "currency": "Essence of the Breach",
+    "omens": ["Omen of Sinistral Crystallisation"],
+    "explanation": "Sinistral Crystallisation restricts the removal to prefixes — only the blocker can go. The Breach modifier takes its place.",
+    "hit": { "select": "*" },
+    "onMiss": "Cannot miss."
+   },
+   {
+    "title": "Caster quality: +3 becomes +4",
+    "currency": "Sibilant Catalyst",
+    "uses": 7,
+    "explanation": "Sibilant catalysts add caster quality. At 34% or more +3 to Level of all Spell Skills works as +4.",
+    "hit": {},
+    "onMiss": "Cannot miss."
+   },
+   {
+    "title": "Whittle off the Breach modifier",
+    "currency": "Chaos Orb",
+    "omens": ["Omen of Whittling"],
+    "explanation": "The Breach modifier has level 1 and is removed with certainty; the Chaos Orb adds a random modifier in exchange. The quality — and the +4 — stay.",
+    "hit": { "select": "Maximum Quality" },
+    "onMiss": "Cannot miss while no unrevealed desecrated modifier is on the item."
+   }
+  ],
+  "nextSteps": [
+   "Cast speed is one of the best suffixes for casters: Skittering (speed) catalysts + Omen of Catalysing Exaltation favour it — but that consumes the caster quality, so do it before the Sibilant catalysts or re-apply them afterwards.",
+   "Finish the suffixes with bones and blockers like in the melee guide."
+  ]
+ }
+]

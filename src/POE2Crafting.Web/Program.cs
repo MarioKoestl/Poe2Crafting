@@ -1,7 +1,12 @@
+using System.Globalization;
 using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Engine;
+using POE2Crafting.Core.Engine.Planning;
 using POE2Crafting.Web;
 using POE2Crafting.Web.Services;
+
+// the UI is English; numbers in markup (widths, input values) must not depend on the server's regional settings
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("en-US");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,9 +20,17 @@ if (!Directory.Exists(dataFolder))
     throw new DirectoryNotFoundException($"Data folder not found: {dataFolder}. Copy the data/ folder next to the application or set DataFolder in appsettings.json.");
 
 var gameData = GameData.Load(dataFolder);
+var engine = new CraftingEngine(gameData);
+// data, mod pool and engine are read-only after loading and shared by all sessions
 builder.Services.AddSingleton(gameData);
-builder.Services.AddSingleton(new ModPool(gameData));
+builder.Services.AddSingleton(engine.Pool);
+builder.Services.AddSingleton(engine);
+builder.Services.AddSingleton(new GuideLibrary(engine));
+// crafting projects: saved automatically next to the data folder (or configured path)
+var projectsFolder = Path.GetFullPath(builder.Configuration["ProjectsFolder"] ?? Path.Combine(dataFolder, "..", "projects"));
+builder.Services.AddSingleton(sp => new ProjectStore(projectsFolder, gameData, sp.GetRequiredService<ILogger<ProjectStore>>()));
 builder.Services.AddScoped<CraftingSession>();
+builder.Services.AddScoped<PlannerState>();
 
 var app = builder.Build();
 

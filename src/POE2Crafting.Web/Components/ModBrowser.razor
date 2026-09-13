@@ -1,5 +1,7 @@
 @* Mod picker of an ItemDraft, shared by the Item Composer and the Crafting Planner: chosen mods, Prefix/Suffix tabs, category sections, tier groups. *@
+@inherits ChangingComponentBase
 @inject ModPool Pool
+@inject GameData Data
 
 @if (Draft.Base == null || _virtualItem == null)
 {
@@ -9,7 +11,7 @@
 @if (Draft.Rarity == Rarity.Normal)
 {
     <div class="target-mods-section">
-        <p class="rarity-note">Normal items have no explicit modifiers. Select <strong>Magic</strong> or <strong>Rare</strong> to add mods.</p>
+        <p class="hint">Normal items have no explicit modifiers. Select <strong>Magic</strong> or <strong>Rare</strong> to add mods.</p>
     </div>
     return;
 }
@@ -25,25 +27,25 @@
                 var idx = i;
                 var sm = Selection.Mods[i];
                 var cat = CategoryOf(sm.Category);
-                <div class="target-mod-row @AffixUi.Css(sm.Mod.AffixType, "-row") @cat.RowClass">
+                <div class="target-mod-row @AffixUi.Css(sm.Mod.AffixType, "-row") @cat.RowClass" @key="sm.Mod.Id">
                     <span class="tm-type @AffixUi.TypeCss(sm.Mod.AffixType)">@AffixUi.Letter(sm.Mod.AffixType)</span>
                     <span class="tm-tier">T@(Pool.DisplayTier(sm.Mod, _virtualItem))</span>
                     <span class="tm-name">@sm.Mod.DisplayName</span>
                     <span class="tm-text">@sm.Mod.Text</span>
-                    @for (int r = 0; r < sm.Mod.Ranges.Count; r++)
+                    @for (int r = 0; r < sm.Values.Count; r++)
                     {
-                        var range = sm.Mod.Ranges[r];
-                        if (range[0] == range[1]) continue;
                         var ri = r;
-                        <input type="number" class="tm-value" step="any" min="@range[0]" max="@range[1]"
-                               placeholder="@ValueLabel" title="@($"{ValueLabel} ({range[0]}–{range[1]})")"
+                        var (lo, hi) = sm.ValueBounds(ri, AllowQualityValues, Data);
+                        if (lo == hi) continue;
+                        <input type="number" class="tm-value" step="any" min="@lo" max="@hi" aria-label="@ValueLabel value"
+                               placeholder="@ValueLabel" title="@ValueTitle(sm, ri, hi)"
                                value="@sm.Values[ri]" @onchange="e => SetValue(sm, ri, e.Value)" />
                     }
                     @if (cat.ShortName != null)
                     {
                         <span class="tm-cat-badge @cat.BadgeClass">@cat.ShortName</span>
                     }
-                    <button class="btn btn-xs tm-remove" @onclick="() => Change(() => Selection.RemoveAt(idx))">✕</button>
+                    <button class="icon-remove" title="Remove modifier" aria-label="Remove modifier" @onclick="() => ChangeSelection(() => Selection.RemoveAt(idx))">✕</button>
                 </div>
             }
         </div>
@@ -51,21 +53,18 @@
 
     <div class="add-mod-section">
         <div class="add-mod-tabs">
-            @foreach (var type in new[] { AffixType.Prefix, AffixType.Suffix })
+            @foreach (var type in AffixTypeExtensions.Both)
             {
-                var t = type;
-                <button class="btn btn-sm @(_affixType == t ? "btn-active" : "")" @onclick="() => _affixType = t">
-                    + @t (@Selection.Count(t)/@Selection.Max(Draft.Rarity, t))
+                <button class="btn btn-sm @(_affixType == type ? "btn-active" : "")" @onclick="() => _affixType = type">
+                    + @type (@Selection.Count(type)/@Selection.Max(Draft.Rarity, type))
                 </button>
             }
         </div>
 
-        <div class="search-filter">
-            <input type="text" @bind="_filter" @bind:event="oninput" placeholder="Search prefixes and suffixes..." />
-        </div>
+        <SearchBox @bind-Value="_filter" Placeholder="Search prefixes and suffixes..." />
         @if (Searching)
         {
-            <p class="builder-hint">Searching prefixes and suffixes; clear the search to browse by tab.</p>
+            <p class="hint">Searching prefixes and suffixes; clear the search to browse by tab.</p>
         }
 
         <div class="mod-browser">
@@ -78,52 +77,50 @@
                     var groups = FilteredGroups(category, affixType);
                     if (groups.Count == 0) continue;
                     var autoExpand = Searching && groups.Count <= AutoExpandLimit;
-                    <div class="mod-category-section">
-                        <div class="mod-category-header @cat.HeaderClass" @onclick="() => Toggle(_collapsed, sectionKey)">
-                            <span class="cat-expand">@(_collapsed.Contains(sectionKey) ? "▸" : "▾")</span>
+                    var collapsed = _collapsed.Contains(sectionKey);
+                    <div class="mod-category-section" @key="sectionKey">
+                        <button type="button" class="mod-category-header @cat.HeaderClass" aria-expanded="@(collapsed ? "false" : "true")" @onclick="() => _collapsed.Toggle(sectionKey)">
+                            <span class="cat-expand">@(collapsed ? "▸" : "▾")</span>
                             <span class="cat-label @cat.LabelClass">@cat.Label @affixType</span>
                             <span class="cat-count">@groups.Count</span>
-                        </div>
-                        @if (!_collapsed.Contains(sectionKey))
+                        </button>
+                        @if (!collapsed)
                         {
                             <div>
                                 @foreach (var group in groups)
                                 {
-                                    var key = group.Key;
-                                    var isAdded = Selection.HasFamily(group.Value[0].Family);
-                                    var expanded = _expanded.Contains(key) != autoExpand;
-                                <div class="mod-family @(isAdded ? "family-added" : "")">
-                                    <div class="family-header" @onclick="() => Toggle(_expanded, key)">
-                                        <span class="family-expand">@(expanded ? "▾" : "▸")</span>
-                                        <span class="family-name">@GroupLabel(group.Value)</span>
-                                        @foreach (var tag in group.Value.SelectMany(m => m.ModTags).Distinct().Take(3))
-                                        {
-                                            <span class="mod-tag" style="color: @TagColor(tag)">@tag</span>
-                                        }
-                                        @if (isAdded) { <span class="family-badge">added</span> }
-                                    </div>
-                                    @if (expanded)
-                                    {
-                                        <div class="family-tiers">
-                                            @foreach (var mod in group.Value.OrderBy(m => Pool.DisplayTier(m, _virtualItem)))
+                                    var isAdded = Selection.HasFamily(group.Tiers[0].Mod.Family);
+                                    var expanded = _expanded.Contains(group.Key) != autoExpand;
+                                    <div class="mod-family @(isAdded ? "family-added" : "")" @key="group.Key">
+                                        <button type="button" class="family-header" aria-expanded="@(expanded ? "true" : "false")" @onclick="() => _expanded.Toggle(group.Key)">
+                                            <span class="family-expand">@(expanded ? "▾" : "▸")</span>
+                                            <span class="family-name">@group.Label</span>
+                                            @foreach (var tag in group.Tags)
                                             {
-                                                var currentMod = mod;
-                                                var selected = Selection.Contains(currentMod);
-                                                var enabled = selected || Selection.CanAdd(currentMod, Draft.Rarity, Draft.ItemLevel);
-                                                <button class="tier-btn @(selected ? "selected" : "") @(enabled ? "" : "disabled")"
-                                                        disabled="@(!enabled)"
-                                                        @onclick="() => Change(() => Selection.Toggle(currentMod, category, Draft.Rarity, Draft.ItemLevel))"
-                                                        title="@(currentMod.Level > Draft.ItemLevel ? $"Requires item level {currentMod.Level}" : "")">
-                                                    <span class="tier-label">T@(Pool.DisplayTier(currentMod, _virtualItem))</span>
-                                                    <span class="tier-name">@currentMod.DisplayName</span>
-                                                    <span class="tier-text">@currentMod.Text</span>
-                                                    <span class="tier-weight" title="Estimated weight (poe2db)">@Pool.WeightForItem(currentMod, _virtualItem)</span>
-                                                    <span class="tier-level">ilvl @currentMod.Level</span>
-                                                </button>
+                                                <span class="mod-tag tag-@TagClass(tag)">@tag</span>
                                             }
-                                        </div>
-                                    }
-                                </div>
+                                            @if (isAdded) { <span class="family-badge">added</span> }
+                                        </button>
+                                        @if (expanded)
+                                        {
+                                            <div class="family-tiers">
+                                                @foreach (var (mod, tier) in group.Tiers)
+                                                {
+                                                    var selected = Selection.Contains(mod);
+                                                    var enabled = selected || Selection.CanAdd(mod, Draft.Rarity, Draft.ItemLevel);
+                                                    <button type="button" class="tier-btn @(selected ? "selected" : "")" disabled="@(!enabled)" @key="mod.Id"
+                                                            @onclick="() => ChangeSelection(() => Selection.Toggle(mod, category, Draft.Rarity, Draft.ItemLevel))"
+                                                            title="@(mod.Level > Draft.ItemLevel ? $"Requires item level {mod.Level}" : "")">
+                                                        <span class="tier-label">T@(tier)</span>
+                                                        <span class="tier-name">@mod.DisplayName</span>
+                                                        <span class="tier-text">@mod.Text</span>
+                                                        <span class="tier-weight" title="Estimated weight (poe2db)">@Pool.WeightForItem(mod, _virtualItem)</span>
+                                                        <span class="tier-level">ilvl @mod.Level</span>
+                                                    </button>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
                                 }
                             </div>
                         }
@@ -136,20 +133,25 @@
 
 @code {
     [Parameter, EditorRequired] public ItemDraft Draft { get; set; } = null!;
-    [Parameter] public EventCallback OnChanged { get; set; }
     [Parameter] public string Title { get; set; } = "Modifiers";
     /// <summary>Placeholder of the value inputs: the actual value in the composer, the minimum value in the planner.</summary>
     [Parameter] public string ValueLabel { get; set; } = "value";
+    /// <summary>Planner targets: values of mods that catalyst quality enhances may go above the roll range (e.g. +4 from a fixed +3).</summary>
+    [Parameter] public bool AllowQualityValues { get; set; }
+
+    /// <summary>Sections whose families are expanded automatically while searching (few results).</summary>
+    private const int AutoExpandLimit = 6;
+    private const int ShownTags = 3;
 
     private ModSelection Selection => Draft.Selection;
 
-    private record CategoryInfo(string Key, string Label, string HeaderClass, string LabelClass, string? ShortName, string BadgeClass, string RowClass);
+    private sealed record CategoryInfo(string Key, string Label, string HeaderClass, string LabelClass, string? ShortName, string BadgeClass, string RowClass);
     /// <summary>Categories offered in the browser.</summary>
     private static readonly CategoryInfo[] Categories =
     {
-        new(ModPool.NormalCategory, "Base", "base-header", "base-label", null, "", ""),
-        new(ModPool.OtherworldlyCategory, "Otherworldly", "otherworldly-header", "otherworldly-label", "OW", "cat-badge-otherworldly", "otherworldly-row"),
-        new(ModPool.DesecratedCategory, "Desecrated", "desecrated-header", "desecrated-label", "Des", "cat-badge-desecrated", "desecrated-row"),
+        new(ModCategories.Normal, "Base", "", "base-label", null, "", ""),
+        new(ModCategories.Otherworldly, "Otherworldly", "otherworldly-header", "otherworldly-label", "OW", "cat-badge-otherworldly", "otherworldly-row"),
+        new(ModCategories.Desecrated, "Desecrated", "desecrated-header", "desecrated-label", "Des", "cat-badge-desecrated", "desecrated-row"),
     };
     /// <summary>Categories that only appear when taken over from an existing item.</summary>
     private static readonly CategoryInfo[] LoadedOnly =
@@ -157,20 +159,15 @@
         new(ModCategories.Essence, "Essence", "", "", "Ess", "cat-badge-crafted", ""),
         new(ModCategories.PerfectEssence, "Perfect Essence", "", "", "Crafted", "cat-badge-crafted", ""),
     };
-    private static CategoryInfo CategoryOf(string key) => Categories.Concat(LoadedOnly).FirstOrDefault(c => c.Key == key) ?? Categories[0];
+    private static readonly Dictionary<string, CategoryInfo> CategoryByKey = Categories.Concat(LoadedOnly).ToDictionary(c => c.Key);
+    private static CategoryInfo CategoryOf(string key) => CategoryByKey.GetValueOrDefault(key, Categories[0]);
 
-    private async Task SetValue(SelectedMod mod, int rangeIndex, object? input)
-    {
-        var range = mod.Mod.Ranges[rangeIndex];
-        mod.Values[rangeIndex] = double.TryParse(input?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)
-            ? Math.Clamp(v, range[0], range[1])
-            : null;
-        await Change(() => { });
-    }
+    /// <summary>One family/stat of a category with its tiers (best first), precomputed per base.</summary>
+    private sealed record TierGroup(string Key, string Label, AffixType Type, List<string> Tags, List<(ModDef Mod, int Tier)> Tiers, string SearchText);
 
     private Item? _virtualItem;
-    /// <summary>category -> tier group key -> mods (all tiers, not filtered by item level so the full picture is visible).</summary>
-    private Dictionary<string, Dictionary<string, List<ModDef>>> _groups = new();
+    /// <summary>category → tier groups sorted by label (all tiers, not filtered by item level so the full picture is visible).</summary>
+    private Dictionary<string, List<TierGroup>> _groups = new();
     private AffixType _affixType = AffixType.Prefix;
     private string _filter = "";
     private readonly HashSet<string> _expanded = new();
@@ -179,60 +176,63 @@
     protected override void OnParametersSet()
     {
         if (Draft.Base == null) { _virtualItem = null; return; }
-        if (!ReferenceEquals(Draft.Base, _virtualItem?.Base))
-        {
-            _expanded.Clear();
-            _virtualItem = Item.FromBase(Draft.Base);
-            _groups = Categories.ToDictionary(c => c.Key, c =>
-                Pool.AllForBaseByCategory(_virtualItem, c.Key).GroupBy(ModTiers.TierGroupKey).ToDictionary(g => g.Key, g => g.ToList()));
-        }
+        if (ReferenceEquals(Draft.Base, _virtualItem?.Base)) return;
+        _expanded.Clear();
+        var item = _virtualItem = Item.FromBase(Draft.Base);
+        _groups = Categories.ToDictionary(c => c.Key, c => Pool.AllForBaseByCategory(item, c.Key)
+            .GroupBy(ModTiers.TierGroupKey)
+            .Select(g => new TierGroup(g.Key, GroupLabel(g), g.First().AffixType,
+                g.SelectMany(m => m.ModTags).Distinct().Take(ShownTags).ToList(),
+                g.Select(m => (Mod: m, Tier: Pool.DisplayTier(m, item))).OrderBy(t => t.Tier).ToList(),
+                string.Join("\n", g.SelectMany(m => new[] { m.Family, m.Text, m.Name }.Concat(m.ModTags)))))
+            .OrderBy(g => g.Label)
+            .ToList());
     }
-
-    /// <summary>Sections whose families are expanded automatically while searching (few results).</summary>
-    private const int AutoExpandLimit = 6;
 
     private bool Searching => !string.IsNullOrWhiteSpace(_filter);
 
     /// <summary>Browsing shows the selected tab's affix type; a search covers prefixes and suffixes.</summary>
-    private IEnumerable<AffixType> VisibleTypes => Searching ? new[] { AffixType.Prefix, AffixType.Suffix } : new[] { _affixType };
+    private IEnumerable<AffixType> VisibleTypes => Searching ? AffixTypeExtensions.Both : new[] { _affixType };
 
-    private List<KeyValuePair<string, List<ModDef>>> FilteredGroups(string category, AffixType type) =>
-        _groups.TryGetValue(category, out var dict)
-            ? dict.Where(g => g.Value[0].AffixType == type)
-                  .Where(g => !Searching || g.Value.Any(m => Matches(m, _filter.Trim())))
-                  .OrderBy(g => GroupLabel(g.Value))
-                  .ToList()
+    private List<TierGroup> FilteredGroups(string category, AffixType type) =>
+        _groups.TryGetValue(category, out var groups)
+            ? groups.Where(g => g.Type == type && TextSearch.Matches(_filter, g.SearchText)).ToList()
             : new();
 
-    private static bool Matches(ModDef m, string filter) =>
-        new[] { m.Family ?? "", m.Text, m.Name }.Concat(m.ModTags).Any(s => s.Contains(filter, StringComparison.OrdinalIgnoreCase));
+    private Task SetValue(SelectedMod mod, int rangeIndex, object? input)
+    {
+        var (lo, hi) = mod.ValueBounds(rangeIndex, AllowQualityValues, Data);
+        mod.Values[rangeIndex] = double.TryParse(input?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)
+            ? Math.Clamp(v, lo, hi)
+            : null;
+        return ChangeSelection(() => { });
+    }
 
-    private async Task Change(Action change)
+    private string ValueTitle(SelectedMod mod, int index, double hi)
+    {
+        var (rollLo, rollHi) = ModText.Bounds(mod.Mod.StatRanges[index]);
+        return hi > rollHi
+            ? $"{ValueLabel} (roll {rollLo}–{rollHi}; up to {hi} with {string.Join("/", Data.CatalystsEnhancing(mod.Mod).Select(c => c.QualityType).Distinct())} catalyst quality)"
+            : $"{ValueLabel} ({rollLo}–{rollHi})";
+    }
+
+    /// <summary>Change the selection, re-apply the draft's rules, then notify the parent.</summary>
+    private Task ChangeSelection(Action change) => Change(() =>
     {
         change();
         Draft.Refresh();
-        await OnChanged.InvokeAsync();
-    }
-
-    private static void Toggle(HashSet<string> set, string key)
-    {
-        if (!set.Remove(key)) set.Add(key);
-    }
+    });
 
     /// <summary>Group label = the lowest tier's text with numbers stripped, e.g. "#% increased Spell Damage".</summary>
-    private static string GroupLabel(List<ModDef> mods)
+    private static string GroupLabel(IEnumerable<ModDef> mods)
     {
         var first = mods.MinBy(m => m.Level)!;
         return string.IsNullOrWhiteSpace(first.Text) ? first.Name : ModText.StripNumbers(first.Text);
     }
 
-    private static readonly (string Tag, string Color)[] TagColors =
-    {
-        ("life", "#cc4444"), ("fire", "#cc4444"), ("mana", "#6688ff"), ("cold", "#6688ff"), ("speed", "#44cc44"), ("lightning", "#ffcc44"),
-        ("chaos", "#aa44cc"), ("physical", "#c8c4b8"), ("critical", "#ffdd44"), ("attribute", "#44aacc"), ("resistance", "#cc8833"),
-        ("defences", "#66ccaa"), ("armour", "#66ccaa"), ("evasion", "#66ccaa"), ("energy_shield", "#66ccaa"),
-        ("attack", "#cc8844"), ("caster", "#8866cc"), ("minion", "#88cc44"),
-    };
+    /// <summary>Tag colour classes in site.css (.mod-tag.tag-*): the first known tag word the tag contains.</summary>
+    private static readonly string[] ColouredTags =
+        { "life", "fire", "mana", "cold", "speed", "lightning", "chaos", "physical", "critical", "attribute", "resistance", "defences", "armour", "evasion", "energy_shield", "attack", "caster", "minion" };
 
-    private static string TagColor(string tag) => TagColors.FirstOrDefault(t => tag.Contains(t.Tag)).Color ?? "#807c70";
+    private static string TagClass(string tag) => ColouredTags.FirstOrDefault(tag.Contains) ?? "other";
 }

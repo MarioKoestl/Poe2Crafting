@@ -1,0 +1,41 @@
+@* A selectable strategy (planner result or crafting guide): name, success chance, expected attempts, steps and a description. *@
+
+<button type="button" class="strategy-card @(Selected ? "selected" : "") @(Strategy.HasBrickRisk ? "has-brick-risk" : "")" aria-pressed="@(Selected ? "true" : "false")"
+        @onclick="OnSelect">
+    <span class="strategy-card-header">
+        <span class="strategy-name">@(Title ?? Strategy.Name)</span>
+        @if (Strategy.HasBrickRisk)
+        {
+            <span class="brick-badge" title="This strategy has steps that can destroy wanted mods">⚠ Brick Risk</span>
+        }
+    </span>
+    <span class="strategy-card-stats">
+        <span class="stat">
+            <span class="stat-label">Success</span>
+            <span class="stat-value @UiFormat.ProbabilityClass(Strategy.OverallProbability)">@UiFormat.Probability(Strategy.OverallProbability)</span>
+        </span>
+        @if (ShowExpected)
+        {
+            <span class="stat">
+                <span class="stat-label">Expected</span>
+                <span class="stat-value">~@UiFormat.Attempts(Strategy.ExpectedAttempts) tries</span>
+            </span>
+        }
+        <span class="stat">
+            <span class="stat-label">Steps</span>
+            <span class="stat-value">@Strategy.Steps.Count</span>
+        </span>
+    </span>
+    <span class="strategy-card-desc">@ChildContent</span>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public CraftingStrategy Strategy { get; set; } = null!;
+    [Parameter] public bool Selected { get; set; }
+    [Parameter] public EventCallback OnSelect { get; set; }
+    /// <summary>Overrides the strategy name.</summary>
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public bool ShowExpected { get; set; } = true;
+    /// <summary>Description below the stats.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

@@ -15,55 +15,52 @@ Zeigt Wahrscheinlichkeiten, erlaubt Würfeln + manuelle Wahl, hat einen Crafting
 ```
 C:\Development\POE2Crafting\
 ├── src/
-│   ├── POE2Crafting.Core/          # Domain + Engine (kein UI)
-│   │   ├── Data/
-│   │   │   ├── GameData.cs         # Lädt alle JSON, Lookups, PagesFor, EssenceModFor, CurrencyVariants, ClassMatchesTarget
-│   │   │   └── Models.cs           # ModDef, BaseItem, CurrencyDef, OmenDef, SimAssumptions, ModTiers, ModCategories
+│   ├── POE2Crafting.Core/          # Domain + Engine + Spielregeln (kein UI)
+│   │   ├── Data/                   # EINE Datei pro Datenmodell (BaseItem, ModDef, CurrencyDef, EssenceDef, OmenDef, CatalystDef, AugmentDef, InstillRecipe, ItemClassDef, GuideModels)
+│   │   │   ├── GameData.cs         # Lädt alle JSON (Pflichtdateien werfen), Lookups (Find*, CurrenciesOf(op), OpOfOmenTarget, PagesFor, EssenceModsFor, Catalyst*/Augment*/Instill-Helfer)
+│   │   │   ├── SimConfig.cs        # SimAssumptions (config.json, init-only; AffixTypeSelection-Enum, QualityPerUse nach Rarity), MaxAffixes = einzige Slot-Limit-Quelle
+│   │   │   ├── ModCategories.cs    # ModCategories (+KindFor/CanAppearAs), ModFamilies (MaximumQuality, AbyssMark)
+│   │   │   ├── CurrencyDef.cs      # CurrencyDef + CurrencyOps (alle Op-Ids als Konstanten) + CraftItemInfo
+│   │   │   ├── EssenceDef.cs       # EssenceDef + EssenceTiers
+│   │   │   ├── ClassTargets.cs     # Klassen-Gruppen (weapon_or_quiver, jewellery, ...) — EINZIGE Stelle mit Gruppen-Logik
+│   │   │   └── ModTiers.cs         # Tier-Ranking pro Familie+Stat
+│   │   ├── Drafting/               # ItemDraft, ModSelection (+SelectedMod.ValueBounds), FinishingTarget — Regeln von Composer/Planner-Target
 │   │   ├── Engine/
-│   │   │   ├── CraftingEngine.cs   # Generische Checks + gemeinsame Bausteine (Kandidaten, Add/Remove, MakeRare, FreeSlots)
-│   │   │   ├── Operations/         # EINE Klasse pro Currency-Op (CraftOperation: Check/Preview/Execute)
-│   │   │   │   ├── AddModOperation.cs, AlchemyOperation.cs, ChaosOperation.cs, AnnulOperation.cs
-│   │   │   │   ├── DivineOperation.cs, ChanceOperation.cs, FractureOperation.cs, FlagOperation.cs
-│   │   │   │   ├── EssenceOperation.cs   # Essenzen + Alloys
-│   │   │   │   ├── DesecrateOperation.cs # Knochen, Omens, Well-of-Souls-Reveal
-│   │   │   │   ├── VaalOperation.cs, SacrificeOperation.cs, ArchitectOperation.cs # Corruption
-│   │   │   │   └── QualityOperation.cs (+Vaal-Infuser), CatalystOperation.cs, SocketOperation.cs, ExtractOperation.cs, FluxOperation.cs
-│   │   │   ├── ModPool.cs          # Mod-Kandidaten, Gewichte, DisplayTier() (gecacht pro Base)
-│   │   │   ├── CraftingPathFinder.cs # Planner-Einstieg: FindPathsFromItem (→ Planning/FromItemPlanner), ToMermaid
-│   │   │   ├── Planning/           # ItemGoal (Diff Item ↔ Ziel), FromItemPlanner (Greedy pro Tool-Policy)
-│   │   │   ├── CraftingPath.cs     # TargetItemSpec, TargetMod.Matches(), CraftingStrategy
-│   │   │   ├── Outcomes.cs         # CraftAction, OmenEffects, StepPreview, ManualChoice, CraftResult, CraftContext
-│   │   │   └── Rng.cs              # Seeded RNG (PickWeighted, SampleWeighted)
+│   │   │   ├── CraftingEngine.cs   # Generische Checks + gemeinsame Bausteine (Pick, ValuesFor, AddOne/AddMods, RemoveOne, PickOutcome<TKey>, MaxQuality, FreeSlots)
+│   │   │   ├── CraftAction.cs, OmenEffects.cs, Candidates.cs (ModCandidate/RemovalCandidate, immutable), Outcomes.cs (Applicability, StepPreview, ManualChoice, CraftResult, InvalidChoiceException)
+│   │   │   ├── ModPool.cs          # Mod-Kandidaten, Gewichte, DisplayTier() (gecacht pro Base, thread-safe)
+│   │   │   ├── Rng.cs              # Seeded RNG (PickWeighted, SampleWeighted, RollRange)
+│   │   │   ├── Operations/         # EINE internal Klasse pro Currency-Op (CraftOperation: Check/Preview/Execute) + CraftContext/ExecuteContext
+│   │   │   └── Planning/           # namespace Engine.Planning
+│   │   │       ├── CraftingPathFinder.cs  # Planner-Einstieg (PrepareTargets, ToMermaid)
+│   │   │       ├── FromItemPlanner.cs (+ .Cache/.AffixMoves/.EssenceMoves/.ValueMoves/.FinishingMoves partials)  # Beam Search
+│   │   │       ├── ItemGoal.cs, TargetItemSpec.cs (TargetItemSpec/TargetMod/AugmentTarget), CraftingStrategy.cs (PlanResult/CraftingStrategy/CraftStep, NewStep, Materials())
+│   │   │       ├── GuideRunner.cs (+GuideWalkthrough), GuideLibrary.cs (Singleton-Cache der Walkthroughs)
+│   │   │       └── OutcomeChance.cs      # Chancen gewünschter Additions/Removals + TryExecute (Planner & Guides)
 │   │   └── Items/
-│   │       ├── Item.cs             # Item (FromBase, AddMod), ItemMod, RevealContext, Rarity, ModKind
-│   │       ├── ModText.cs          # ALLE Zahlen-/Range-Regeln für Mod-Texte (Render, StatSignature, MidValue, Tokens)
-│   │       └── ItemParser.cs       # Ctrl+C / Ctrl+Alt+C Text → Item (Mod-Auflösung pro Base)
+│   │       ├── Item.cs             # Item (FromBase, AddMod, ReplaceMod, Title, QualityText, EffectiveValues), ItemMod (StatValues), RevealContext (Describe), Rarity, ModKind(+OccupiesSlot), AffixTypeExtensions (Both/Lower/Opposite)
+│   │       ├── ModText.cs          # ALLE Zahlen-/Range-Regeln (Render, StatSignature, Bounds, PossibleRolls, ChanceAtLeast, ScaleValues, RescaleValues)
+│   │       ├── ItemParser.cs       # Ctrl+C / Ctrl+Alt+C Text → Item (Mod-Auflösung pro Base, Catalyst-Qualitytyp kanonisiert)
+│   │       ├── ItemTextWriter.cs   # Item → Text (Round-Trip mit dem Parser, Test)
+│   │       ├── ItemTextFormat.cs   # Marker/Header-Flags/Separator — gemeinsames Vokabular von Parser, Writer, ItemDiff
+│   │       └── ItemDiff.cs         # Mod-/Runen-/Property-Änderungen (Multiset)
 │   └── POE2Crafting.Web/           # Blazor UI
-│       ├── Pages/
-│       │   ├── Index.razor         # Hauptseite: links Item, rechts Simulator/Planner Tabs
-│       │   └── ItemComposer.razor  # Inline-Composer zum Zusammenstellen von Items
-│       ├── Components/
-│       │   ├── ItemDisplay.razor   # Item-Anzeige (Mods, Runen, Implicits, Display-Tiers)
-│       │   ├── BaseItemForm.razor  # Klasse/Base/Rarity/ilvl eines ItemDraft (Composer + Planner)
-│       │   ├── ModBrowser.razor    # Mod-Auswahl eines ItemDraft, gruppiert nach ModTiers.TierGroupKey
-│       │   ├── ModOptionRow.razor  # Mod-Zeile mit %/P-S/Tier/Choose (Preview + Well of Souls)
-│       │   ├── DistributionRow.razor # Balken-Zeile (Removal, Outcomes)
-│       │   ├── CurrencySelector.razor # Gruppen: Orbs, Essences, Alloys
-│       │   ├── PreviewPanel.razor  # Wahrscheinlichkeiten, Würfeln, manuelle Wahl (Chaos 2-stufig)
-│       │   ├── RevealPanel.razor   # Well of Souls: Optionen würfeln/wählen, Abyssal Echoes, ganzer Pool
-│       │   ├── ItemBuilder.razor   # Planner: Target-Item definieren + Pfade finden
-│       │   ├── PlannerPanel.razor  # Planner: Ergebnisse anzeigen
-│       │   └── MermaidDiagram.razor
+│       ├── Pages/Index.razor       # Hauptseite: links Item, rechts Tabs Simulator | Crafting Planner | Guides (Index besitzt das Pane-Layout)
+│       ├── Components/             # u. a. ItemDisplay, ItemComposer, BaseItemForm, ModBrowser, CurrencySelector, PreviewPanel, RevealPanel, InstillPanel/Picker,
+│       │                           # ItemBuilder, PlannerPanel, StrategyGuide, StrategyCard, GuideList, GuideDetail, GuideBulletList, ProjectPanel,
+│       │                           # EmptyState, SearchBox, CraftIcon, CraftItemLink, CraftText, ItemDiffList, DistributionRow, ModOptionRow, MermaidDiagram
 │       ├── Services/
-│       │   ├── CraftingSession.cs  # Per-User Session: CurrentItem, History, Reveal-State (Apply/Commit/Restore)
-│       │   ├── ItemDraft.cs        # State von Composer/Planner: Base, Rarity, ilvl, Selection, Preview
-│       │   ├── ModSelection.cs     # Regeln für gewählte Mods (Slots, ilvl, Familie, Tier-Tausch)
+│       │   ├── CraftingSession.cs  # Per-User Session: Projekt, CurrentItem, History, Reveal-State (lädt Projekt lazy)
+│       │   ├── PlannerState.cs     # Per-User State von Planner + Guides (Draft, Ergebnis, Auswahl) + Changed-Event + PlannerStateComponentBase
+│       │   ├── ProjectStore.cs     # Projekte als JSON (atomar, gecachte Liste)
+│       │   ├── UiFormat.cs         # Chancen/Versuche/CSS-Klassen/Plural (invariant)
+│       │   ├── UiHelpers.cs        # Toggle-Extension, TextSearch.Matches, ChangingComponentBase (Change → OnChanged)
 │       │   └── AffixUi.cs          # P/S-Buchstabe + CSS-Klassen
-│       └── wwwroot/css/site.css    # EINZIGE CSS-Datei
+│       └── wwwroot/css/site.css    # EINZIGE CSS-Datei (alle Farben als Tokens in :root)
 ├── data/                           # JSON-Datenspeicher (Spieldaten)
 ├── research/                       # poe2db Exports, PoB-Daten
 ├── tools/                          # Python-Skripte für Datenaufbereitung
-└── tests/
+└── tests/                          # GlobalUsings.cs, TestData (Apply, BestMod, Spec, Plan, Defs, TestBases), [DataFact]/[DataTheory]
 ```
 
 ## Wichtige Architektur-Konzepte
@@ -88,14 +85,25 @@ C:\Development\POE2Crafting\
 - Item.Bind() setzt ItemClass immer aus der Base (Spiel sagt "Staves", Daten "Staff")
 
 ### Engine-Operationen
-- Neue Currency-Mechanik = neue `CraftOperation`-Klasse unter `Engine/Operations/` + Eintrag im Engine-Konstruktor; KEIN switch über Op-Ids
+- Neue Currency-Mechanik = neue `CraftOperation`-Klasse unter `Engine/Operations/` + Eintrag im Engine-Konstruktor; KEIN switch über Op-Ids (Op-Ids nur über `CurrencyOps`)
+- Ungültige manuelle Wahl → `InvalidChoiceException` (nur die fängt `OutcomeChance.TryExecute`/Session; andere Exceptions sind Bugs und dürfen nicht verschluckt werden)
+- Kandidaten sind immutable (`ModCandidate.Normalised`, `RemovalCandidate.Uniform/UniformOf` liefern neue Objekte): Previews werden im Planner gecacht und geteilt
+- Gewählt-oder-zufällig immer über `CraftingEngine.Pick`, benannte Ergebnisse über `PickOutcome<TKey>` (Label ↔ Key, z. B. Desecrate: AffixType, Augment: Sockel-Index), Corruption über `ExecuteContext.Corrupt()`
+- `StepPreview.WeightsNote` getrennt von den Notes
 - Generische Checks (Rarity, Target-Klasse, Mirrored, Corrupted, Max-ilvl, Omen-Zuordnung) macht nur `CraftingEngine.Check`
 - Omen-Effekt-Ids als Konstanten in `OmenEffects`, Kategorie-Namen in `ModCategories`
 - MEHRERE Omens pro Aktion: `CraftAction.Omens` / `CraftContext.Omens` (Liste; `OmenEffects.None` = keine, nie null); `ctx.OmenIs(effect)`, `omens.Has/WithEffect`, `OmenEffects.RestrictedType(omens)`; `CraftOperation.AcceptsOmen(ctx, omen)` pro Omen. Widersprüche (`OmenEffects.Conflict`, ANNAHME): gleiches Omen doppelt, Prefix- vs. Suffix-Restriktion, zwei Boss-Omens, Putrefaction + Restriktion. UI: Omens als Toggle, blockierte mit Grund im Tooltip. Planner probiert Einzel-Omens und verträgliche Paare
 - Alle Currencies aus den Daten haben eine Operation (Test `Every_simulated_currency_has_an_operation` prüft das)
-- Klassen-Gruppen (weapon_or_quiver, armour, ring_or_amulet, socketable, equipment, ...) NUR in der Tabelle `GameData.TargetGroups`; Currency nutzt `CurrencyDef.ClassTarget` (Target ?? QualityTarget), sonst `CraftOperation.DefaultClassTarget`
+- Klassen-Gruppen (weapon_or_quiver, armour, ring_or_amulet, socketable, equipment, ...) NUR in `ClassTargets` (Konstanten + Tabelle); Currency nutzt `CurrencyDef.ClassTarget` (Target ?? QualityTarget), sonst `CraftOperation.DefaultClassTarget`
 - Gemeinsame Bausteine u. a.: `PickOutcome`/`NormaliseOutcomes` (benannte Ergebnisse + Handwahl), `AddCorruptionEnchant`, `RemoveOne`, `AddOne`
 - `CraftOperation.WorksOnCorrupted` / `RequiresCorrupted` statt eigener Corrupted-Checks
+
+### "+4 Skills Amulett"-Technik (YouTube-Guide, Test `PlusFourAmuletTechTests`)
+- Katalysator-Quality erhöht die WERTE passender Mods (Tag): `Item.EffectiveText(mod)` = alle Zahlen × (1 + Quality/100), ganze Zahlen abgerundet (+3 × 1.34 = +4, × 1.33 = +3); ItemDisplay zeigt den effektiven Wert (Basiswert im Tooltip)
+- Desecrated-Mods (auch unrevealed) zählen für die 4 Mods, können aber NICHT fractured werden (1/3 statt 1/4)
+- Omen of Whittling: unrevealed Desecrated zählt als Level 1 (vorher revealen!); Essence-of-the-Breach-Mod hat Level 1 → wegwhittlen, Quality bleibt
+- Essence of the Abyss: Mark existiert als Prefix+Suffix derselben Familie → nimmt den Slot des entfernten Mods (mit Sinistral Crystallisation garantiert Prefix)
+- Der Planner findet die Technik selbst (Tests `Planner_*` in `PlusFourAmuletTechTests`): Werte-Ziel "+4" auf fixem +3-Mod → Breach (+Crystallisation) → Katalysatoren → Breach-Mod entfernen; ohne toten Mod zuerst ein Blocker
 
 ### Quality, Katalysatoren, Sockel, Flux
 - Quality-Currencies: +config `qualityPerUse` je Rarity (UNVERIFIED), Cap = `Item.MaxQuality()` (Base-Quality/Default 20 + "Maximum Quality"-Mods wie Essence of the Breach)
@@ -123,6 +131,16 @@ C:\Development\POE2Crafting\
 - Reveal: `Engine.RevealPool/RollRevealOptions/Reveal`; Optionen = config `revealOptionCount` (3); Ancient-Bones: MinModLevel, Altered Collarbone: + breach_otherworldly
 - Datenlage: Desecrated-Mods fast alle Level 65, Gewicht 1 (keine poe2db-Schätzung) → Gnawed-Bones auf Waffen finden meist nichts
 
+### Slot-Limits
+- NUR über `SimAssumptions.MaxAffixes(item, rarity, type)` bzw. `MaxAffixes(itemClass, rarity, type, modTexts)`: Rarity-Limits aus config, `rareMaxAffixesPerTypeByClass` (Jewel = 2P/2S) + Extra-Slots aus Mods "+1 Prefix/Suffix Modifier allowed" (`ModText.ExtraAffixesAllowed`)
+
+### Liquid Emotions, Runen/Soul Cores, Instill, Hinekora's Lock
+- Liquid Emotions auf Juwelen = Essenz-artig: GameData macht aus den op-null-Currencies mit Mods der Kategorie `liquid` synthetische Essenzen (Tier "Liquid", Section "Liquid Emotions"); `EssenceModsFor` liefert ALLE möglichen Mods (Contempt: Prefix ODER Suffix, je 50 %, nur passende rollen)
+- Augments: `GameData.Augments` aus `socketable`-Mods (Name = Rune/Soul Core/Idol), synthetische Currencies Op `socket_augment` (Section "Runes & Soul Cores"); `AugmentOperation` füllt freien Sockel, voll → gewählter Sockel wird ersetzt (config, ANNAHME); Effekttext pro Klasse via `GameData.AugmentEffectText`; Bonded-Effekte (nur Shaman) nicht modelliert
+- Instill: `data/instills.json` (892 Rezepte, `python tools/poe2db_instills.py` aus research zip); `Engine.CheckInstill/Instill` → Enchant "Allocates X" (nur Amulette, nicht corrupted, ersetzt vorhandenes = ANNAHME); `Item.InstilledNotable`; UI `InstillPanel`/`InstillPicker`; `GameData.EmotionCurrency("Ire")`
+- Hinekora's Lock: setzt `Item.Foreseeing` + `ForeseeSeed`; `Engine.Foresee(item, action)` = exaktes Ergebnis pro Aktion (Currency+Omens), `CraftingEngine.ForeseeRng` beim Anwenden → identisch; PreviewPanel zeigt "foreseen result" (ItemDiffList)
+- `ItemDiff.Between(before, after)` = Mod-Änderungen (Planner-Guide, Lock-Vorschau)
+
 ### Essenzen & Alloys
 - `GameData.AllCurrencies`: currencies.json + synthetische CurrencyDef für Essenzen/Alloys (Op="essence", `.Essence`) und Katalysatoren (Op="catalyst") → gleicher Engine-/UI-Pfad; `FindCurrency` sucht in allen
 - `GameData.EssenceModFor(essence, base, class)`: garantierter Mod aus Kategorie essence/perfect_essence, Page-Match über Weights-Keys
@@ -134,12 +152,22 @@ C:\Development\POE2Crafting\
 - Nur noch "Path from Current Item" (Mario, 13.09.2026: Pfade ab leerer Base braucht er nicht) — der alte Template-Planner ab Normal-Base wurde entfernt; eine Normal-Base als Current Item funktioniert trotzdem (Transmute-Moves)
 - Wahrscheinlichkeiten kommen direkt aus `CraftingEngine.Preview` (gleiche Regeln wie Simulator)
 
+### Web-Muster
+- Culture: en-US global (Program.cs), Zahlen in Markup/CSS über `UiFormat` (invariant)
+- Kein Prerendering (`InteractiveServerRenderMode(prerender: false)`), Session lädt das Projekt lazy
+- Singletons: GameData, ModPool, CraftingEngine (zustandslos), GuideLibrary, ProjectStore; Scoped: CraftingSession, PlannerState
+- Komponenten, die geteilten State ändern: `@inherits ChangingComponentBase` → `Change(() => ...)` ruft OnChanged
+- Komponenten ohne Parameter rendern bei Parent-Render NICHT neu → State-Anzeige über `PlannerStateComponentBase` (Changed-Event)
+- `@key` in Listen; teure Berechnungen in OnParametersSet cachen (CurrencySelector pro Item-Referenz, ModBrowser pro Base, PreviewPanel pro Action/Item)
+- Klickbare Karten/Header sind `<button>` (StrategyCard, Kategorie-/Familien-Header, Step-Toggle, Projekt-Item)
+
 ### CraftingSession (Scoped per User)
-- Hält CurrentItem, History, Engine, RNG
+- Hält das offene Projekt (`Project`), das aktuelle Projekt-Item (`ProjectItem`, eigene History) + CurrentItem, Engine, RNG
+- Projekte: `ProjectStore` (Singleton) speichert jedes Projekt als `projects/{Id}.json` (Ordner neben data/, config `ProjectsFolder`, gitignored) — AUTOMATISCH bei jeder Änderung (Commit/Undo/Auswahl/Entfernen); beim Session-Start wird das zuletzt geänderte Projekt geöffnet. KEIN JSON-Download/Upload mehr
+- UI `ProjectPanel` (oben im Item-Panel): Projekt-Auswahl, neu (＋), umbenennen (✎), löschen (🗑 → "Delete?"), Item-Liste des Projekts (klicken = öffnen, ✕ → "Remove?")
 - ImportItem(): Itemtext parsen (Fehler + Anzahl nicht zuordenbarer Mods in LastError)
-- SetItem(item, action): Composer/Import → CurrentItem, neue History
+- SetItem(item, action): Composer/Import → NEUES Item im Projekt (ohne Projekt wird eines angelegt)
 - Execute(): Currency/Omen/Essenz anwenden; InvalidOperationException aus der Engine → LastError (kein Circuit-Crash)
-- Save/Load: JSON-Projekte
 
 ### UI-Layout (Index.razor)
 - Desktop (>1100px): App füllt den Viewport; JEDE Spalte/Pane hat genau EINE Scrollbar (`.panel-body`, `.pane`) — keine verschachtelten Scroll-Container (keine max-height+overflow in Listen/Mod-Browser!). Schmal: alles gestapelt, Seite scrollt
@@ -153,7 +181,7 @@ C:\Development\POE2Crafting\
 ### Currency-/Omen-Infos (CraftItemLink)
 - `GameData.FindCraftItem(name)` → `CraftItemInfo` (Kind, IconUrl, Description, Facts wie Min-Mod-Level) für alle Currencies, Essenzen, Alloys, Katalysatoren, Omens
 - Icons LOKAL: `src/POE2Crafting.Web/wwwroot/img/icons/` + `data/icons.json` (Slug → lokaler Pfad), einmalig geladen mit `python tools/poe2db_icons.py` (Art-Pfade von poe2db, Dateien vom RePoE-fork-Mirror; poe2db-CDN blockiert z. B. Essenz-Icons außerhalb poe2db → nie direkt verlinken)
-- `CraftItemLink` = markierter Name (Icon + Name, `ShowIcon=false` in Kacheln) → Popover beim HOVER (Mario will Hover, nicht Klick; fixed, per JS `positionPopover` platziert, schließt 150 ms nach Verlassen); Klicks gehen durch (Kachel wird ausgewählt)
+- `CraftItemLink` = markierter Name (Icon + Name, `ShowIcon=false` in Kacheln) → Popover beim HOVER (Mario will Hover, nicht Klick): reines CSS-:hover (kein Server-Roundtrip), `onmouseenter="positionPopover(this)"` platziert es (fixed), 150 ms Schließ-Verzögerung per transition-delay; Klicks gehen durch
 - Currency-Suche filtert Name UND Beschreibung (z. B. "life" findet Essence of the Body); versteckte, nicht nutzbare Treffer werden als Hinweis gezählt
 - `CraftText` = Text aus Namen mit " + " / " → " (CraftAction.DisplayName, Step-Currency, History) → jeder bekannte Name wird zum Link
 - Neue Stellen, an denen Currency-/Omen-Namen angezeigt werden, IMMER über CraftItemLink/CraftText rendern
@@ -171,10 +199,24 @@ C:\Development\POE2Crafting\
 - Werte pro Mod-Range (SelectedMod.Values): im Composer = echte Werte, im Planner = Mindestwerte (TargetMod.MinValues)
 - "Path from Current Item" = `CraftingPathFinder.FindPathsFromItem` → `Engine/Planning/FromItemPlanner` → `PlanResult` (Strategies + Problems)
   - `ItemGoal.Compare(item, target)`: Kept / ToRemove / Missing / ValuesUnmet / RarityGap (Distance)
-  - Greedy pro Tool-Policy (Basic, +Omens/Chaos, +Essences, +Desecration, +Fracture): alle Moves werden mit engine.Preview bewertet, nächster Zustand via engine.Execute mit ManualChoice; Score = success^(1/progress), bei Gleichstand mehr Progress
-  - Moves: Annul (+Sinistral/Dextral/Light), Transmute/Augment/Regal/Exalt (+Omens), Chaos (Removal × Addition), Essenzen/Alloys (+Crystallisation), Desecration + Reveal (+Abyssal Echoes), Fracture als Schutz (nur 1. Schritt), Divine wenn nur Werte fehlen
+  - Beam Search pro Tool-Policy (Basic, +Omens/Chaos, +Essences, +Desecration, +Fracture): BeamWidth 8, Ranking = Pfadchance × 0.3^Distance × 0.97^Schritte (nur zum Aussortieren); Ergebnis = wahrscheinlichster kompletter Pfad, Gleichstand → weniger verbrauchte Items (`Node.Cost`); Zustände per `Signature` dedupliziert, Pfade unter dem besten fertigen werden abgeschnitten
+  - Dadurch sind Setup-Züge ohne direkten Fortschritt möglich: Blocker (`BlockerMoves`: Addition mit sicherem Affix-Typ, irrelevantes Ergebnis), Katalysator-Setup für Omen of Catalysing Exaltation, Essence of the Breach (`MaximumQualityMoves`, nur wenn Katalysator-Quality über dem Maximum nötig ist), Chaos + Omen of Whittling ohne Ziel-Mod (Ergebnis-Typ Prefix/Suffix als getrennte Züge mit ihrer Chance — nie einen Typ annehmen)
+  - Moves: Annul (+Sinistral/Dextral/Light), Transmute/Augment/Regal/Exalt (+Omens inkl. Catalysing), Chaos (Removal × Addition, +Whittling), Essenzen/Alloys (+Crystallisation), Desecration + Reveal (+Abyssal Echoes), Fracture, Divine wenn nur Werte fehlen, Katalysatoren bis Werte-Ziele erreicht (`CatalystValueMoves`)
+  - Werte-Ziele gelten für EFFEKTIVE Werte (`TargetMod.ValuesSatisfiedBy(item, mod)` → `Item.EffectiveValues`, Katalysator-Quality zählt); `ModDef.StatRanges`/`ItemMod.StatValues`: bei Texten ohne Range die fixen Zahlen (+3 Skills) — ModBrowser (`AllowQualityValues` im Planner) erlaubt Eingaben bis Max × `GameData.HighestCatalystFactor`
+  - Previews/Simulationen werden pro Plan gecacht (Policies überlappen); ItemBuilder plant per Task.Run mit "Planning…"-Anzeige
   - Hinzugefügte Mods werden mit Minimalwerten angenommen; Reveal-Chance nimmt gleiche Gewichte an
-  - WICHTIG: Züge, nach denen das Item eine höhere Rarity als das Ziel hat, sind verboten (Rarity kann nicht gesenkt werden; z. B. Essenz macht Magic → Rare). Zentral in `BuildGreedy` über `ItemGoal.RarityImpossible`; `CraftStep.Result` = Item nach dem Schritt (Test `No_strategy_step_leaves_the_target_rarity`)
+  - Finishing-Ziele (`TargetItemSpec.MinQuality/QualityType/Augments/InstillNotable`, UI `FinishingTargetForm` + `FinishingTarget`): sichere Schritte (N× Quality-Currency bzw. Katalysator, Artificer's Orb, Rune einsetzen, Instill) — `ItemGoal` zählt sie in `Distance`
+  - `CraftStep.Materials` (Name → Anzahl) → Guide-Ansicht (PlannerPanel): Start/Final-Item, Materialliste (pro Lauf + erwartet inkl. Retries), Schritte abhaken, Mod-Änderungen je Schritt, Hinekora-Hinweis bei unsicheren Schritten
+  - WICHTIG: Züge, nach denen das Item eine höhere Rarity als das Ziel hat, sind verboten (Rarity kann nicht gesenkt werden; z. B. Essenz macht Magic → Rare). Zentral in `Search` über `ItemGoal.RarityImpossible`; `CraftStep.Result` = Item nach dem Schritt (Test `No_strategy_step_leaves_the_target_rarity`)
+
+### Crafting Guides (Tab "Guides")
+- Kuratierte Abfolgen mit Erklärung in `data/guides.json` (`CraftingGuide`: Summary, KeyIdeas, Start-Item, Steps, NextSteps; Modelle in `Data/GuideModels.cs`, geladen als `GameData.Guides`)
+- Step: Currency + Omens + Uses + Explanation + OnMiss + `Hit` (was als Treffer zählt: `select` = Filter auf die Removal-Liste der Preview — beim Fracturing Orb der gefracturte Mod —, `add`/`addTag` = hinzugefügter Mod, `outcome` = benanntes Ergebnis; Texte als Teilstring, "*" = beliebig)
+- `GuideRunner.Run(guide)` spielt den Guide durch die Engine: Chance aus `Engine.Preview`, Item nach jedem Schritt via Execute mit ManualChoice → `GuideWalkthrough` (Start, `CraftingStrategy`, Problems) — Guides zeigen also immer die aktuellen Regeln/Annahmen
+- `OutcomeChance` (Chance gewünschter Additions/Removals, `TryExecute`) teilen sich Planner und Guides
+- UI: `GuideList` + `GuideDetail` (Walkthroughs aus dem Singleton `GuideLibrary`, Auswahl in `PlannerState`), `StrategyGuide` = gemeinsame Schritt-Ansicht für Planner-Ergebnisse UND Guides, `StrategyCard` = gemeinsame Karte; "Craft along in the Simulator" legt das Start-Item im Projekt an
+- Neue Guides: nur JSON ergänzen; Test `Every_guide_plays_through_with_the_current_data` prüft, dass jeder Guide mit den Daten durchläuft
+- Vorhanden: Fracture +3 Skills at 1/3 (Abyss mark), +4 Melee Skills Amulet, +4 Spell Skills Amulet (Quelle: YouTube-Video von Mario)
 
 ## Gewichte
 - poe2db-Schätzwerte, NICHT echte Spielgewichte
@@ -198,6 +240,12 @@ C:\Development\POE2Crafting\
 - Runen/Soul Cores einsetzen (Augments in Sockel), Perfect Flux, Reforging Bench
 - Verifizieren: Quality pro Nutzung je Rarity, Katalysator-Menge/Typwechsel, Catalysing-Exaltation-Stärke, Flux-"equivalent"
 - Expedition-/Crest-Mods (Mechanik unklar)
+- Abgleich mobalytics (Perra, 06/2026) + forgeofexiles.com (Wiki Stand 0.4.x, teils "unverified"/PoE1-Annahmen) am 13.09.2026 — FEHLT noch:
+  - Recombinator (+ Omen of Recombination), Reforging Bench (3→1, Essenz-Upgrade), Salvage
+  - Vaal Cultivation Orb / Crystallised Corruption / Core Destabiliser / Ancient Infuser / Double Corruption (Daten da, op null)
+  - Currency-Preise (poe.ninja) + Kosten-Schätzung pro Pfad; Omen of the Ancients/Unique-Ergebnisse; Sanctified-Effekt
+  - Planner: Plan speichern/teilen; Hinekora's Lock in Wahrscheinlichkeiten einrechnen (derzeit nur Hinweis); Instill-Notables mit Apostroph heißen im Datensatz ohne (Slug "Deserts Scorn")
+  - Abweichung: forgeofexiles nennt Greater Transmute/Augment min. Mod-Level 55, poe2db-Daten 44 (wir nutzen poe2db); forgeofexiles sagt "nur 1 Omen aktiv" (Stand 0.4) — Mario spielt mit mehreren aktiven Omens
 - Planner: Currency-Kosten berücksichtigen (empfiehlt aktuell z. B. Perfect-Orbs rein nach Wahrscheinlichkeit)
 - Essenzen: ob Mod-Level > Item-Level blockiert, ist unverifiziert (derzeit nur Hinweis)
 - Weitere Details: siehe Claude-Projekt "POE 2" → poe2-crafting/STATUS.md und KNOWLEDGE_BASE.md

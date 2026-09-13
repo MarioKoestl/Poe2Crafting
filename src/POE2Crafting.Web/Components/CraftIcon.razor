@@ -1,0 +1,11 @@
+@* Icon of a crafting item (local file from data/icons.json); hidden when the image can't be loaded. *@
+
+@if (Url != null)
+{
+    <img src="@Url" alt="" class="@Class" loading="lazy" onerror="this.style.display='none'" />
+}
+
+@code {
+    [Parameter] public string? Url { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+}

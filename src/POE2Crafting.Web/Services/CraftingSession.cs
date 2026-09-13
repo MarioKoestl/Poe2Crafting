@@ -4,54 +4,149 @@ using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Web.Services;
 
-/// <summary>Per-user scoped crafting session: holds the current item, crafting history, RNG seed and pending Well of Souls reveals.</summary>
+/// <summary>
+/// Per-user scoped crafting session: the open project with its items (each with its own history), the current item, RNG and pending
+/// Well of Souls reveals. Every change of the project is saved automatically; a failed save is reported in <see cref="LastError"/>.
+/// </summary>
 public sealed class CraftingSession
 {
     private readonly GameData _data;
-    private readonly CraftingEngine _engine;
+    private readonly ProjectStore _store;
+    private readonly Rng _rng = new();
     /// <summary>Options rolled at the Well of Souls per unrevealed mod index (cleared whenever the item changes).</summary>
     private readonly Dictionary<int, RevealState> _reveals = new();
+    private bool _projectLoaded;
 
-    public Item? CurrentItem { get; private set; }
-    public List<HistoryEntry> History { get; } = new();
-    public Rng Rng { get; private set; } = new();
-    public string? ProjectName { get; set; }
-    public string? LastError { get; private set; }
-
-    public CraftingSession(GameData data, ModPool pool)
+    public CraftingSession(GameData data, CraftingEngine engine, ProjectStore store)
     {
         _data = data;
-        _engine = new CraftingEngine(data, pool);
+        Engine = engine;
+        _store = store;
     }
 
-    public CraftingEngine Engine => _engine;
-    public GameData Data => _data;
+    public CraftingEngine Engine { get; }
 
-    public void SetError(string message) => LastError = message;
+    public CraftingProject? Project { get { EnsureProject(); return _project; } }
+    public ProjectItem? ProjectItem { get { EnsureProject(); return _projectItem; } }
+    public Item? CurrentItem { get { EnsureProject(); return _currentItem; } }
+    /// <summary>History of the current item (empty without an item).</summary>
+    public IReadOnlyList<HistoryEntry> History => ProjectItem?.History ?? (IReadOnlyList<HistoryEntry>)Array.Empty<HistoryEntry>();
+    public string? LastError { get; private set; }
 
-    /// <summary>Parse and set an item text; returns false when nothing was imported (LastError says why, or warns about unmatched mods).</summary>
-    public bool ImportItem(string text)
+    private CraftingProject? _project;
+    private ProjectItem? _projectItem;
+    private Item? _currentItem;
+
+    /// <summary>The most recently changed project is opened on first use (not in the constructor: no disk access while the page prerenders).</summary>
+    private void EnsureProject()
     {
+        if (_projectLoaded) return;
+        _projectLoaded = true;
+        if (_store.List().FirstOrDefault() is { } recent) OpenProject(recent.Id);
+    }
+
+    // ---- projects ----
+
+    public IReadOnlyList<ProjectSummary> Projects() => _store.List();
+
+    public void CreateProject(string name)
+    {
+        EnsureProject();
+        _project = new CraftingProject { Name = string.IsNullOrWhiteSpace(name) ? $"Project {DateTime.Now:yyyy-MM-dd HH:mm}" : name.Trim() };
+        SelectItem(null);
+        Save();
+    }
+
+    public void OpenProject(string id)
+    {
+        _projectLoaded = true;
+        if (_store.Load(id) is not { } project) { LastError = "The project could not be loaded."; return; }
+        _project = project;
+        SelectItem(project.Items.FirstOrDefault(i => i.Id == project.SelectedItemId) ?? project.Items.FirstOrDefault());
+    }
+
+    public void RenameProject(string name)
+    {
+        if (Project == null || string.IsNullOrWhiteSpace(name)) return;
+        Project.Name = name.Trim();
+        Save();
+    }
+
+    public void DeleteProject()
+    {
+        if (Project is not { } project) return;
+        _store.Delete(project.Id);
+        _project = null;
+        SelectItem(null);
+        if (_store.List().FirstOrDefault() is { } next) OpenProject(next.Id);
+    }
+
+    /// <summary>Make an item of the project the current item (nothing happens when it already is).</summary>
+    public void OpenItem(string itemId)
+    {
+        if (Project?.Items.FirstOrDefault(i => i.Id == itemId) is not { } item || ReferenceEquals(item, ProjectItem)) return;
+        SelectItem(item);
+        Save(touch: false);
+    }
+
+    public void RemoveItem(string itemId)
+    {
+        if (Project?.Items.FirstOrDefault(i => i.Id == itemId) is not { } item) return;
+        Project.Items.Remove(item);
+        if (ReferenceEquals(item, _projectItem)) SelectItem(Project.Items.LastOrDefault());
+        Save();
+    }
+
+    private void SelectItem(ProjectItem? item)
+    {
+        _projectItem = item;
+        if (_project != null) _project.SelectedItemId = item?.Id;
+        if (item?.Current is { } current) Restore(current);
+        else { _currentItem = null; _reveals.Clear(); }
+    }
+
+    private void Save(bool touch = true)
+    {
+        if (_project == null) return;
         try
         {
-            var item = ItemParser.Parse(text, _data);
-            if (item.Base == null) { LastError = $"Import failed: unknown base item \"{item.BaseName}\"."; return false; }
-            SetItem(item, "Imported");
-            var unresolved = item.Mods.Count(m => m.IsAffix && m.Def == null && !m.Unrevealed);
-            if (unresolved > 0) LastError = $"Imported, but {unresolved} modifier(s) could not be matched to game data and are shown as text only.";
-            return true;
+            _store.Save(_project, touch);
         }
-        catch (Exception ex)
+        catch (IOException ex)
+        {
+            LastError = $"Saving the project failed: {ex.Message}";
+        }
+    }
+
+    // ---- items ----
+
+    /// <summary>Parse an item text and add it to the project; returns false when nothing was imported (LastError says why, or warns about unmatched mods).</summary>
+    public bool ImportItem(string text)
+    {
+        Item item;
+        try
+        {
+            item = ItemParser.Parse(text, _data);
+        }
+        catch (FormatException ex)
         {
             LastError = $"Import failed: {ex.Message}";
             return false;
         }
+        if (item.Base == null) { LastError = $"Import failed: unknown base item \"{item.BaseName}\"."; return false; }
+        SetItem(item, "Imported");
+        var unresolved = item.Mods.Count(m => m.IsAffix && m.Def == null && !m.Unrevealed);
+        if (unresolved > 0) LastError = $"Imported, but {unresolved} modifier(s) could not be matched to game data and are shown as text only.";
+        return true;
     }
 
-    /// <summary>Replace the current item (import, compose) and start a new history.</summary>
+    /// <summary>Add a new item (import, compose, guide) to the project — a new project is created when none is open — and make it the current item.</summary>
     public void SetItem(Item item, string action)
     {
-        History.Clear();
+        if (Project == null) CreateProject("");
+        var projectItem = new ProjectItem();
+        _project!.Items.Add(projectItem);
+        SelectItem(projectItem);
         EditItem(item, action);
     }
 
@@ -63,34 +158,44 @@ public sealed class CraftingSession
     }
 
     public StepPreview Preview(CraftAction action, int? forcedRemovalIndex = null) =>
-        CurrentItem != null ? _engine.Preview(CurrentItem, action, forcedRemovalIndex) : new StepPreview { Applicability = Applicability.No("No item loaded.") };
+        CurrentItem != null ? Engine.Preview(CurrentItem, action, forcedRemovalIndex) : new StepPreview { Applicability = Applicability.No("No item loaded.") };
 
+    /// <summary>Apply an action; on a foreseeing item (Hinekora's Lock) a random roll gives exactly the foreseen result.</summary>
     public void Execute(CraftAction action, ManualChoice? choice = null) =>
-        Apply(action.DisplayName, item => _engine.Execute(item, action, Rng, choice));
+        Apply(action.DisplayName, item => Engine.Execute(item, action, item.Foreseeing && choice == null ? CraftingEngine.ForeseeRng(item, action) : _rng, choice));
+
+    /// <summary>Hinekora's Lock: the result the action will have on the current item, or null when the item doesn't foresee or the action can't be used.</summary>
+    public CraftResult? Foresee(CraftAction action) =>
+        CurrentItem is { Foreseeing: true } item && Engine.Check(item, action).Ok ? Engine.Foresee(item, action) : null;
+
+    /// <summary>Instill a notable on the current amulet.</summary>
+    public void Instill(InstillRecipe recipe) => Apply($"Instill {recipe.Notable}", item => Engine.Instill(item, recipe));
+
+    public Applicability CheckInstill(InstillRecipe recipe) =>
+        CurrentItem != null ? Engine.CheckInstill(CurrentItem, recipe) : Applicability.No("No item loaded.");
 
     public void Undo()
     {
-        if (History.Count <= 1) return;
-        History.RemoveAt(History.Count - 1);
-        Restore(History[^1].Item);
+        if (ProjectItem is not { History.Count: > 1 } item) return;
+        item.History.RemoveAt(item.History.Count - 1);
+        Restore(item.History[^1].Item);
+        Save();
     }
-
-    public void ResetRng(int? seed = null) => Rng = new Rng(seed);
 
     /// <summary>All simulated currencies, essences, alloys and catalysts with their applicability to the current item.</summary>
     public List<(CurrencyDef Currency, Applicability App)> ApplicableCurrencies() =>
         CurrentItem == null ? new() : _data.AllCurrencies.Where(c => c.Op != null)
-            .Select(c => (c, _engine.Check(CurrentItem, new CraftAction { Currency = c })))
+            .Select(c => (c, Engine.Check(CurrentItem, new CraftAction { Currency = c })))
             .ToList();
 
     /// <summary>Why the currency can't be used with these omens active together on the current item, or null.</summary>
     public string? CombinationProblem(CurrencyDef currency, IReadOnlyList<OmenDef> omens) =>
-        CurrentItem == null ? "No item loaded." : _engine.Check(CurrentItem, new CraftAction { Currency = currency, Omens = omens }) is { Ok: false } app ? app.Reason : null;
+        CurrentItem == null ? "No item loaded." : Engine.Check(CurrentItem, new CraftAction { Currency = currency, Omens = omens }) is { Ok: false } app ? app.Reason : null;
 
     /// <summary>Crafting omens that can modify the given currency on the current item (each on its own).</summary>
     public List<OmenDef> OmensFor(CurrencyDef currency) =>
         CurrentItem == null ? new() : _data.Omens.Where(o => o.Crafting && o.TargetCurrency != null &&
-            _engine.Check(CurrentItem, CraftAction.Of(currency, o)).Ok).ToList();
+            Engine.Check(CurrentItem, CraftAction.Of(currency, o)).Ok).ToList();
 
     // ---- Well of Souls ----
 
@@ -106,7 +211,7 @@ public sealed class CraftingSession
     public void RollRevealOptions(int modIndex)
     {
         if (CurrentItem == null || _reveals.ContainsKey(modIndex)) return;
-        _reveals[modIndex] = new RevealState { Options = _engine.RollRevealOptions(CurrentItem, modIndex, Rng) };
+        _reveals[modIndex] = new RevealState { Options = Engine.RollRevealOptions(CurrentItem, modIndex, _rng) };
     }
 
     public bool CanRerollReveal(int modIndex) => _reveals.TryGetValue(modIndex, out var s) && !s.RerollUsed;
@@ -115,79 +220,42 @@ public sealed class CraftingSession
     public void RerollRevealOptions(int modIndex)
     {
         if (CurrentItem == null || !_reveals.TryGetValue(modIndex, out var state) || state.RerollUsed) return;
-        state.Options = _engine.RollRevealOptions(CurrentItem, modIndex, Rng);
+        state.Options = Engine.RollRevealOptions(CurrentItem, modIndex, _rng);
         state.RerollUsed = true;
     }
 
     public void Reveal(int modIndex, string modId) =>
-        Apply("Well of Souls", item => _engine.Reveal(item, modIndex, modId, Rng));
-
-    // ---- save / load ----
-
-    public CraftingProject ToProject() => new()
-    {
-        Name = ProjectName ?? "Untitled",
-        Item = CurrentItem,
-        History = History.ToList(),
-        RngSeed = Rng.Seed,
-        SavedAt = DateTime.UtcNow,
-    };
-
-    public void LoadProject(CraftingProject project)
-    {
-        History.Clear();
-        History.AddRange(project.History ?? new());
-        foreach (var h in History) h.Item?.Bind(_data);
-        ProjectName = project.Name;
-        Rng = new Rng(project.RngSeed);
-        if (project.Item != null) Restore(project.Item);
-    }
+        Apply("Well of Souls", item => Engine.Reveal(item, modIndex, modId, _rng));
 
     // ---- state changes ----
 
-    /// <summary>Run an engine action on the current item and record it; engine refusals become LastError instead of exceptions.</summary>
+    /// <summary>Run an engine action on the current item and record it; an impossible manual choice becomes LastError instead of an exception.</summary>
     private void Apply(string actionName, Func<Item, CraftResult> run)
     {
         if (CurrentItem == null) { LastError = "No item loaded."; return; }
         CraftResult result;
         try { result = run(CurrentItem); }
-        catch (InvalidOperationException ex) { LastError = ex.Message; return; }
+        catch (InvalidChoiceException ex) { LastError = ex.Message; return; }
 
         if (!result.Applied) { LastError = result.Summary; return; }
         if (result.Destroyed) { LastError = $"{result.Summary} (The simulator keeps the previous state so you can try again.)"; return; }
-        Commit(result.Item, actionName, result.Summary, result.Details);
+        Commit(result.Item, actionName, result.Summary);
     }
 
-    private void Commit(Item item, string action, string summary, List<string>? details = null)
+    private void Commit(Item item, string action, string summary)
     {
-        CurrentItem = item;
+        _currentItem = item;
         LastError = null;
         _reveals.Clear();
-        History.Add(new HistoryEntry { Action = action, Item = item.Clone(), Summary = summary, Details = details ?? new() });
+        ProjectItem!.History.Add(new HistoryEntry { Action = action, Item = item.Clone(), Summary = summary });
+        Save();
     }
 
     private void Restore(Item item)
     {
-        CurrentItem = item.Clone();
-        CurrentItem.Bind(_data);
+        _currentItem = item.Clone();
+        _currentItem.Bind(_data);
         LastError = null;
         _reveals.Clear();
     }
-}
-
-public sealed class HistoryEntry
-{
-    public string Action { get; init; } = "";
-    public Item Item { get; init; } = null!;
-    public string Summary { get; init; } = "";
-    public List<string> Details { get; init; } = new();
-}
-
-public sealed class CraftingProject
-{
-    public string Name { get; set; } = "Untitled";
-    public Item? Item { get; set; }
-    public List<HistoryEntry>? History { get; set; }
-    public int RngSeed { get; set; }
-    public DateTime SavedAt { get; set; }
 }

@@ -1,7 +1,3 @@
-using POE2Crafting.Core.Data;
-using POE2Crafting.Core.Items;
-using Xunit;
-
 namespace POE2Crafting.Tests;
 
 /// <summary>Parser tests against the real data store (docs/STATUS.md 4.7: Mario's staff).</summary>
@@ -38,13 +34,12 @@ Gain 49(49-54)% of Damage as Extra Lightning Damage
 { Crafted Suffix Modifier ""of the Stars"" }
 46(25-50)% chance to gain Nature's Archon when your Plants Overgrow";
 
-    [SkippableFact]
+    [DataFact]
     public void Parses_properties_runes_and_implicit_without_counting_them_as_affixes()
     {
-        Skip.If(TestData.Data == null, "Data folder not found");
         var item = ItemParser.Parse(MariosStaff, TestData.Data);
 
-        Assert.Equal("Sanctified Staff", item.BaseName);
+        Assert.Equal(TestBases.Staff, item.BaseName);
         Assert.NotNull(item.Base);
         Assert.Equal("Staff", item.ItemClass);
         Assert.Equal(12, item.Quality);
@@ -57,10 +52,9 @@ Gain 49(49-54)% of Damage as Extra Lightning Damage
         Assert.Equal(3, item.SuffixCount);
     }
 
-    [SkippableFact]
+    [DataFact]
     public void Resolves_every_affix_to_the_staff_version_of_the_mod()
     {
-        Skip.If(TestData.Data == null, "Data folder not found");
         var item = ItemParser.Parse(MariosStaff, TestData.Data);
 
         Assert.All(item.Affixes, m => Assert.NotNull(m.Def));
@@ -69,7 +63,7 @@ Gain 49(49-54)% of Damage as Extra Lightning Damage
         Assert.Equal(new List<double> { 200 }, glyphic.Values);
     }
 
-    [SkippableTheory]
+    [DataTheory]
     [InlineData("Glyphic", 2)]
     [InlineData("Chalybeous", 3)]
     [InlineData("Electrifying", 2)]
@@ -77,16 +71,14 @@ Gain 49(49-54)% of Damage as Extra Lightning Damage
     [InlineData("of Havoc", 5)]
     public void Display_tiers_match_the_in_game_tiers(string affixName, int inGameTier)
     {
-        Skip.If(TestData.Data == null, "Data folder not found");
         var item = ItemParser.Parse(MariosStaff, TestData.Data);
         var mod = item.Affixes.Single(m => m.Def!.Name == affixName);
         Assert.Equal(inGameTier, TestData.Pool!.DisplayTier(mod.Def!, item));
     }
 
-    [SkippableFact]
+    [DataFact]
     public void Crafted_suffix_is_matched_to_the_alloy_mod()
     {
-        Skip.If(TestData.Data == null, "Data folder not found");
         var item = ItemParser.Parse(MariosStaff, TestData.Data);
 
         var crafted = Assert.Single(item.Mods, m => m.Kind == ModKind.Crafted);
@@ -95,24 +87,22 @@ Gain 49(49-54)% of Damage as Extra Lightning Damage
         Assert.Equal(new List<double> { 46 }, crafted.Values);
     }
 
-    [SkippableFact]
+    [DataFact]
     public void Magic_item_name_resolves_to_its_base()
     {
-        Skip.If(TestData.Data == null, "Data folder not found");
         var text = @"Item Class: Wands
 Rarity: Magic
 Runic Siphoning Wand of the Magus
 --------
 Item Level: 80";
         var item = ItemParser.Parse(text, TestData.Data);
-        Assert.Equal("Siphoning Wand", item.BaseName);
+        Assert.Equal(TestBases.Wand, item.BaseName);
         Assert.NotNull(item.Base);
     }
 
-    [SkippableFact]
+    [DataFact]
     public void Simple_ctrl_c_mod_lines_are_resolved_by_text_and_range()
     {
-        Skip.If(TestData.Data == null, "Data folder not found");
         var text = @"Item Class: Staves
 Rarity: Magic
 Sanctified Staff
@@ -126,10 +116,9 @@ Item Level: 82
         Assert.Equal("(189-208)% increased Spell Damage", mod.Def!.Text);
     }
 
-    [SkippableFact]
+    [DataFact]
     public void Shown_value_range_wins_over_a_mismatching_affix_name()
     {
-        Skip.If(TestData.Data == null, "Data folder not found");
         var text = @"Item Class: Rings
 Rarity: Rare
 Doom Hold
@@ -143,10 +132,9 @@ Item Level: 82
         Assert.Equal("+(60-69) to maximum Life", mod.Def!.Text);
     }
 
-    [SkippableFact]
+    [DataFact]
     public void Simple_ctrl_c_suffix_line_is_resolved_as_suffix()
     {
-        Skip.If(TestData.Data == null, "Data folder not found");
         var text = @"Item Class: Staves
 Rarity: Magic
 Sanctified Staff
@@ -159,29 +147,48 @@ Item Level: 82
         Assert.NotNull(mod.Def);
     }
 
-    [Fact]
-    public void Normalised_texts_of_item_line_and_template_are_equal()
+    [DataFact]
+    public void Enchant_line_on_corrupted_item_is_imported_as_corruption_enchantment()
     {
-        Assert.Equal(ModText.StatSignature("+(209-248) to maximum Mana"), ModText.StatSignature("+238(209-248) to maximum Mana"));
-        Assert.Equal(ModText.StatSignature("+(209-248) to maximum Mana"), ModText.StatSignature("+238 to maximum Mana"));
-        Assert.Equal(ModText.StatSignature("Adds (13-18) to (25-29) Fire Damage"), ModText.StatSignature("Adds 16(13-18) to 27(25-29) Fire Damage"));
-        Assert.NotEqual(ModText.StatSignature("(10-20)% increased Spell Damage"), ModText.StatSignature("15% increased Cast Speed"));
-    }
-
-    [Fact]
-    public void Crafted_prefix_header_keeps_affix_type_without_data()
-    {
-        var text = @"Item Class: Staves
+        var text = @"Item Class: Wands
 Rarity: Rare
-Test Staff
-Sanctified Staff
+Grim Bane
+Siphoning Wand
 --------
 Item Level: 80
 --------
-{ Crafted Prefix Modifier ""Celestial"" }
-+150 to maximum Mana";
-        var mod = Assert.Single(ItemParser.Parse(text).Mods);
-        Assert.Equal(ModKind.Crafted, mod.Kind);
-        Assert.Equal(AffixType.Prefix, mod.Affix);
+25(20-30)% increased Spell Damage (enchant)
+--------
+Corrupted";
+        var item = ItemParser.Parse(text, TestData.Data);
+        var (enchant, _) = Assert.Single(item.CorruptionEnchants);
+        Assert.Equal("CorruptionSpellDamageOnWeapon1", enchant.Def!.Name);
+        Assert.Contains("(enchant)", ItemTextWriter.ToText(item));
+    }
+
+    [DataFact]
+    public void Catalyst_quality_of_the_item_text_is_stored_as_the_catalyst_type()
+    {
+        var text = @"Item Class: Amulets
+Rarity: Rare
+Doom Choker
+Gold Amulet
+--------
+Quality: +20% (Life Modifiers)
+--------
+Item Level: 82";
+        var item = ItemParser.Parse(text, TestData.Data);
+        Assert.Equal("Life", item.QualityType);
+        Assert.Equal("life", item.QualityTag);
+        // a Flesh Catalyst (type Life) now tops up the same quality instead of replacing a "different" type
+        Assert.Contains("already at the maximum", TestData.Engine!.Check(item, TestData.Action("Flesh Catalyst")).Reason);
+    }
+
+    [DataFact]
+    public void Class_specific_slot_limits_ignore_the_class_name_case()
+    {
+        var rules = TestData.Data!.Config.Assumptions;
+        Assert.Equal(rules.MaxAffixes("Jewel", Rarity.Rare, AffixType.Prefix, Array.Empty<string>()), rules.MaxAffixes("JEWEL", Rarity.Rare, AffixType.Prefix, Array.Empty<string>()));
+        Assert.Equal(2, rules.MaxAffixes("jewel", Rarity.Rare, AffixType.Prefix, Array.Empty<string>()));
     }
 }

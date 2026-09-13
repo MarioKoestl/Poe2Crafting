@@ -1,0 +1,15 @@
+@* Search input (filters while typing) with optional controls next to it, e.g. a checkbox. Matching uses TextSearch.Matches. *@
+
+<div class="search-filter">
+    <input type="search" value="@Value" placeholder="@Placeholder" aria-label="@Placeholder" @oninput="OnInput" />
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Search...";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private Task OnInput(ChangeEventArgs e) => ValueChanged.InvokeAsync(e.Value?.ToString() ?? "");
+}

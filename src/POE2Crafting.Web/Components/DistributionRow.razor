@@ -2,9 +2,9 @@
 
 <div class="dist-row @(Highlighted ? "pending-choice" : "")">
     <div class="dist-bar-bg">
-        <div class="dist-bar @BarClass" style="width: @($"{Probability * 100:F1}")%"></div>
+        <div class="dist-bar @BarClass" style="width: @UiFormat.CssPercent(Probability)"></div>
     </div>
-    <span class="dist-pct">@($"{Probability:P1}")</span>
+    <span class="dist-pct">@UiFormat.Probability(Probability)</span>
     <span class="dist-label">@Label</span>
     @if (ChooseLabel != null)
     {

@@ -1,0 +1,111 @@
+@* Project selector (saved automatically) and the items of the open project: open one, remove one. New/imported items are added to the project. *@
+@inherits ChangingComponentBase
+@inject CraftingSession Session
+
+<div class="project-panel">
+    <div class="project-bar">
+        @if (_mode is BarMode.Create or BarMode.Rename)
+        {
+            <input type="text" class="project-name-input" @bind="_name" @bind:event="oninput" placeholder="Project name" aria-label="Project name"
+                   @onkeydown="OnNameKey" />
+            <button class="btn btn-sm btn-primary" @onclick="ConfirmName">@(_mode == BarMode.Create ? "Create" : "Rename")</button>
+            <button class="btn btn-sm" @onclick="() => _mode = BarMode.None">Cancel</button>
+        }
+        else
+        {
+            <select class="project-select" aria-label="Project" value="@(Session.Project?.Id ?? "")" @onchange="e => Open(e.Value?.ToString())">
+                @if (Session.Project == null)
+                {
+                    <option value="">— no project —</option>
+                }
+                @foreach (var p in Session.Projects())
+                {
+                    <option value="@p.Id">@p.Name (@p.ItemCount)</option>
+                }
+            </select>
+            <button class="btn btn-sm" title="New project" aria-label="New project" @onclick="() => StartName(BarMode.Create)">＋</button>
+            @if (Session.Project != null)
+            {
+                <button class="btn btn-sm" title="Rename project" aria-label="Rename project" @onclick="() => StartName(BarMode.Rename)">✎</button>
+                @if (_mode == BarMode.ConfirmDelete)
+                {
+                    <button class="btn btn-sm btn-danger" title="Delete this project and all its items" @onclick="DeleteProject">Delete?</button>
+                }
+                else
+                {
+                    <button class="btn btn-sm" title="Delete project" aria-label="Delete project" @onclick="() => _mode = BarMode.ConfirmDelete">🗑</button>
+                }
+            }
+        }
+    </div>
+
+    @if (Session.Project is { } project)
+    {
+        <div class="project-items">
+            @if (project.Items.Count == 0)
+            {
+                <p class="hint">No items yet — compose or import one; it is added to this project.</p>
+            }
+            @foreach (var entry in project.Items)
+            {
+                var item = entry.Current;
+                var active = ReferenceEquals(entry, Session.ProjectItem);
+                <div class="project-item @(active ? "active" : "") @UiFormat.RarityCss(item?.Rarity)" @key="entry.Id">
+                    <button type="button" class="project-item-text" aria-pressed="@(active ? "true" : "false")" @onclick="() => Change(() => Session.OpenItem(entry.Id))">
+                        <span class="project-item-name">@(item?.Title ?? "(empty)")</span>
+                        <span class="project-item-meta">@item?.Rarity · @item?.PrefixCount P / @item?.SuffixCount S · @UiFormat.Plural(entry.History.Count - 1, "step")</span>
+                    </button>
+                    @if (_confirmRemove == entry.Id)
+                    {
+                        <button class="btn btn-xs btn-danger" @onclick="() => RemoveItem(entry.Id)">Remove?</button>
+                    }
+                    else
+                    {
+                        <button class="icon-remove" title="Remove from project" aria-label="Remove from project" @onclick="() => _confirmRemove = entry.Id">✕</button>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private enum BarMode { None, Create, Rename, ConfirmDelete }
+
+    private BarMode _mode;
+    private string _name = "";
+    private string? _confirmRemove;
+
+    private void StartName(BarMode mode)
+    {
+        _mode = mode;
+        _name = mode == BarMode.Rename ? Session.Project?.Name ?? "" : "";
+    }
+
+    private async Task OnNameKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await ConfirmName();
+        else if (e.Key == "Escape") _mode = BarMode.None;
+    }
+
+    private Task ConfirmName() => Change(() =>
+    {
+        if (_mode == BarMode.Create) Session.CreateProject(_name);
+        else Session.RenameProject(_name);
+        _mode = BarMode.None;
+    });
+
+    private Task Open(string? id) => string.IsNullOrEmpty(id) ? Task.CompletedTask : Change(() => Session.OpenProject(id));
+
+    private Task DeleteProject() => Change(() =>
+    {
+        Session.DeleteProject();
+        _mode = BarMode.None;
+    });
+
+    private Task RemoveItem(string id) => Change(() =>
+    {
+        Session.RemoveItem(id);
+        _confirmRemove = null;
+    });
+}

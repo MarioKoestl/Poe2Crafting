@@ -1,0 +1,19 @@
+@* A titled bullet list of a guide (key ideas, next steps); nothing when empty. *@
+
+@if (Items.Count > 0)
+{
+    <div class="guide-ideas">
+        <div class="section-title">@Title</div>
+        <ul>
+            @foreach (var item in Items)
+            {
+                <li>@item</li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<string> Items { get; set; } = Array.Empty<string>();
+}

@@ -6,33 +6,17 @@
     <title>POE2 Crafting Simulator</title>
     <base href="/" />
     <link rel="stylesheet" href="css/site.css" />
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="RenderMode" />
 </head>
 <body>
-    <Routes @rendermode="InteractiveServer" />
-    <script src="js/site.js"></script>
+    <Routes @rendermode="RenderMode" />
     <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-    <script>
-        mermaid.initialize({
-            startOnLoad: false,
-            theme: 'dark',
-            themeVariables: {
-                darkMode: true,
-                primaryColor: '#1a1a20',
-                primaryBorderColor: '#af8f4e',
-                primaryTextColor: '#c8c4b8',
-                lineColor: '#af8f4e',
-                secondaryColor: '#22222a',
-                tertiaryColor: '#141418',
-                background: '#0c0c0e'
-            },
-            flowchart: {
-                curve: 'basis',
-                padding: 15,
-                htmlLabels: true
-            }
-        });
-    </script>
+    <script src="js/site.js"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 </html>
+
+@code {
+    /// <summary>No prerendering: the per-user session (projects on disk) is created once, when the interactive circuit starts.</summary>
+    private static readonly IComponentRenderMode RenderMode = new InteractiveServerRenderMode(prerender: false);
+}

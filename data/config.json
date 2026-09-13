@@ -1,5 +1,4 @@
 {
- "schemaVersion": 1,
  "gameVersion": "0.5.x (data exported 2026-09-11 from poe2db.tw)",
  "assumptions": {
   "weightsSource": "poe2db.tw DropChance estimates (poe2db: 'Modifier weight information cannot be obtained from game files')",
@@ -8,11 +7,16 @@
   "magicMaxSuffixes": 1,
   "rareMaxPrefixes": 3,
   "rareMaxSuffixes": 3,
+  "rareMaxAffixesPerTypeByClass": {
+   "Jewel": 2
+  },
+  "rareMaxAffixesNote": "Rare jewels: 2 prefixes + 2 suffixes (community guides 0.5); '+1 Prefix/Suffix Modifier allowed' (Potent Liquid Contempt) raises the limit of that type",
+  "augmentReplacesOccupiedSocket": true,
+  "augmentWorksOnCorrupted": true,
+  "instillReplacesExisting": true,
+  "augmentInstillNote": "ASSUMPTIONS: socketing into a full item replaces (destroys) the chosen augment; corrupted items can still be socketed; a new instill replaces the amulet's existing one",
   "alchemyModCount": 4,
   "alchemyOnMagicKeepsExistingMods": true,
-  "whittlingRule": "lowest_mod_level_then_random",
-  "homogenisingRule": "shares_any_mod_tag_with_random_existing_mod",
-  "restrictedOmenWhenNoSlot": "currency_not_applicable",
   "vaalOutcomes": {
    "no_change": 0.25,
    "corrupted_implicit": 0.25,
@@ -24,7 +28,8 @@
   "vaalRerollMaxMods": 3,
   "vaalQualityCap": 23,
   "architectSuccessChance": 0.5,
-  "modLevelRequirementFactor": 0.8,
+  "chanceUniqueChance": 0.05,
+  "fractureMinMods": 4,
   "qualityPerUseNote": "UNVERIFIED (PoE1 convention); catalyst +5 per use from community guides; infuser corruption chance from poe2wiki (0 at 20%, +5% per point above)",
   "defaultMaxQuality": 20,
   "catalystQualityPerUse": 5,
@@ -37,7 +42,6 @@
    "Rare": 1,
    "Unique": 1
   },
-  "shardsPerOrb": 10,
   "onlyOneCraftedModPerItem": true,
   "revealOptionCount": 3,
   "putrefactionUnrevealedCount": 6

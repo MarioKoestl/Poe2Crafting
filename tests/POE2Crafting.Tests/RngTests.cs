@@ -1,6 +1,3 @@
-using POE2Crafting.Core.Engine;
-using Xunit;
-
 namespace POE2Crafting.Tests;
 
 public class RngTests
@@ -29,7 +26,7 @@ public class RngTests
         var rng = new Rng(1);
         for (int i = 0; i < 50; i++)
         {
-            var v = rng.RollRange(10, 20);
+            var v = rng.RollRange(new[] { 10.0, 20.0 });
             Assert.Equal(Math.Floor(v), v);
             Assert.InRange(v, 10, 20);
         }
@@ -39,7 +36,7 @@ public class RngTests
     public void RollRange_decimal_range_returns_decimal()
     {
         var rng = new Rng(1);
-        var v = rng.RollRange(1.5, 3.5);
+        var v = rng.RollRange(new[] { 1.5, 3.5 });
         Assert.InRange(v, 1.5, 3.5);
     }
 }

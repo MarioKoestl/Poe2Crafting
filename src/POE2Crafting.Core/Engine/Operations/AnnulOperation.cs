@@ -1,11 +1,12 @@
+using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Core.Engine.Operations;
 
 /// <summary>Orb of Annulment: remove a random mod (Greater Annulment: two; Sinistral/Dextral Annulment, Omen of Light restrict the pool).</summary>
-public sealed class AnnulOperation : CraftOperation
+internal sealed class AnnulOperation : CraftOperation
 {
-    public AnnulOperation(CraftingEngine engine) : base(engine, "annul") { }
+    public AnnulOperation(CraftingEngine engine) : base(engine, CurrencyOps.Annul) { }
 
     private static int RemoveCount(CraftContext ctx) => ctx.OmenIs(OmenEffects.RemoveTwo) ? 2 : 1;
 

@@ -1,0 +1,35 @@
+@* Guides tab, left pane: the curated crafting guides (data/guides.json) with search; picking one shows it in GuideDetail. *@
+@inject GuideLibrary Guides
+@inherits PlannerStateComponentBase
+
+<h3 class="pane-title">Crafting Guides</h3>
+<SearchBox @bind-Value="_search" Placeholder="Search guides (name, technique, tag)..." />
+
+@{
+    var guides = Guides.Guides.Where(g => TextSearch.Matches(_search, g.Tags.Concat(g.KeyIdeas).Prepend(g.Summary).Prepend(g.Name))).ToList();
+}
+<div class="guide-list">
+    @foreach (var guide in guides)
+    {
+        <StrategyCard @key="guide.Id" Strategy="Guides.Walkthrough(guide).Strategy" Title="@guide.Name" ShowExpected="false"
+                      Selected="guide.Id == Planner.SelectedGuideId" OnSelect="() => Select(guide)">
+            @guide.Summary
+            <span class="guide-tags">
+                @foreach (var tag in guide.Tags)
+                {
+                    <span class="guide-tag">@tag</span>
+                }
+            </span>
+        </StrategyCard>
+    }
+    @if (guides.Count == 0)
+    {
+        <p class="hint">No guide matches "@_search".</p>
+    }
+</div>
+
+@code {
+    private string _search = "";
+
+    private void Select(CraftingGuide guide) => Planner.SelectGuide(guide.Id);
+}
