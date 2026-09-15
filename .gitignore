@@ -72,3 +72,6 @@ research/*.zip
 # personal crafting projects (saved automatically by the app) and guides saved from the simulator
 projects/
 saved-guides/
+
+# Currency Exchange hourly digests (downloaded by the app)
+market-cache/

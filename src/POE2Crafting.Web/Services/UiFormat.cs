@@ -1,4 +1,5 @@
 using System.Globalization;
+using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Engine.Planning;
 using POE2Crafting.Core.Items;
 
@@ -23,16 +24,54 @@ public static class UiFormat
     /// <summary>A CSS length in percent ("12.5%"), always with a dot.</summary>
     public static string CssPercent(double p) => Percent(p, "0.#");
 
+    /// <summary>An SVG coordinate ("12.5"), always with a dot.</summary>
+    public static string Coordinate(double value) => value.ToString("0.#", CultureInfo.InvariantCulture);
+
     private static string Percent(double p, string format) => (p * 100).ToString(format, CultureInfo.InvariantCulture) + "%";
 
-    public static string Attempts(double attempts)
+    public static string Attempts(double attempts) => double.IsPositiveInfinity(attempts) ? "∞" : Compact(attempts);
+
+    /// <summary>A count shortened for tables: 7.5, 850, 12.3K, 4.4M.</summary>
+    public static string Compact(double value)
     {
-        if (double.IsPositiveInfinity(attempts)) return "∞";
-        if (attempts < 10) return attempts.ToString("0.#", CultureInfo.InvariantCulture);
-        if (attempts < 1000) return attempts.ToString("N0", CultureInfo.InvariantCulture);
-        if (attempts < 1_000_000) return (attempts / 1000).ToString("F1", CultureInfo.InvariantCulture) + "K";
-        return (attempts / 1_000_000).ToString("F1", CultureInfo.InvariantCulture) + "M";
+        if (value < 10) return value.ToString("0.#", CultureInfo.InvariantCulture);
+        if (value < 1000) return value.ToString("N0", CultureInfo.InvariantCulture);
+        if (value < 1_000_000) return (value / 1000).ToString("F1", CultureInfo.InvariantCulture) + "K";
+        return (value / 1_000_000).ToString("F1", CultureInfo.InvariantCulture) + "M";
     }
+
+    /// <summary>An exchange price with three significant digits for small values: 1,234 · 45.1 · 9.27 · 0.108 · 0.00254.</summary>
+    public static string Price(double value)
+    {
+        if (value >= 1000) return value.ToString("N0", CultureInfo.InvariantCulture);
+        if (value >= 10) return value.ToString("0.0", CultureInfo.InvariantCulture);
+        if (value >= 1 || value <= 0) return value.ToString("0.00", CultureInfo.InvariantCulture);
+        int decimals = Math.Min(8, 2 - (int)Math.Floor(Math.Log10(value)));
+        return value.ToString("F" + decimals, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>A base item stat as the Bases page shows it ("54", "1.45", "25%", "3 s", "58–134"); empty when the base doesn't have it.</summary>
+    public static string StatValue(BaseStat stat, BaseItem baseItem)
+    {
+        if (stat.Text?.Invoke(baseItem) is { } text) return text;
+        if (stat.Value(baseItem) is not { } value) return "";
+        return stat.Format switch
+        {
+            BaseStatFormat.Decimal => value.ToString("0.##", CultureInfo.InvariantCulture),
+            BaseStatFormat.Percent => value.ToString("0.#", CultureInfo.InvariantCulture) + "%",
+            BaseStatFormat.Seconds => value.ToString("0.##", CultureInfo.InvariantCulture) + " s",
+            _ => value.ToString("0", CultureInfo.InvariantCulture),
+        };
+    }
+
+    /// <summary>A change with sign: "+4.2%", "−12.0%".</summary>
+    public static string SignedPercent(double p) => (p > 0 ? "+" : p < 0 ? "−" : "") + Percent(Math.Abs(p), "0.0");
+
+    /// <summary>"trend-up" / "trend-down" for a price change (none when unchanged).</summary>
+    public static string TrendClass(double change) => change > 0 ? "trend-up" : change < 0 ? "trend-down" : "";
+
+    /// <summary>Local clock time of a unix time (exchange hours): "14:00".</summary>
+    public static string ClockTime(long unixSeconds) => DateTimeOffset.FromUnixTimeSeconds(unixSeconds).ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
 
     public static string ProbabilityClass(double p) => p switch
     {

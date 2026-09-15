@@ -75,3 +75,9 @@ window.renderMermaid = async function (container, definition, id) {
         container.innerHTML = '<pre class="mermaid-error-text">' + e.message.replace(/</g, '&lt;') + '</pre>';
     }
 };
+
+// Scroll an element into view inside its scroll container (Market page: a table row's ⇄ opens the trade calculator).
+window.scrollToElement = function (id) {
+    const element = document.getElementById(id);
+    if (element) element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};

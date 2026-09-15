@@ -1,0 +1,27 @@
+@* Dropdown of exchange items: Divine/Exalted/Chaos first, then grouped by category. *@
+
+<select class="market-select" value="@Value" aria-label="@Label" @onchange="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? Value)">
+    <optgroup label="Core currencies">
+        @foreach (var item in Items.Where(i => ExchangeCurrencies.Core.Contains(i.Id)))
+        {
+            <option value="@item.Id">@item.Name</option>
+        }
+    </optgroup>
+    @foreach (var group in Items.Where(i => !ExchangeCurrencies.Core.Contains(i.Id)).GroupBy(i => i.Category).OrderBy(g => ExchangeCategories.Order(g.Key)))
+    {
+        <optgroup label="@group.Key">
+            @foreach (var item in group)
+            {
+                <option value="@item.Id">@item.Name</option>
+            }
+        </optgroup>
+    }
+</select>
+
+@code {
+    /// <summary>Items in display order within their category.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<ExchangeItem> Items { get; set; } = Array.Empty<ExchangeItem>();
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Label { get; set; } = "Item";
+}

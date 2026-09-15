@@ -1,0 +1,138 @@
+@* All exchange items of a league priced in the reference currency: filter by category/search, sort by column. *@
+@inject ExchangeCatalog Catalog
+
+<div class="market-table-filters">
+    <SearchBox @bind-Value="_search" Placeholder="Search items...">
+        <label class="checkbox-row"><input type="checkbox" @bind="_craftingOnly" /> Crafting items only</label>
+    </SearchBox>
+    <div class="detail-tabs market-categories">
+        <button class="btn btn-sm @(_category == null ? "btn-active" : "")" @onclick="() => _category = null">All <span class="count-pill">@Filtered(null).Count()</span></button>
+        @foreach (var category in ExchangeCategories.All)
+        {
+            var count = Filtered(category).Count();
+            if (count == 0) continue;
+            <button class="btn btn-sm @(_category == category ? "btn-active" : "")" @onclick="() => _category = category">@category <span class="count-pill">@count</span></button>
+        }
+    </div>
+</div>
+
+@{
+    var rows = Sorted(Filtered(_category)).ToList();
+    var shown = _showAll ? rows : rows.Take(PageSize).ToList();
+}
+@if (rows.Count == 0)
+{
+    <EmptyState>No items match.</EmptyState>
+}
+else
+{
+    <div class="table-scroll">
+        <table class="materials-table market-table">
+            <thead>
+                <tr>
+                    <th>@SortButton(SortColumn.Name, "Item")</th>
+                    <th title="What selling 1 item gets you (lowest fills of the latest hours)">@SortButton(SortColumn.Price, "Sell")</th>
+                    <th title="Volume-weighted average of the latest hours">Average</th>
+                    <th title="What buying 1 item costs you (highest fills of the latest hours)">Buy</th>
+                    <th title="(Buy − Sell) / Average: what a round trip loses">@SortButton(SortColumn.Spread, "Spread")</th>
+                    <th title="Items you get for 1 @Reference.Name (average)">Per 1 @ShortName</th>
+                    <th title="Average of the last hours against the first hours of the history">@SortButton(SortColumn.Change, $"{HistoryHours} h")</th>
+                    <th>Trend</th>
+                    <th title="Items traded in all pairs during the history (value in @Reference.Name)">@SortButton(SortColumn.Volume, "Traded")</th>
+                    <th title="Items offered in the order books (latest hour)">Stock</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in shown)
+                {
+                    var fair = row.Quotes.Fair!;
+                    <tr @key="row.Item.Id">
+                        <td class="market-item-cell">
+                            <ExchangeItemName Item="row.Item" />
+                            <span class="market-item-meta">
+                                @row.Item.Category@(fair.Via != null ? $" · priced {Catalog.RouteText(fair)}" : "")
+                                @if (fair.LastHour < LatestHour)
+                                {
+                                    <span title="No trade in the latest hour"> · last trade @UiFormat.ClockTime(fair.LastHour)</span>
+                                }
+                            </span>
+                        </td>
+                        <td class="market-sell">
+                            @UiFormat.Price(fair.Sell)
+                            @if (row.Quotes.BetterSellRoute is { } sell)
+                            {
+                                <span class="market-route-mark" title="Selling @Catalog.RouteText(sell) gets @UiFormat.Price(sell.Sell)">▲</span>
+                            }
+                        </td>
+                        <td>@UiFormat.Price(fair.Average)</td>
+                        <td class="market-buy">
+                            @UiFormat.Price(fair.Buy)
+                            @if (row.Quotes.BetterBuyRoute is { } buy)
+                            {
+                                <span class="market-route-mark" title="Buying @Catalog.RouteText(buy) costs @UiFormat.Price(buy.Buy)">▼</span>
+                            }
+                        </td>
+                        <td>@UiFormat.Share(fair.Spread)</td>
+                        <td>@UiFormat.Price(1 / fair.Average)</td>
+                        <td class="@(row.Change is { } c ? UiFormat.TrendClass(c) : "")">@(row.Change is { } change ? UiFormat.SignedPercent(change) : "–")</td>
+                        <td><Sparkline Values="row.Series" /></td>
+                        <td title="≈ @UiFormat.Compact(row.VolumeValue) @Reference.Name">@UiFormat.Compact(row.Volume)</td>
+                        <td>@UiFormat.Compact(row.Stock)</td>
+                        <td><button class="btn btn-xs" title="Open in the trade calculator" @onclick="() => OnConvert.InvokeAsync(row.Item.Id)">⇄</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (rows.Count > shown.Count)
+    {
+        <button class="btn btn-sm market-show-all" @onclick="() => _showAll = true">Show all @rows.Count items</button>
+    }
+}
+
+@code {
+    private const int PageSize = 100;
+
+    [Parameter, EditorRequired] public IReadOnlyList<ItemMarket> Rows { get; set; } = Array.Empty<ItemMarket>();
+    [Parameter, EditorRequired] public ExchangeItem Reference { get; set; } = null!;
+    [Parameter, EditorRequired] public int HistoryHours { get; set; }
+    [Parameter, EditorRequired] public long LatestHour { get; set; }
+    [Parameter] public EventCallback<string> OnConvert { get; set; }
+
+    private enum SortColumn { Volume, Name, Price, Spread, Change }
+
+    private string _search = "";
+    private string? _category;
+    private bool _craftingOnly = true, _showAll;
+    private SortColumn _sort = SortColumn.Volume;
+    private bool _descending = true;
+
+    private string ShortName => Reference.Name.Replace(" Orb", "");
+
+    private IEnumerable<ItemMarket> Filtered(string? category) => Rows.Where(r =>
+        (!_craftingOnly || r.Item.IsCraftingItem)
+        && (category == null || r.Item.Category == category)
+        && TextSearch.Matches(_search, r.Item.Name, r.Item.Category));
+
+    private IEnumerable<ItemMarket> Sorted(IEnumerable<ItemMarket> rows)
+    {
+        Func<ItemMarket, IComparable> key = _sort switch
+        {
+            SortColumn.Name => r => r.Item.Name,
+            SortColumn.Price => r => r.Quotes.Fair!.Average,
+            SortColumn.Spread => r => r.Quotes.Fair!.Spread,
+            SortColumn.Change => r => r.Change ?? double.MinValue,
+            _ => r => r.VolumeValue,
+        };
+        return _descending ? rows.OrderByDescending(key) : rows.OrderBy(key);
+    }
+
+    private RenderFragment SortButton(SortColumn column, string label) => @<button class="market-sort @(_sort == column ? "active" : "")" @onclick="() => SortBy(column)">@label@(_sort == column ? (_descending ? " ▾" : " ▴") : "")</button>;
+
+    private void SortBy(SortColumn column)
+    {
+        _descending = _sort != column ? column != SortColumn.Name : !_descending;
+        _sort = column;
+    }
+}

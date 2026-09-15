@@ -30,6 +30,8 @@ public sealed class GameData
     public IReadOnlyList<InstillRecipe> Instills { get; }
     /// <summary>Curated crafting sequences with explanations (data/guides.json).</summary>
     public IReadOnlyList<CraftingGuide> Guides { get; }
+    /// <summary>Items of the Currency Exchange by GGG metadata id (data/exchange_items.json, optional).</summary>
+    public IReadOnlyDictionary<string, ExchangeItemDef> ExchangeItems { get; }
 
     /// <summary>
     /// Every usable crafting item as a currency: currencies.json plus one synthetic currency per essence/alloy/liquid emotion (Op essence),
@@ -67,11 +69,12 @@ public sealed class GameData
 
     private GameData(string folder, List<BaseItem> bases, List<ModDef> mods, List<CurrencyDef> currencies, List<EssenceDef> essences,
         List<EssenceDef> alloys, List<OmenDef> omens, List<CatalystDef> catalysts, List<ItemClassDef> classes, SimConfig config,
-        Dictionary<string, string> iconsBySlug, List<InstillRecipe> instills, List<CraftingGuide> guides)
+        Dictionary<string, string> iconsBySlug, List<InstillRecipe> instills, List<CraftingGuide> guides, List<ExchangeItemDef> exchangeItems)
     {
         DataFolder = folder;
         Bases = bases; Mods = mods; Omens = omens; Catalysts = catalysts;
         ItemClasses = classes; Config = config; Instills = instills; Guides = guides;
+        ExchangeItems = exchangeItems.GroupBy(i => i.Id).ToDictionary(g => g.Key, g => g.First());
         _baseByName = ByName(bases, b => b.Name);
         _modById = mods.ToDictionary(m => m.Id);
         _omenByName = ByName(omens, o => o.Name);
@@ -184,7 +187,8 @@ public sealed class GameData
             Read<SimConfig>("config.json"),
             Read<Dictionary<string, string>>("icons.json", required: false),
             Read<List<InstillRecipe>>("instills.json", required: false),
-            Read<List<CraftingGuide>>("guides.json", required: false));
+            Read<List<CraftingGuide>>("guides.json", required: false),
+            Read<List<ExchangeItemDef>>("exchange_items.json", required: false));
     }
 
     /// <summary>

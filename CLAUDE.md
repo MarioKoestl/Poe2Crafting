@@ -22,6 +22,7 @@ C:\Development\POE2Crafting\
 │   │   │   ├── ModCategories.cs    # ModCategories (+KindFor/CanAppearAs), ModFamilies (MaximumQuality, AbyssMark)
 │   │   │   ├── CurrencyDef.cs      # CurrencyDef + CurrencyOps (alle Op-Ids als Konstanten) + CraftItemInfo
 │   │   │   ├── EssenceDef.cs       # EssenceDef + EssenceTiers
+│   │   │   ├── BaseStats.cs        # Vergleichbare Base-Werte (Armour/Evasion/ES/Ward/Block, Schaden/APS/Crit/DPS, Flask, Anforderungen) aus bases.json (BaseItem.Armour/Weapon/Flask/Requirements/SubType); PrimaryOf(subType)
 │   │   │   ├── ClassTargets.cs     # Klassen-Gruppen (weapon_or_quiver, jewellery, ...) — EINZIGE Stelle mit Gruppen-Logik
 │   │   │   └── ModTiers.cs         # Tier-Ranking pro Familie+Stat
 │   │   ├── Drafting/               # ItemDraft, ModSelection (+SelectedMod.ValueBounds), FinishingTarget — Regeln von Composer/Planner-Target
@@ -38,6 +39,7 @@ C:\Development\POE2Crafting\
 │   │   │       ├── GuideRunner.cs (+GuideWalkthrough), GuideLibrary.cs (Singleton-Cache der Walkthroughs)
 │   │   │       ├── RecordedGuide.cs      # HistoryEntry, RecordedGuide (gespeicherte Simulator-History), RecordedGuideRunner → GuideWalkthrough
 │   │   │       └── OutcomeChance.cs      # Chancen gewünschter Additions/Removals + TryExecute (Planner & Guides)
+│   │   ├── Market/                 # Currency Exchange: ExchangeDigest (API-JSON → HourlyMarket), LeagueMarket (Preise/Routen/Rows), MarketSnapshot, ExchangeCatalog (+ExchangeCurrencies/-Categories), ExchangeQuote/QuoteRoutes/ItemMarket, MarketSettings
 │   │   └── Items/
 │   │       ├── Item.cs             # Item (FromBase, AddMod, ReplaceMod, Title, QualityText, EffectiveValues), ItemMod (StatValues), RevealContext (Describe), Rarity, ModKind(+OccupiesSlot), AffixTypeExtensions (Both/Lower/Opposite)
 │   │       ├── ModText.cs          # ALLE Zahlen-/Range-Regeln (Render, StatSignature, Bounds, PossibleRolls, ChanceAtLeast, ScaleValues, RangesText)
@@ -47,6 +49,8 @@ C:\Development\POE2Crafting\
 │   │       └── ItemDiff.cs         # Mod-/Runen-/Property-Änderungen (Multiset)
 │   └── POE2Crafting.Web/           # Blazor UI
 │       ├── Pages/Index.razor       # Hauptseite: links Item, rechts Tabs Simulator | Crafting Planner | Guides (Index besitzt das Pane-Layout)
+│       ├── Pages/Market.razor      # /market: Currency Exchange (Core rates, Trade calculator, Preistabelle); Top-Bar-Navigation Crafting | Bases | Market in MainLayout
+│       ├── Pages/Bases.razor       # /bases(?class=Gloves): alle Basis-Items einer Klasse, Filter Verteidigungstyp (SubType), sortierbare Spalten aus `BaseStats`, Bestwert je Spalte hervorgehoben, Runeforged-Varianten optional, "Craft" = neues Item im Projekt
 │       ├── Components/             # u. a. ItemDisplay, ItemComposer, BaseItemForm, ModBrowser, CurrencySelector, PreviewPanel, RevealOptions, InstillPanel/Picker,
 │       │                           # ItemBuilder, PlannerPanel, StrategyGuide, StrategyCard, GuideList, GuideDetail, GuideBulletList, ProjectPanel,
 │       │                           # EmptyState, SearchBox, CraftIcon, CraftItemLink, CraftText, ItemDiffList, DistributionRow, ModOptionRow, MermaidDiagram
@@ -56,7 +60,8 @@ C:\Development\POE2Crafting\
 │       │   ├── ProjectStore.cs     # Projekte als JSON (atomar, gecachte Liste)
 │       │   ├── GuideCatalog.cs     # Singleton: kuratierte Guides + gespeicherte Guides (saved-guides/{Id}.json)
 │       │   ├── JsonDocumentFolder.cs # ein JSON pro Dokument (atomar, kaputte Dateien übersprungen) — von ProjectStore und GuideCatalog geteilt
-│       │   ├── UiFormat.cs         # Chancen/Versuche/CSS-Klassen/Plural (invariant)
+│       │   ├── MarketDataService.cs # Singleton + HostedService: stündliche Exchange-Digests laden, market-cache/, alle PollMinutes prüfen, Changed-Event
+│       │   ├── UiFormat.cs         # Chancen/Versuche/Preise/Compact/CSS-Klassen/Plural (invariant)
 │       │   ├── UiHelpers.cs        # Toggle-Extension, TextSearch.Matches, ChangingComponentBase (Change → OnChanged)
 │       │   └── AffixUi.cs          # P/S-Buchstabe + CSS-Klassen
 │       └── wwwroot/css/site.css    # EINZIGE CSS-Datei (alle Farben als Tokens in :root)
@@ -246,6 +251,17 @@ C:\Development\POE2Crafting\
   - Nicht-Currency-Schritte: Instill → Emotionen als Material (`GameData.InstillMaterials`); Edited/Well of Souls → ohne Chance/Material, als Problem gemeldet
   - GuideDetail: Basis-Item, Speicherdatum, "Craft along", Löschen (🗑 → "Delete?")
 - Export "⤓ HTML" (GuideDetail + PlannerPanel): `GuideExportButton` → `GuideHtmlExport.ToHtml` (eine eigenständige HTML-Datei, Inline-CSS, Item-Icons als Base64 eingebettet, keine Skripte: Start/Final-Item, Materialien, Schritte mit Chance, Erklärung, Mod-Änderungen, aufklappbar "Item after this step", Items mit Tier, Roll-Range und Mod-Level wie im Simulator; KEINE Notes/Annahmen — Mario will die im Export nicht) → `downloadFile` in site.js
+
+### Currency Exchange / Market-Seite (Mario, 15.09.2026)
+- Quelle: GGGs öffentliche API `https://web.poecdn.com/api/currency-exchange/poe2/<unix-stunde>` (kein Login): pro abgeschlossener Stunde alle Paare aller Ligen (volume_traded, highest_stock, lowest/highest_ratio). Laufende Stunde → 404 mit `next_change_id` = angefragte Stunde (`ExchangeDigest.IsComplete`). KEIN Live-Orderbook
+- Ratios: `{A: x, B: y}` = x A für y B; lowest/highest vergleichen "A pro B" (verifiziert an Chaos|Divine 9:1 / 10:1)
+- Items per Metadata-Id: `data/exchange_items.json` (`python tools/poe2_exchange_items.py`: IDs aus den letzten Digests → RePoE-fork base_items.json → Name/Klasse/Icon, Icons lokal; bestehende Einträge bleiben) → `GameData.ExchangeItems`, `ExchangeCatalog` (Name, Icon, Kategorie, `IsCraftingItem` = `FindCraftItem` kennt es; unbekannte IDs → Name aus der ID)
+- `MarketDataService`: beim Start fehlende Stunden der letzten `Market:HistoryHours` (24) laden, als kompakte `HourlyMarket`-Listen in `market-cache/{hour}.json` (neben data/, config `MarketCacheFolder`, gitignored), dann alle `PollMinutes` (5) prüfen; "Check now" weckt den Loop; 429 → Fehlertext, nächster Poll
+- Preise (`LeagueMarket`, ANNAHMEN, Settings in appsettings "Market"): Average = volumengewichtet über die letzten `RecentHours` (3) Stunden MIT Handel des Paars; Sell ≈ niedrigste Fills, Buy ≈ höchste Fills (je Stunde, volumengewichtet); Fills weiter als ×`OutlierFactor` (1.5) vom Stundenschnitt = Fehlorder → zählen als Schnitt
+- Routen: direkt + über Divine/Exalted/Chaos (`ExchangeQuote.Through` multipliziert Sell×Sell/Buy×Buy); Marktpreis = Route mit dem meisten Volumen, `BetterSellRoute`/`BetterBuyRoute` ab 1 % Vorteil (z. B. Divines über Exalts kaufen)
+- Row: Stunden-Serie (Sparkline), Change = Schnitt letzte vs. erste `RecentHours` Stunden, Volumen (alle Paare), Stock (letzte Stunde)
+- UI: Liga-Auswahl (Standard = meiste Paare), Referenz Divine/Exalted/Chaos, Core-Rate-Karten (`MarketPairCard`), Trade calculator (`MarketConverter`, Routen-Tabelle), Tabelle (`MarketTable`: Kategorien, Suche, "Crafting items only" Standard an, sortierbar, ⇄ → Rechner); Seite abonniert `MarketDataService.Changed`
+- Offen: Preise im Planner (Kosten pro Pfad), Gold-Gebühren
 
 ## Gewichte
 - poe2db-Schätzwerte, NICHT echte Spielgewichte

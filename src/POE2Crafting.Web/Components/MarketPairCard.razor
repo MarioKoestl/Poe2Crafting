@@ -1,0 +1,41 @@
+@* Exchange rate of one core pair (e.g. Divine ↔ Chaos): what selling and buying one item gets/costs, cheaper routes, trend and volume. *@
+
+<div class="market-card">
+    <div class="market-card-head">
+        <span class="market-card-title"><ExchangeItemName Item="Row.Item" /> <span class="market-arrow">↔</span> <ExchangeItemName Item="Counter" /></span>
+        <Sparkline Values="Row.Series" />
+    </div>
+    @if (Row.Quotes.Fair is { } fair)
+    {
+        <div class="market-card-rates">
+            <div class="stat" title="Selling 1 @Row.Item.Name: estimated from the lowest fills of the latest hours">
+                <span class="stat-label">You sell 1 → get</span>
+                <span class="stat-value market-sell">@UiFormat.Price(fair.Sell)</span>
+            </div>
+            <div class="stat" title="Volume-weighted average of all fills of the latest hours">
+                <span class="stat-label">Average</span>
+                <span class="stat-value">@UiFormat.Price(fair.Average)</span>
+            </div>
+            <div class="stat" title="Buying 1 @Row.Item.Name: estimated from the highest fills of the latest hours">
+                <span class="stat-label">You buy 1 → pay</span>
+                <span class="stat-value market-buy">@UiFormat.Price(fair.Buy)</span>
+            </div>
+        </div>
+        <div class="market-card-facts">
+            <span>1 @Counter.Name = @UiFormat.Price(1 / fair.Average) @Row.Item.Name</span>
+            <span>Spread @UiFormat.Share(fair.Spread)</span>
+            @if (Row.Change is { } change)
+            {
+                <span class="@UiFormat.TrendClass(change)">@UiFormat.SignedPercent(change) (@HistoryHours h)</span>
+            }
+            <span title="@Row.Item.Name traded in all pairs during the last @HistoryHours hours">@UiFormat.Compact(Row.Volume) traded</span>
+        </div>
+        <MarketRouteHints Quotes="Row.Quotes" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ItemMarket Row { get; set; } = null!;
+    [Parameter, EditorRequired] public ExchangeItem Counter { get; set; } = null!;
+    [Parameter, EditorRequired] public int HistoryHours { get; set; }
+}

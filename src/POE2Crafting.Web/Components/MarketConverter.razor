@@ -1,0 +1,86 @@
+@* Trade calculator: selling or buying an amount of one item for another, per route (direct or through Divine/Exalted/Chaos). *@
+@using System.Globalization
+@inject ExchangeCatalog Catalog
+
+<div class="market-converter">
+    <div class="market-converter-form">
+        <input type="number" min="0" step="any" class="market-amount" value="@UiFormat.Coordinate(Amount)" aria-label="Amount"
+               @onchange="SetAmount" />
+        <ItemSelect Items="_items" Value="@From" ValueChanged="FromChanged" Label="Item" />
+        <button class="btn btn-sm" title="Swap" aria-label="Swap items" @onclick="Swap">⇄</button>
+        <ItemSelect Items="_items" Value="@To" ValueChanged="ToChanged" Label="Currency" />
+    </div>
+
+    @if (From == To)
+    {
+        <p class="hint">Choose two different items.</p>
+    }
+    else if (_quotes.IsEmpty)
+    {
+        <p class="hint">@Catalog.Item(From).Name and @Catalog.Item(To).Name were not traded against each other or through Divine, Exalted or Chaos Orbs in the last hours.</p>
+    }
+    else if (_quotes.Fair is { } fair)
+    {
+        var from = Catalog.Item(From);
+        var to = Catalog.Item(To);
+        <div class="market-converter-summary">
+            <div>Selling <strong>@UiFormat.Price(Amount) <ExchangeItemName Item="from" /></strong> gets <strong class="market-sell">≈ @UiFormat.Price(Amount * _quotes.BestSell!.Sell) <ExchangeItemName Item="to" /></strong> (@Catalog.RouteText(_quotes.BestSell))</div>
+            <div>Buying <strong>@UiFormat.Price(Amount) <ExchangeItemName Item="from" /></strong> costs <strong class="market-buy">≈ @UiFormat.Price(Amount * _quotes.BestBuy!.Buy) <ExchangeItemName Item="to" /></strong> (@Catalog.RouteText(_quotes.BestBuy))</div>
+            <div class="hint">For @UiFormat.Price(Amount) @to.Name you get ≈ @UiFormat.Price(Amount / _quotes.BestBuy.Buy) @from.Name (average @UiFormat.Price(Amount / fair.Average)).</div>
+        </div>
+        <div class="table-scroll">
+            <table class="materials-table market-routes">
+                <thead>
+                    <tr><th>Route</th><th>Sell → get</th><th>Buy → pay</th><th>Average</th><th>Spread</th><th>Traded</th><th>Last trade</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var route in _quotes.Routes)
+                    {
+                        <tr @key="route.Via ?? route.Item">
+                            <td>@Catalog.RouteText(route)</td>
+                            <td class="@(route == _quotes.BestSell ? "market-best" : "")">@UiFormat.Price(Amount * route.Sell)</td>
+                            <td class="@(route == _quotes.BestBuy ? "market-best" : "")">@UiFormat.Price(Amount * route.Buy)</td>
+                            <td>@UiFormat.Price(Amount * route.Average)</td>
+                            <td>@UiFormat.Share(route.Spread)</td>
+                            <td>@UiFormat.Compact(route.Volume)</td>
+                            <td>@UiFormat.ClockTime(route.LastHour)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public LeagueMarket Market { get; set; } = null!;
+    [Parameter, EditorRequired] public string From { get; set; } = "";
+    [Parameter] public EventCallback<string> FromChanged { get; set; }
+    [Parameter, EditorRequired] public string To { get; set; } = "";
+    [Parameter] public EventCallback<string> ToChanged { get; set; }
+
+    private double Amount { get; set; } = 1;
+    private IReadOnlyList<ExchangeItem> _items = Array.Empty<ExchangeItem>();
+    private LeagueMarket? _itemsOf;
+    private QuoteRoutes _quotes = QuoteRoutes.None;
+
+    protected override void OnParametersSet()
+    {
+        if (_itemsOf != Market)
+        {
+            _itemsOf = Market;
+            _items = Market.Items.Select(Catalog.Item).OrderBy(i => i.Name).ToList();
+        }
+        _quotes = Market.Quote(From, To);
+    }
+
+    private void SetAmount(ChangeEventArgs e) =>
+        Amount = double.TryParse(e.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && value > 0 ? value : 1;
+
+    private async Task Swap()
+    {
+        var (from, to) = (From, To);
+        await FromChanged.InvokeAsync(to);
+        await ToChanged.InvokeAsync(from);
+    }
+}

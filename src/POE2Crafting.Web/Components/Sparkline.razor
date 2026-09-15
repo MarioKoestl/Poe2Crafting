@@ -1,0 +1,31 @@
+@* Tiny price line of an exchange item (hourly prices, gaps skipped); green when the last price is above the first, red below. *@
+
+@if (_points != null)
+{
+    <svg class="sparkline @_trend" viewBox="0 0 @Width @Height" width="@Width" height="@Height" aria-hidden="true">
+        <polyline points="@_points" />
+    </svg>
+}
+
+@code {
+    private const int Width = 84, Height = 22;
+
+    [Parameter, EditorRequired] public IReadOnlyList<double?> Values { get; set; } = Array.Empty<double?>();
+
+    private string? _points, _trend;
+
+    protected override void OnParametersSet()
+    {
+        var points = Values.Select((v, i) => (Index: i, Value: v)).Where(p => p.Value is > 0).Select(p => (p.Index, Value: p.Value!.Value)).ToList();
+        if (points.Count < 2)
+        {
+            _points = null;
+            return;
+        }
+        double min = points.Min(p => p.Value), max = points.Max(p => p.Value), range = max - min;
+        double X(int index) => Values.Count > 1 ? index * (Width - 2.0) / (Values.Count - 1) + 1 : 1;
+        double Y(double value) => range > 0 ? Height - 2 - (value - min) / range * (Height - 4) : Height / 2.0;
+        _points = string.Join(" ", points.Select(p => $"{UiFormat.Coordinate(X(p.Index))},{UiFormat.Coordinate(Y(p.Value))}"));
+        _trend = UiFormat.TrendClass(points[^1].Value - points[0].Value);
+    }
+}

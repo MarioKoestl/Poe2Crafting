@@ -1,0 +1,181 @@
+@page "/bases"
+@inject GameData Data
+@inject CraftingSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>Base Items · POE2 Crafting</PageTitle>
+
+<div class="single-page">
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Base Items</h2>
+            <div class="market-controls">
+                <label class="checkbox-row" title="League variants with Ward, e.g. Runeforged Vaal Gloves">
+                    <input type="checkbox" @bind="_showRuneforged" /> Runeforged variants
+                </label>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            <div class="base-classes">
+                @foreach (var group in Data.ItemClasses.GroupBy(c => c.Group))
+                {
+                    <div class="base-class-group">
+                        <span class="stat-label">@group.Key</span>
+                        <div class="detail-tabs">
+                            @foreach (var itemClass in group)
+                            {
+                                var name = itemClass.Name;
+                                <button class="btn btn-sm @(_class == name ? "btn-active" : "")" @onclick="() => SelectClass(name)">@name</button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <SearchBox @bind-Value="_search" Placeholder="@($"Search {_class} (name, implicit)...")" />
+
+            @if (SubTypes.Count > 1)
+            {
+                <div class="detail-tabs base-subtypes">
+                    <button class="btn btn-sm @(_subType == null ? "btn-active" : "")" @onclick="() => SelectSubType(null)">All <span class="count-pill">@ClassBases.Count</span></button>
+                    @foreach (var (subType, count) in SubTypes)
+                    {
+                        var type = subType;
+                        <button class="btn btn-sm @(_subType == type ? "btn-active" : "")" @onclick="() => SelectSubType(type)">@type <span class="count-pill">@count</span></button>
+                    }
+                </div>
+            }
+
+            @{
+                var bases = ClassBases.Where(b => (_subType == null || b.SubType == _subType) && TextSearch.Matches(_search, b.Name, b.Implicit, b.SubType)).ToList();
+                var stats = BaseStats.For(bases);
+                var sort = _sortByName ? null : _sort != null && stats.Contains(_sort) ? _sort : stats.FirstOrDefault(s => s.Label == "Level");
+                var sorted = (sort == null ? (_descending ? bases.OrderByDescending(b => b.Name) : bases.OrderBy(b => b.Name))
+                    : _descending ? bases.OrderByDescending(b => sort.Value(b) ?? double.MinValue).ThenBy(b => b.Name)
+                    : bases.OrderBy(b => sort.Value(b) ?? double.MaxValue).ThenBy(b => b.Name)).ToList();
+                var best = stats.Where(s => s.HigherIsBetter != null).ToDictionary(s => s, s => BestValue(s, bases));
+                bool hasImplicit = bases.Any(b => !string.IsNullOrEmpty(b.Implicit));
+            }
+
+            @if (bases.Count == 0)
+            {
+                <EmptyState>No bases match.</EmptyState>
+            }
+            else
+            {
+                <div class="table-scroll">
+                    <table class="materials-table base-table">
+                        <thead>
+                            <tr>
+                                <th><button class="market-sort @(sort == null ? "active" : "")" @onclick="() => SortBy(null)">Base</button></th>
+                                @foreach (var stat in stats)
+                                {
+                                    var column = stat;
+                                    <th title="@stat.Description">
+                                        <button class="market-sort @(sort == column ? "active" : "")" @onclick="() => SortBy(column)">@stat.Label@(sort == column ? (_descending ? " ▾" : " ▴") : "")</button>
+                                    </th>
+                                }
+                                @if (hasImplicit)
+                                {
+                                    <th>Implicit</th>
+                                }
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var baseItem in sorted)
+                            {
+                                <tr @key="baseItem.Id">
+                                    <td class="base-name-cell">
+                                        <span class="base-name"><CraftIcon Url="@Data.BaseIconUrl(baseItem)" Class="base-icon" />@baseItem.Name</span>
+                                        @if (baseItem.SubType != null && _subType == null)
+                                        {
+                                            <span class="market-item-meta">@baseItem.SubType</span>
+                                        }
+                                    </td>
+                                    @foreach (var stat in stats)
+                                    {
+                                        <td class="@(best.TryGetValue(stat, out var top) && top != null && stat.Value(baseItem) == top ? "base-best" : "")">@UiFormat.StatValue(stat, baseItem)</td>
+                                    }
+                                    @if (hasImplicit)
+                                    {
+                                        <td class="base-implicit">@baseItem.Implicit</td>
+                                    }
+                                    <td><button class="btn btn-xs" title="Create a new item of this base in the simulator" @onclick="() => Craft(baseItem)">Craft</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="hint market-notes">Base values without quality or modifiers (poe2db data). Highlighted: the best value of each column among the listed bases.</p>
+            }
+        </div>
+    </section>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "class")] public string? InitialClass { get; set; }
+
+    private string _class = "Body Armour";
+    private string? _subType;
+    private string _search = "";
+    private bool _showRuneforged;
+    private BaseStat? _sort;
+    private bool _sortByName, _descending = true;
+
+    protected override void OnInitialized()
+    {
+        if (InitialClass != null && Data.FindItemClass(InitialClass) is { } itemClass) _class = itemClass.Name;
+    }
+
+    private List<BaseItem> ClassBases => Data.BasesOfClass(_class).Where(b => !b.Hidden && (_showRuneforged || !b.IsRuneforged)).ToList();
+
+    private List<(string SubType, int Count)> SubTypes => ClassBases.Where(b => b.SubType != null)
+        .GroupBy(b => b.SubType!).Select(g => (g.Key, g.Count())).OrderBy(g => g.Key.Count(c => c == '/')).ThenBy(g => g.Key).ToList();
+
+    private void SelectClass(string itemClass)
+    {
+        _class = itemClass;
+        _subType = null;
+        _sort = null;
+        _sortByName = false;
+        _descending = true;
+    }
+
+    /// <summary>A defence type sorts by its defence, best first ("Energy Shield" → highest energy shield on top).</summary>
+    private void SelectSubType(string? subType)
+    {
+        _subType = subType;
+        if (BaseStats.PrimaryOf(subType) is { } primary)
+        {
+            _sort = primary;
+            _sortByName = false;
+            _descending = true;
+        }
+    }
+
+    /// <summary>Click on a column: sort by it (numbers best first, names A–Z); again: reverse.</summary>
+    private void SortBy(BaseStat? stat)
+    {
+        bool same = stat == null ? _sortByName : !_sortByName && _sort == stat;
+        _descending = same ? !_descending : stat != null;
+        _sort = stat;
+        _sortByName = stat == null;
+    }
+
+    private static double? BestValue(BaseStat stat, IEnumerable<BaseItem> bases)
+    {
+        var values = bases.Select(stat.Value).OfType<double>().ToList();
+        // nothing to point out when every base has the same value (e.g. sockets)
+        if (values.Count == 0 || values.Min() == values.Max() && values.Count == bases.Count()) return null;
+        return stat.HigherIsBetter == true ? values.Max() : values.Min();
+    }
+
+    /// <summary>A new normal item of the base in the current project, opened in the simulator.</summary>
+    private void Craft(BaseItem baseItem)
+    {
+        Session.SetItem(Item.FromBase(baseItem, withImplicit: true), "Created from base");
+        Navigation.NavigateTo("");
+    }
+}

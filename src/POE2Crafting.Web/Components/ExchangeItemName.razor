@@ -1,0 +1,14 @@
+@* Name of an exchange item: crafting items as CraftItemLink (hover info), everything else with its icon. *@
+
+@if (Item.IsCraftingItem)
+{
+    <CraftItemLink Name="@Item.Name" />
+}
+else
+{
+    <span class="exchange-name"><CraftIcon Url="@Item.IconUrl" Class="craft-link-icon" />@Item.Name</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public ExchangeItem Item { get; set; } = null!;
+}

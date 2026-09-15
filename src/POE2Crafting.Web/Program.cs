@@ -2,6 +2,7 @@ using System.Globalization;
 using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Engine;
 using POE2Crafting.Core.Engine.Planning;
+using POE2Crafting.Core.Market;
 using POE2Crafting.Web;
 using POE2Crafting.Web.Services;
 
@@ -31,6 +32,19 @@ builder.Services.AddSingleton(sp => new ProjectStore(projectsFolder, gameData, s
 // guides saved from simulator histories: next to the projects (or configured path)
 var savedGuidesFolder = Path.GetFullPath(builder.Configuration["SavedGuidesFolder"] ?? Path.Combine(dataFolder, "..", "saved-guides"));
 builder.Services.AddSingleton(sp => new GuideCatalog(savedGuidesFolder, new GuideLibrary(engine), engine, sp.GetRequiredService<ILogger<GuideCatalog>>()));
+// Currency Exchange prices: hourly digests of GGG's public API, cached next to the projects (or configured path), polled in the background
+var marketSettings = builder.Configuration.GetSection("Market").Get<MarketSettings>() ?? new MarketSettings();
+var marketCacheFolder = Path.GetFullPath(builder.Configuration["MarketCacheFolder"] ?? Path.Combine(dataFolder, "..", "market-cache"));
+builder.Services.AddHttpClient(MarketDataService.HttpClientName, http =>
+{
+    http.BaseAddress = new Uri("https://web.poecdn.com/api/currency-exchange/poe2/");
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("POE2CraftingSimulator/1.0 (+https://github.com/MarioKoestl/Poe2Crafting)");
+    http.Timeout = TimeSpan.FromSeconds(90);
+});
+builder.Services.AddSingleton(new ExchangeCatalog(gameData));
+builder.Services.AddSingleton(sp => new MarketDataService(sp.GetRequiredService<IHttpClientFactory>(), marketSettings, marketCacheFolder,
+    sp.GetRequiredService<ILogger<MarketDataService>>()));
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MarketDataService>());
 builder.Services.AddScoped<CraftingSession>();
 builder.Services.AddScoped<PlannerState>();
 

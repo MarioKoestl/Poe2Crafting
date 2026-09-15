@@ -1,0 +1,125 @@
+@page "/market"
+@implements IDisposable
+@inject MarketDataService MarketData
+@inject ExchangeCatalog Catalog
+@inject IJSRuntime JS
+
+<PageTitle>Currency Exchange · POE2 Crafting</PageTitle>
+
+<div class="single-page">
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Currency Exchange</h2>
+            <div class="market-controls">
+                @if (Snapshot.Leagues.Count > 0)
+                {
+                    <select class="market-select" value="@League" aria-label="League" @onchange="e => _league = e.Value?.ToString()">
+                        @foreach (var league in Snapshot.Leagues)
+                        {
+                            <option value="@league">@league</option>
+                        }
+                    </select>
+                }
+                <div class="detail-tabs market-reference" role="group" aria-label="Prices in">
+                    @foreach (var currency in ExchangeCurrencies.Core)
+                    {
+                        var id = currency;
+                        <button class="btn btn-sm @(_reference == id ? "btn-active" : "")" @onclick="() => _reference = id">
+                            <CraftIcon Url="@Catalog.Item(id).IconUrl" Class="craft-link-icon" />@Catalog.Item(id).Name
+                        </button>
+                    }
+                </div>
+                <span class="market-status">@StatusText</span>
+                <button class="btn btn-sm" @onclick="MarketData.CheckNow" disabled="@MarketData.IsLoading" title="Check for a new hourly digest now (otherwise every @MarketData.Settings.PollMinutes minutes)">↻ Check now</button>
+            </div>
+        </div>
+
+        <div class="panel-body">
+            @if (MarketData.LastError != null)
+            {
+                <div class="error-banner" role="alert">@MarketData.LastError</div>
+            }
+
+            @if (League is not { } leagueName || Snapshot.LatestHour is not { } latestHour)
+            {
+                <EmptyState Icon="⟳" Hint="GGG publishes the Currency Exchange trades once per hour; the last hours are downloaded when the app starts.">
+                    @(MarketData.IsLoading ? $"Loading exchange history… {MarketData.Progress}" : "No exchange data yet.")
+                </EmptyState>
+            }
+            else
+            {
+                var market = Snapshot.League(leagueName);
+                var reference = Catalog.Item(_reference);
+                var rows = market.Rows(_reference, Catalog);
+                int hours = MarketData.Settings.HistoryHours;
+
+                <h3 class="section-title">Core rates</h3>
+                <div class="market-cards">
+                    @foreach (var (item, counter) in CorePairs)
+                    {
+                        if (market.Row(Catalog.Item(item), counter) is { } pair)
+                        {
+                            <MarketPairCard @key="(item, counter)" Row="pair" Counter="Catalog.Item(counter)" HistoryHours="hours" />
+                        }
+                    }
+                </div>
+
+                <h3 class="section-title" id="trade-calculator">Trade calculator</h3>
+                <MarketConverter Market="market" @bind-From="_convertFrom" @bind-To="_convertTo" />
+
+                <h3 class="section-title">Prices in @reference.Name <span class="count-pill">@leagueName</span></h3>
+                <MarketTable Rows="rows" Reference="reference" HistoryHours="hours" LatestHour="latestHour" OnConvert="ConvertItem" />
+
+                <p class="hint market-notes">
+                    Source: GGG's public Currency Exchange API (hourly digests of all trades, no live order book). Average = volume-weighted fills of the
+                    latest @UiFormat.Plural(MarketData.Settings.RecentHours, "hour") with trades; Sell/Buy are estimated from the hours' lowest/highest fills
+                    (fills more than ×@UiFormat.Coordinate(MarketData.Settings.OutlierFactor) away from the average count as mistake orders).
+                    Items without a direct pair with @reference.Name are priced through Divine, Exalted or Chaos Orbs (▲/▼ = another route is better). Gold fees are not included.
+                </p>
+            }
+        </div>
+    </section>
+</div>
+
+@code {
+    /// <summary>The core pairs, each priced in the cheaper currency: Divine ↔ Chaos, Divine ↔ Exalted, Chaos ↔ Exalted.</summary>
+    private static readonly (string Item, string Counter)[] CorePairs =
+    {
+        (ExchangeCurrencies.Divine, ExchangeCurrencies.Chaos),
+        (ExchangeCurrencies.Divine, ExchangeCurrencies.Exalted),
+        (ExchangeCurrencies.Chaos, ExchangeCurrencies.Exalted),
+    };
+
+    private string? _league;
+    private string _reference = ExchangeCurrencies.Chaos;
+    private string _convertFrom = ExchangeCurrencies.Divine, _convertTo = ExchangeCurrencies.Chaos;
+
+    private MarketSnapshot Snapshot => MarketData.Snapshot;
+    private string? League => _league != null && Snapshot.Leagues.Contains(_league) ? _league : Snapshot.DefaultLeague;
+
+    private string StatusText
+    {
+        get
+        {
+            if (MarketData.IsLoading) return $"Loading… {MarketData.Progress}";
+            var parts = new List<string>();
+            if (Snapshot.LatestHour is { } latest) parts.Add($"Trades until {UiFormat.ClockTime(latest + 3600)} · {UiFormat.Plural(Snapshot.Hours.Count, "hour")}");
+            if (MarketData.LastCheck is { } check) parts.Add($"checked {check:HH:mm}");
+            return string.Join(" · ", parts);
+        }
+    }
+
+    protected override void OnInitialized() => MarketData.Changed += OnMarketChanged;
+
+    private void OnMarketChanged() => InvokeAsync(StateHasChanged);
+
+    /// <summary>A table row's ⇄: price the item in the current reference currency.</summary>
+    private async Task ConvertItem(string itemId)
+    {
+        _convertFrom = itemId;
+        _convertTo = _reference;
+        await JS.InvokeVoidAsync("scrollToElement", "trade-calculator");
+    }
+
+    public void Dispose() => MarketData.Changed -= OnMarketChanged;
+}

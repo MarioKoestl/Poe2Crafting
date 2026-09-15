@@ -1,0 +1,18 @@
+@* Other routes (direct, or through Divine/Exalted/Chaos) that sell for more or buy for less than the market route. *@
+@inject ExchangeCatalog Catalog
+
+@if (Quotes.BetterSellRoute is { } sell)
+{
+    <span class="market-route-hint" title="@RouteTitle(sell)">Sell @Catalog.RouteText(sell): @UiFormat.Price(sell.Sell)</span>
+}
+@if (Quotes.BetterBuyRoute is { } buy)
+{
+    <span class="market-route-hint" title="@RouteTitle(buy)">Buy @Catalog.RouteText(buy): @UiFormat.Price(buy.Buy)</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public QuoteRoutes Quotes { get; set; } = null!;
+
+    private string RouteTitle(ExchangeQuote quote) =>
+        quote.Via is { } via ? $"Two trades: first into {Catalog.Item(via).Name}, then into the target currency" : "One trade in the direct pair";
+}
