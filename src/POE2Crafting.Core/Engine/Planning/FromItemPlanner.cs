@@ -65,10 +65,18 @@ internal sealed partial class FromItemPlanner
     public PlanResult Plan(Item start, TargetItemSpec target)
     {
         var result = new PlanResult();
-        var startGoal = ItemGoal.Compare(start, target);
+        var startGoal = Compare(start, target);
         if (startGoal.RarityImpossible)
         {
             result.Problems.Add($"The item is {start.Rarity}; rarity cannot be lowered to {target.TargetRarity}.");
+            return result;
+        }
+        // no currency raises the item level: a target tier above it can never roll
+        var tooHigh = startGoal.Missing.Where(t => t.ResolvedMod?.Level > start.ItemLevel).ToList();
+        if (tooHigh.Count > 0)
+        {
+            result.Problems.AddRange(tooHigh.Select(t =>
+                $"{t.DisplayName} ({t.ResolvedMod!.Text}) needs item level {t.ResolvedMod.Level}, but the item has item level {start.ItemLevel} — it can never roll there. Choose a lower tier or start from an item with a higher item level."));
             return result;
         }
         if (startGoal.Reached)
@@ -114,7 +122,7 @@ internal sealed partial class FromItemPlanner
                     if (move.Success <= 0 || best != null && chance < best.Probability - Tolerance) continue;
                     // a move must never leave the item in a state the target cannot come back from (rarity can't be lowered:
                     // e.g. an essence turns a magic item rare, so it is useless for a magic target)
-                    var goal = ItemGoal.Compare(move.Next, target);
+                    var goal = Compare(move.Next, target);
                     if (goal.RarityImpossible) continue;
                     var signature = SignatureOf(move.Next);
                     // the same state again is only worth following when it is more likely (complete paths still compete on cost below)
@@ -176,12 +184,12 @@ internal sealed partial class FromItemPlanner
     private IEnumerable<Move> Moves(Item item, ItemGoal goal, TargetItemSpec target, Tools tools)
     {
         foreach (var m in FinishingMoves(item, goal, target)) yield return m;
-        foreach (var m in ValueMoves(item, goal, tools)) yield return m;
+        foreach (var m in ValueMoves(item, goal, target, tools)) yield return m;
         var additions = new Lazy<List<(CraftAction Action, StepPreview Preview)>>(() => AddOps(item, target).SelectMany(op => Actions(item, op, tools)).ToList());
         if (goal.AffixesDone)
         {
             // Essence of the Breach needs a mod to replace: add a blocker for it first
-            if (tools.HasFlag(Tools.Essences) && NeedsMaximumQuality(item, goal))
+            if (tools.HasFlag(Tools.Essences) && NeedsMaximumQuality(item, goal, target))
                 foreach (var m in BlockerMoves(item, goal, additions.Value)) yield return m;
             yield break;
         }
@@ -202,6 +210,8 @@ internal sealed partial class FromItemPlanner
     }
 
     // ------------------------------------------------------------------ shared helpers of the move generators
+
+    private ItemGoal Compare(Item item, TargetItemSpec target) => ItemGoal.Compare(item, target, _engine.Assumptions.DefaultMaxQuality);
 
     /// <summary>Chance to remove an unwanted mod, chance to lose a kept one, and the best unwanted pick (mods blocking a target first).</summary>
     private static (double Ok, double Brick, RemovalCandidate? Best) Removal(List<RemovalCandidate> removals, ItemGoal goal) =>

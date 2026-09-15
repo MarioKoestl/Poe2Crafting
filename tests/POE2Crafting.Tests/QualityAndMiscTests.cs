@@ -16,8 +16,14 @@ public class QualityAndMiscTests
         Assert.Equal(12, stripped.Quality);
         Assert.True(stripped.Corrupted);
         Assert.Contains(stripped.Mods, m => m.Kind == ModKind.Implicit);
-        Assert.Single(stripped.Affixes, m => m.Unrevealed);
+        Assert.Empty(stripped.UnrevealedMods); // the draft's selection takes unrevealed mods over and adds them again
         Assert.Equal(4, item.Affixes.Count()); // the original is untouched
+
+        var draft = new POE2Crafting.Core.Drafting.ItemDraft(TestData.Data!);
+        draft.LoadFrom(item, copyValues: true);
+        var edited = draft.BuildItem()!;
+        Assert.Single(edited.UnrevealedMods);
+        Assert.Equal((12, true), (edited.Quality, edited.Corrupted));
     }
 
     [DataFact]
@@ -118,18 +124,43 @@ public class QualityAndMiscTests
     }
 
     [DataFact]
-    public void Blazing_flux_turns_cold_resistance_into_an_equivalent_fire_resistance()
+    public void Blazing_flux_turns_cold_resistance_into_an_equivalent_fire_resistance_with_a_new_roll()
     {
         var ring = TestData.NewItem(TestBases.Ring, Rarity.Rare);
         var cold = TestData.Pool!.AllForBase(ring).Where(m => m.Family == "ColdResistance").MaxBy(m => m.Level)!;
-        ring.AddMod(cold, values: new() { cold.Ranges[0][1] });
+        ring.AddMod(cold, values: new() { ModText.Bounds(cold.Ranges[0]).Lo });
 
-        var result = TestData.Apply(ring, "Blazing Flux").Item;
-        var fire = Assert.Single(result.Affixes);
-        Assert.Equal("FireResistance", fire.Def!.Family);
-        Assert.Equal(cold.Level, fire.Def.Level);
-        Assert.Equal(fire.Def.Ranges[0][1], fire.Values[0]);
+        var rolled = new HashSet<double>();
+        Item? result = null;
+        for (int seed = 0; seed < 20; seed++)
+        {
+            result = TestData.Apply(ring, "Blazing Flux", seed: seed).Item;
+            var fire = Assert.Single(result.Affixes);
+            Assert.Equal("FireResistance", fire.Def!.Family);
+            Assert.Equal(cold.Level, fire.Def.Level);
+            var (lo, hi) = ModText.Bounds(fire.Def.Ranges[0]);
+            Assert.InRange(fire.Values[0], lo, hi);
+            rolled.Add(fire.Values[0]);
+        }
+        // the lowest cold roll does not stay the lowest fire roll: the value is rolled anew
+        Assert.True(rolled.Count > 1);
 
-        Assert.False(TestData.Engine!.Check(result, TestData.Action("Blazing Flux")).Ok);
+        Assert.False(TestData.Engine!.Check(result!, TestData.Action("Blazing Flux")).Ok);
+    }
+
+    [DataFact]
+    public void Flux_values_can_be_chosen_inside_the_new_tier()
+    {
+        var ring = TestData.NewItem(TestBases.Ring, Rarity.Rare);
+        var lightning = TestData.Pool!.AllForBase(ring).Where(m => m.Family == "LightningResistance").MaxBy(m => m.Level)!;
+        ring.AddMod(lightning, values: new() { ModText.Bounds(lightning.Ranges[0]).Lo });
+
+        var reroll = Assert.Single(TestData.Engine!.Preview(ring, TestData.Action("Chilling Flux")).ValueRerolls);
+        Assert.Equal("ColdResistance", reroll.Mod.Family);
+        var best = reroll.Mod.Ranges.Select(r => ModText.Bounds(r).Hi).ToList();
+
+        var cold = Assert.Single(TestData.Apply(ring, "Chilling Flux", new ManualChoice { Rerolls = new() { [reroll.Index] = best } }).Item.Affixes);
+        Assert.Equal(reroll.Mod.Id, cold.ModId);
+        Assert.Equal(best, cold.Values);
     }
 }

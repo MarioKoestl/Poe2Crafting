@@ -1,28 +1,35 @@
-@* Guides tab, left pane: the curated crafting guides (data/guides.json) with search; picking one shows it in GuideDetail. *@
-@inject GuideLibrary Guides
+@* Guides tab, left pane: guides saved from the simulator and the curated guides (data/guides.json) with search; picking one shows it in GuideDetail. *@
+@inject GuideCatalog Guides
 @inherits PlannerStateComponentBase
 
 <h3 class="pane-title">Crafting Guides</h3>
-<SearchBox @bind-Value="_search" Placeholder="Search guides (name, technique, tag)..." />
+<SearchBox @bind-Value="_search" Placeholder="Search guides (name, technique, base, tag)..." />
 
 @{
-    var guides = Guides.Guides.Where(g => TextSearch.Matches(_search, g.Tags.Concat(g.KeyIdeas).Prepend(g.Summary).Prepend(g.Name))).ToList();
+    var walkthroughs = Guides.All().Where(w => TextSearch.Matches(_search, w.Guide.Tags.Concat(w.Guide.KeyIdeas).Prepend(w.Guide.Summary).Prepend(w.Guide.Name))).ToList();
 }
 <div class="guide-list">
-    @foreach (var guide in guides)
+    @foreach (var (recorded, title) in new[] { (true, "My Guides"), (false, "Curated Guides") })
     {
-        <StrategyCard @key="guide.Id" Strategy="Guides.Walkthrough(guide).Strategy" Title="@guide.Name" ShowExpected="false"
-                      Selected="guide.Id == Planner.SelectedGuideId" OnSelect="() => Select(guide)">
-            @guide.Summary
-            <span class="guide-tags">
-                @foreach (var tag in guide.Tags)
-                {
-                    <span class="guide-tag">@tag</span>
-                }
-            </span>
-        </StrategyCard>
+        var section = walkthroughs.Where(w => IsRecorded(w) == recorded).ToList();
+        if (section.Count == 0) continue;
+        <div class="section-title">@title</div>
+        @foreach (var walkthrough in section)
+        {
+            var guide = walkthrough.Guide;
+            <StrategyCard @key="guide.Id" Strategy="walkthrough.Strategy" Title="@guide.Name" ShowExpected="false"
+                          Selected="guide.Id == Planner.SelectedGuideId" OnSelect="() => Planner.SelectGuide(guide.Id)">
+                @guide.Summary
+                <span class="guide-tags">
+                    @foreach (var tag in guide.Tags)
+                    {
+                        <span class="guide-tag">@tag</span>
+                    }
+                </span>
+            </StrategyCard>
+        }
     }
-    @if (guides.Count == 0)
+    @if (walkthroughs.Count == 0)
     {
         <p class="hint">No guide matches "@_search".</p>
     }
@@ -31,5 +38,5 @@
 @code {
     private string _search = "";
 
-    private void Select(CraftingGuide guide) => Planner.SelectGuide(guide.Id);
+    private bool IsRecorded(GuideWalkthrough walkthrough) => Guides.FindRecorded(walkthrough.Guide.Id) != null;
 }

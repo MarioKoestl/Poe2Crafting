@@ -5,7 +5,7 @@
     <h3 class="pane-title">Crafting Paths</h3>
     @if (Planner.Result is not { } result)
     {
-        <EmptyState Icon="⟡">Load the current item as target, edit it and click <strong>Path from Current Item</strong>.</EmptyState>
+        <EmptyState Icon="⟡">Choose source and target items of your project, edit the target and click <strong>Find Paths</strong>.</EmptyState>
     }
     else if (result.Plan.Strategies.Count == 0)
     {
@@ -35,6 +35,7 @@
                 <div class="detail-tabs">
                     <button class="btn btn-sm @(_showDiagram ? "" : "btn-active")" @onclick="() => _showDiagram = false">Guide</button>
                     <button class="btn btn-sm @(_showDiagram ? "btn-active" : "")" @onclick="() => _showDiagram = true">Flowchart</button>
+                    <GuideExportButton Export="@(new GuideExport($"{selected.Name}: {result.Start.BaseName}", selected.Description, result.Start, selected) { Problems = result.Plan.Problems })" />
                 </div>
 
                 @if (_showDiagram)

@@ -28,24 +28,36 @@ internal sealed class CatalystOperation : CraftOperation
     public override StepPreview Preview(CraftContext ctx, int? forcedRemovalIndex)
     {
         var catalyst = ctx.Currency.Catalyst!;
-        var enhanced = ctx.Item.Mods.Where(m => catalyst.Enhances(m.Def)).Select(m => m.DisplayText()).ToList();
+        var choice = Choice(ctx.Item, catalyst);
         return new StepPreview
         {
+            Quality = choice,
             Notes =
             {
-                $"Quality {ctx.Item.Quality}% → {NewQuality(ctx.Item)}% ({catalyst.QualityType}).",
-                enhanced.Count > 0 ? $"Enhanced modifiers: {string.Join("; ", enhanced)}" : $"No modifier on the item has the \"{catalyst.ModTag}\" tag yet.",
+                $"Quality {ctx.Item.Quality}% → {choice.Default}% ({catalyst.QualityType}).",
+                ctx.Item.Mods.Any(m => catalyst.Enhances(m.Def)) ? "Whole numbers round down: an enhanced value only rises once the quality is high enough (see the table)."
+                    : $"No modifier on the item has the \"{catalyst.ModTag}\" tag yet.",
             },
         };
     }
 
-    private int NewQuality(Item item) => Math.Min(Engine.MaxQuality(item), item.Quality + Assumptions.CatalystQualityPerUse);
+    /// <summary>The quality after one use: +catalystQualityPerUse when rolled; chosen: any higher value up to the maximum (the current amount when the type changes).</summary>
+    private QualityChoice Choice(Item item, CatalystDef catalyst)
+    {
+        int max = Engine.MaxQuality(item);
+        int min = Math.Min(max, item.QualityType == catalyst.QualityType ? item.Quality + 1 : Math.Max(1, item.Quality));
+        return new QualityChoice(catalyst.QualityType!, Math.Min(max, item.Quality + Assumptions.CatalystQualityPerUse), min, max);
+    }
 
     public override void Execute(ExecuteContext ctx)
     {
         var item = ctx.Result;
-        item.QualityType = ctx.Currency.Catalyst!.QualityType;
-        item.Quality = NewQuality(item);
+        var choice = Choice(item, ctx.Currency.Catalyst!);
+        int quality = ctx.Choice?.Quality ?? choice.Default;
+        if (quality < choice.Min || quality > choice.Max)
+            throw new InvalidChoiceException($"The quality after the catalyst must be between {choice.Min}% and {choice.Max}%.");
+        item.QualityType = choice.Type;
+        item.Quality = quality;
         ctx.Details.Add($"Quality is now {item.Quality}% ({item.QualityType}).");
     }
 }

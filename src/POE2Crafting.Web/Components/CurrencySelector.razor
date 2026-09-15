@@ -17,7 +17,8 @@
     @if (hidden > 0)
     {
         <p class="hint">
-            @UiFormat.Plural(hidden, "more match", "more matches") but can't be used on this item.
+            @(string.IsNullOrWhiteSpace(_filter) ? UiFormat.Plural(hidden, "more currency", "more currencies") : UiFormat.Plural(hidden, "more match", "more matches"))
+            can't be used on this item and @(hidden == 1 ? "is" : "are") hidden.
             <button class="btn btn-xs" @onclick="() => _onlyApplicable = false">Show all</button>
         </p>
     }
@@ -39,32 +40,32 @@
                         }
                     </span>
                 </button>
+                @if (Selected is { } action && action.Currency.Name == currency.Name && OmensFor(currency) is { Count: > 0 } omens)
+                {
+                    @* full-width row right below the chosen tile (grid-auto-flow: dense lets the following tiles fill the row) *@
+                    <div class="omen-section" @key="@("omens")">
+                        <h4 class="section-title">Active omens <span class="count-pill">@(action.Omens.Count == 0 ? "none" : $"{action.Omens.Count} active")</span></h4>
+                        <div class="omen-grid">
+                            @foreach (var omen in omens)
+                            {
+                                var active = action.Omens.Contains(omen);
+                                var blocked = active ? null : Session.CombinationProblem(action.Currency, action.Omens.Append(omen).ToList());
+                                @* aria-disabled instead of disabled: disabled buttons swallow the hover that opens the omen info *@
+                                <button @key="omen.Name" class="omen-btn @(active ? "selected" : "") @(blocked != null ? "blocked" : "")" aria-disabled="@(blocked != null ? "true" : "false")"
+                                        title="@(blocked ?? (active ? "Click to deactivate" : "Click to activate (several omens can be active at once)"))"
+                                        @onclick="() => blocked == null ? ToggleOmen(omen) : Task.CompletedTask">
+                                    <span class="omen-check">@(active ? "✓" : "+")</span>
+                                    <CraftItemLink Name="@omen.Name" />
+                                </button>
+                            }
+                            @if (action.Omens.Count > 0)
+                            {
+                                <button class="btn btn-xs" @onclick="() => SetSelected(action.Currency, Array.Empty<OmenDef>())">Clear</button>
+                            }
+                        </div>
+                    </div>
+                }
             }
-        </div>
-    }
-
-    @if (Selected is { } action && OmensFor(action.Currency) is { Count: > 0 } omens)
-    {
-        <div class="omen-section">
-            <h4 class="section-title">Active omens <span class="count-pill">@(action.Omens.Count == 0 ? "none" : $"{action.Omens.Count} active")</span></h4>
-            <div class="omen-grid">
-                @foreach (var omen in omens)
-                {
-                    var active = action.Omens.Contains(omen);
-                    var blocked = active ? null : Session.CombinationProblem(action.Currency, action.Omens.Append(omen).ToList());
-                    @* aria-disabled instead of disabled: disabled buttons swallow the hover that opens the omen info *@
-                    <button @key="omen.Name" class="omen-btn @(active ? "selected" : "") @(blocked != null ? "blocked" : "")" aria-disabled="@(blocked != null ? "true" : "false")"
-                            title="@(blocked ?? (active ? "Click to deactivate" : "Click to activate (several omens can be active at once)"))"
-                            @onclick="() => blocked == null ? ToggleOmen(omen) : Task.CompletedTask">
-                        <span class="omen-check">@(active ? "✓" : "+")</span>
-                        <CraftItemLink Name="@omen.Name" />
-                    </button>
-                }
-                @if (action.Omens.Count > 0)
-                {
-                    <button class="btn btn-xs" @onclick="() => SetSelected(action.Currency, Array.Empty<OmenDef>())">Clear</button>
-                }
-            </div>
         </div>
     }
 </div>
@@ -101,7 +102,7 @@
         return omens;
     }
 
-    /// <summary>Currencies matching the search (name or description), grouped; plus how many matches the "only usable" filter hides.</summary>
+    /// <summary>Currencies matching the search (name or description), grouped; plus how many of them the "only usable" filter hides.</summary>
     private (List<IGrouping<string, (CurrencyDef Currency, Applicability App)>> Groups, int Hidden) GetGroups()
     {
         var matching = _applicable.Where(x => TextSearch.Matches(_filter, x.Currency.Name, x.Currency.DescriptionText)).ToList();
@@ -111,7 +112,7 @@
             .GroupBy(x => SyntheticSections.Contains(x.Currency.Section) ? x.Currency.Section! : OrbsSection)
             .OrderBy(g => Array.IndexOf(GroupOrder, g.Key))
             .ToList();
-        return (groups, string.IsNullOrWhiteSpace(_filter) ? 0 : matching.Count - shown.Count);
+        return (groups, matching.Count - shown.Count);
     }
 
     private Task Select(CurrencyDef currency) => SetSelected(currency, Array.Empty<OmenDef>());

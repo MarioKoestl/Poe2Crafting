@@ -397,6 +397,26 @@ main {
 .rarity-unique { --rarity: var(--rarity-unique); }
 
 .item-header { text-align: center; margin-bottom: 0.55rem; }
+.item-base-icon { display: block; width: 48px; height: 48px; object-fit: contain; margin: 0 auto 0.3rem; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6)); }
+.project-item-icon { width: 26px; height: 26px; object-fit: contain; flex-shrink: 0; align-self: center; margin-left: 0.3rem; }
+.item-copy {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.4rem;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.66rem;
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+.item-box:hover .item-copy, .item-copy:focus-visible { opacity: 1; }
+.item-copy:hover { color: var(--text-bright); border-color: var(--border-strong); }
+.item-copy.copied { opacity: 1; color: var(--green-light); border-color: var(--green); }
+.item-copy.failed { opacity: 1; color: var(--red-light); border-color: var(--red); }
 .item-name { color: var(--rarity); font-size: 1.02rem; font-weight: 650; }
 .item-base { color: var(--rarity); font-size: 0.9rem; font-weight: 550; }
 .rarity-normal .item-base { color: var(--text-bright); }
@@ -420,6 +440,15 @@ main {
     gap: 0.45rem;
 }
 .mod-line.implicit { color: var(--blue); justify-content: center; }
+.mod-body { flex: 1; min-width: 0; }
+.reveal-toggle { padding: 0 0.4rem; font-size: 0.66rem; vertical-align: middle; }
+.reveal-pool { margin: 0.15rem 0 0.4rem 1.2rem; padding-left: 0.5rem; border-left: 2px solid color-mix(in srgb, var(--desecrated) 45%, transparent); }
+/* the item column is narrow: let the possible reveals wrap instead of cutting the text */
+.reveal-pool .add-row { flex-wrap: wrap; align-items: baseline; }
+.reveal-pool .add-stat { white-space: normal; flex-basis: 100%; padding-left: 1.2rem; }
+.reveal-pool .add-sep { display: none; }
+.reveal-group-title { margin-top: 0.35rem; font-size: 0.68rem; font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.mod-body > * + * { margin-left: 0.35rem; }
 .mod-line.prefix .mod-text { color: var(--prefix-color); }
 .mod-line.suffix .mod-text { color: var(--suffix-color); }
 .mod-line.crafted .mod-text { color: var(--crafted); font-style: italic; }
@@ -451,6 +480,23 @@ main {
     flex-shrink: 0;
     min-width: 1.6em;
 }
+
+.mod-range {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.mod-level {
+    font-size: 0.66rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.mod-badge + .mod-level, .add-stat + .mod-level { margin-left: 0.35rem; }
 
 .mod-badge, .tm-cat-badge, .family-badge, .brick-badge, .guide-tag {
     font-size: 0.64rem;
@@ -514,6 +560,7 @@ main {
 .history-entry:first-child::before { border-color: var(--accent); background: var(--accent); }
 .history-action { color: var(--accent-light); font-weight: 600; }
 .history-summary { color: var(--text-muted); font-size: 0.74rem; }
+.history-save { margin-top: 0.6rem; width: 100%; }
 
 /* ==== Simulator: currency selector ==== */
 
@@ -530,6 +577,7 @@ main {
 .currency-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-auto-flow: dense;
     gap: 0.4rem;
 }
 
@@ -569,7 +617,13 @@ main {
 .currency-name { font-weight: 600; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .currency-reason { font-size: 0.68rem; color: var(--red-muted); }
 
-.omen-section { margin-top: 1rem; }
+.currency-grid .omen-section {
+    grid-column: 1 / -1;
+    padding: 0.6rem 0.7rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--accent-soft);
+    border-radius: var(--radius);
+}
 .omen-btn {
     display: inline-flex;
     align-items: center;
@@ -733,6 +787,13 @@ main {
     transition: background 0.1s;
 }
 .add-row:hover { background: var(--bg-hover); }
+.quality-choice { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.6rem; font-size: 0.8rem; }
+.table-scroll { overflow-x: auto; }
+.quality-effects td { font-size: 0.78rem; }
+.quality-effects .value-up { color: var(--green-light); font-weight: 600; }
+.value-pick { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; margin: 0.15rem 0 0.4rem 2.6rem; }
+.reroll-list { display: flex; flex-direction: column; gap: 0.15rem; margin-bottom: 0.5rem; }
+.reroll-row .add-stat { flex: 1; }
 .add-tier { min-width: 1.9em; font-size: 0.72rem; font-weight: 650; color: var(--accent); flex-shrink: 0; }
 .add-name { color: var(--text-bright); font-weight: 550; white-space: nowrap; flex-shrink: 0; }
 .add-sep { color: var(--border-light); flex-shrink: 0; }
@@ -996,7 +1057,7 @@ main {
 .tier-label { color: var(--accent); font-weight: 650; }
 .tier-name { color: var(--text-bright); font-weight: 550; white-space: nowrap; }
 .tier-text { color: var(--text-muted); }
-.tier-weight, .tier-level { color: var(--text-muted); font-size: 0.7rem; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tier-weight, .tier-btn .mod-level { color: var(--text-muted); font-size: 0.7rem; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ==== Planner results ==== */
 

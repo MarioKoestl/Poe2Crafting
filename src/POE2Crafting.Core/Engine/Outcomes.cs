@@ -1,3 +1,4 @@
+using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Core.Engine;
@@ -24,6 +25,9 @@ public sealed class StepPreview
     /// <summary>False when the additions are only informational (e.g. what a desecrated mod could reveal into) and cannot be chosen.</summary>
     public bool AdditionsChoosable { get; init; } = true;
     public string? AdditionLabel { get; init; }
+    /// <summary>A second group of possible additions shown below the first (reveals: the regular modifiers besides the exclusive ones).</summary>
+    public List<ModCandidate> OtherAdditions { get; init; } = new();
+    public string? OtherAdditionLabel { get; init; }
     /// <summary>For special currencies (Orb of Chance, Desecration ...): named outcomes with probabilities.</summary>
     public Dictionary<string, double> SpecialOutcomes { get; init; } = new();
     /// <summary>Assumptions and hints about the action (without <see cref="WeightsNote"/>).</summary>
@@ -36,16 +40,27 @@ public sealed class StepPreview
     public bool TwoStepChoice { get; init; }
     /// <summary>Heading for the Removals list (e.g. "Fracture Target" when the list is not a removal).</summary>
     public string? RemovalLabel { get; init; }
+    /// <summary>Mods whose values the action rolls anew (Divine Orb, Flux); a manual choice sets them via <see cref="ManualChoice.Rerolls"/>.</summary>
+    public List<ValueReroll> ValueRerolls { get; init; } = new();
+    /// <summary>Catalysts: the quality after the use (default and allowed range); a manual choice sets it via <see cref="ManualChoice.Quality"/>.</summary>
+    public QualityChoice? Quality { get; init; }
 
     /// <summary>A copy with the engine's generic parts: the applicability, its notes in front, and the weights note.</summary>
     internal StepPreview WithApplicability(Applicability applicability, string weightsNote) => new()
     {
         Applicability = applicability, WeightsNote = weightsNote,
         RemoveCount = RemoveCount, AddCount = AddCount, Removals = Removals, Additions = Additions, AdditionsChoosable = AdditionsChoosable,
-        AdditionLabel = AdditionLabel, SpecialOutcomes = SpecialOutcomes, Notes = applicability.Notes.Concat(Notes).ToList(),
+        AdditionLabel = AdditionLabel, OtherAdditions = OtherAdditions, OtherAdditionLabel = OtherAdditionLabel, SpecialOutcomes = SpecialOutcomes, Notes = applicability.Notes.Concat(Notes).ToList(),
         PrefixProbability = PrefixProbability, SuffixProbability = SuffixProbability, TwoStepChoice = TwoStepChoice, RemovalLabel = RemovalLabel,
+        ValueRerolls = ValueRerolls, Quality = Quality,
     };
 }
+
+/// <summary>A mod (by index into Item.Mods) whose values are rolled anew, and the modifier whose ranges the new values have (a Flux changes it).</summary>
+public sealed record ValueReroll(int Index, ModDef Mod);
+
+/// <summary>Quality of <paramref name="Type"/> after a catalyst: <paramref name="Default"/> when rolled, any value from <paramref name="Min"/> to <paramref name="Max"/> when chosen.</summary>
+public sealed record QualityChoice(string Type, int Default, int Min, int Max);
 
 /// <summary>Manual selection of an outcome instead of rolling.</summary>
 public sealed class ManualChoice
@@ -57,8 +72,10 @@ public sealed class ManualChoice
     /// <summary>Optional rolled values per added mod (null = roll randomly within the tier).</summary>
     public List<List<double>?> Values { get; init; } = new();
     public string? SpecialOutcome { get; init; }
-    /// <summary>For Divine Orb: values per existing mod index (null entries keep random).</summary>
+    /// <summary>Divine Orb, Flux: values per mod index (see <see cref="StepPreview.ValueRerolls"/>); missing indices roll randomly.</summary>
     public Dictionary<int, List<double>>? Rerolls { get; init; }
+    /// <summary>Catalysts: the quality after the use (see <see cref="StepPreview.Quality"/>).</summary>
+    public int? Quality { get; init; }
 }
 
 public sealed class CraftResult

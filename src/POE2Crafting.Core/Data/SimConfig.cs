@@ -58,6 +58,17 @@ public sealed class SimAssumptions
     public bool OnlyOneCraftedModPerItem { get; init; } = true;
     /// <summary>Number of options offered when revealing a desecrated modifier at the Well of Souls.</summary>
     public int RevealOptionCount { get; init; } = 3;
+    /// <summary>Options of a reveal that are always exclusive Lich (desecrated) modifiers ("at least one", expertgamereviews.com).</summary>
+    public int RevealGuaranteedExclusiveOptions { get; init; } = 1;
+    /// <summary>Chance that each further option is a regular modifier instead of a Lich modifier (poe2db: "may include base modifiers"). ASSUMPTION, no data.</summary>
+    public double RevealRegularOptionChance { get; init; } = 0.5;
+    /// <summary>
+    /// True (poe2db: "Reveal desecrated modifiers may include base modifiers. Unless you use Omen to guarantee named modifiers"; Mario in game:
+    /// 3 Kurgal options with Omen of the Blackblooded): with Omen of the Sovereign/Liege/Blackblooded every option is a modifier of that Lich.
+    /// False: only the exclusive option is, the others stay regular.
+    /// </summary>
+    public bool RevealBossOmenOnlyLichModifiers { get; init; } = true;
+    public string? RevealNote { get; init; }
     /// <summary>Unrevealed modifiers created by Omen of Putrefaction ("up to 6").</summary>
     public int PutrefactionUnrevealedCount { get; init; } = 6;
 

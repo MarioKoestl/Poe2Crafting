@@ -1,0 +1,28 @@
+@* Number inputs for the rolled values of a modifier, one per range (fixed numbers have none); a typed value is kept inside its range.
+   Edits the given list in place: Divine/Flux rerolls and the values of a chosen added modifier. *@
+
+@for (int r = 0; r < Mod.Ranges.Count && r < Values.Count; r++)
+{
+    var ri = r;
+    var (lo, hi) = ModText.Bounds(Mod.Ranges[ri]);
+    if (lo == hi) continue;
+    <input type="number" class="tm-value" step="any" min="@lo" max="@hi" aria-label="Value @(ri + 1) of @Mod.Text"
+           title="@lo–@hi" value="@Values[ri]" @onchange="e => Set(ri, e.Value, lo, hi)" />
+}
+
+@code {
+    [Parameter, EditorRequired] public ModDef Mod { get; set; } = null!;
+    [Parameter, EditorRequired] public List<double> Values { get; set; } = null!;
+
+    /// <summary>Whether a modifier has any value to choose.</summary>
+    public static bool HasRolledValues(ModDef mod) => mod.Ranges.Any(r => ModText.Bounds(r) is var (lo, hi) && lo != hi);
+
+    /// <summary>The middle of every range: the start values of the inputs.</summary>
+    public static List<double> MiddleValues(ModDef mod) => mod.Ranges.Select(ModText.MidValue).ToList();
+
+    private void Set(int index, object? input, double lo, double hi)
+    {
+        if (double.TryParse(input?.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v))
+            Values[index] = Math.Clamp(v, lo, hi);
+    }
+}

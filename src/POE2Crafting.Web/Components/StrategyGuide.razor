@@ -84,13 +84,14 @@
                             }
                         </div>
                     }
-                    @if (step.Result != null)
-                    {
-                        <details class="step-result">
-                            <summary>Item after this step</summary>
-                            <ItemDisplay Item="step.Result" />
-                        </details>
-                    }
+                }
+                @* always available, also for steps that are not unfolded *@
+                @if (step.Result != null)
+                {
+                    <details class="step-result">
+                        <summary>Item after this step</summary>
+                        <ItemDisplay Item="step.Result" />
+                    </details>
                 }
             </div>
         </div>

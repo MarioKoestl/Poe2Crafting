@@ -15,12 +15,14 @@ public sealed class CraftingEngine
     private readonly ModPool _pool;
     private readonly Dictionary<string, CraftOperation> _operations;
     private readonly DesecrateOperation _desecrate;
+    private readonly RevealOperation _reveal;
 
     public CraftingEngine(GameData data, ModPool? pool = null)
     {
         _data = data;
         _pool = pool ?? new ModPool(data);
         _desecrate = new DesecrateOperation(this);
+        _reveal = new RevealOperation(this);
         _operations = new CraftOperation[]
         {
             new AddModOperation(this, CurrencyOps.Transmute, Rarity.Magic, requiresNoAffixes: true),
@@ -38,6 +40,7 @@ public sealed class CraftingEngine
             FlagOperation.Lock(this),
             new EssenceOperation(this),
             _desecrate,
+            _reveal,
             new VaalOperation(this),
             new SacrificeOperation(this),
             new ArchitectOperation(this),
@@ -139,10 +142,20 @@ public sealed class CraftingEngine
     public List<ModCandidate> RevealPool(Item item, int modIndex) => _desecrate.RevealPool(item, modIndex);
 
     /// <summary>Roll the options offered at the Well of Souls (config: revealOptionCount).</summary>
-    public List<ModDef> RollRevealOptions(Item item, int modIndex, Rng rng) => _desecrate.RollRevealOptions(item, modIndex, rng);
+    public List<ModDef> RollRevealOptions(Item item, int modIndex, Rng rng) => _desecrate.RollOptions(item, modIndex, rng);
 
-    /// <summary>Turn the unrevealed mod into the chosen desecrated mod.</summary>
-    public CraftResult Reveal(Item item, int modIndex, string modId, Rng rng) => _desecrate.Reveal(item, modIndex, modId, rng);
+    /// <summary>The exclusive and regular modifiers an unrevealed mod can become, with their chance to be offered.</summary>
+    public (List<ModCandidate> Exclusive, List<ModCandidate> Regular) RevealOffers(Item item, int modIndex) => _desecrate.RevealOffers(item, modIndex);
+
+    /// <summary>Heading of the exclusive reveal options of an unrevealed mod ("Kurgal modifiers — all 3 options" with a boss omen).</summary>
+    public string RevealExclusiveLabel(Item item, int modIndex) => _desecrate.ExclusiveLabel(item, modIndex);
+
+    /// <summary>Chance that a wanted modifier is among the options offered for the unrevealed mod.</summary>
+    public double RevealChance(Item item, int modIndex, Func<ModDef, bool> wanted) => _desecrate.RevealChance(item, modIndex, wanted);
+
+    /// <summary>Turn the unrevealed mod into the chosen desecrated mod (the Well of Souls with a manual choice).</summary>
+    public CraftResult Reveal(Item item, int modIndex, string modId, Rng rng) =>
+        Execute(item, CraftAction.Of(GameData.WellOfSouls), rng, new ManualChoice { RemoveIndices = { modIndex }, AddModIds = { modId } });
 
     // ------------------------------------------------------------------ generic checks
 
@@ -210,8 +223,8 @@ public sealed class CraftingEngine
         return list;
     }
 
-    /// <summary>Modifier level for Omen of Whittling: an unrevealed desecrated mod counts as level 1 (community tests), unknown lines as highest.</summary>
-    private static int ModLevel(ItemMod mod) => mod.Unrevealed ? 1 : mod.Def?.Level ?? int.MaxValue;
+    /// <summary>Modifier level for Omen of Whittling: an unrevealed desecrated mod counts as level 1 (community-reported, e.g. dadsofexile.com; not confirmed by GGG — ties with real level-1 mods are split randomly), unknown lines as highest.</summary>
+    internal static int ModLevel(ItemMod mod) => mod.Unrevealed ? 1 : mod.Def?.Level ?? int.MaxValue;
 
     /// <summary>Prefix and suffix candidate lists for adding one mod (before choosing the affix type).</summary>
     internal (List<ModCandidate> prefixes, List<ModCandidate> suffixes) AdditionCandidates(Item item, int minLevel, IReadOnlyList<OmenDef> omens, Rarity targetRarity,
@@ -260,7 +273,7 @@ public sealed class CraftingEngine
 
     /// <summary>The chosen values of the first added mod, or a random roll.</summary>
     internal static List<double> ValuesFor(ManualChoice? choice, ModDef mod, Rng rng) =>
-        choice?.Values.Count > 0 && choice.Values[0] is { } values ? values : RollValues(mod, rng);
+        choice?.Values.Count > 0 && choice.Values[0] is { } values ? CheckedValues(mod, values) : RollValues(mod, rng);
 
     /// <summary>Add one mod (random or chosen). Returns false when nothing could be added.</summary>
     internal bool AddOne(ExecuteContext ctx, AffixType? forcedType, ManualChoice? choice, IReadOnlyList<OmenDef> omens)
@@ -366,6 +379,24 @@ public sealed class CraftingEngine
     }
 
     internal static List<double> RollValues(ModDef mod, Rng rng) => mod.Ranges.Select(rng.RollRange).ToList();
+
+    /// <summary>New values of the mod at <paramref name="index"/> with the ranges of <paramref name="mod"/>: the manually chosen ones (checked) or a random roll.</summary>
+    internal static List<double> RerolledValues(ExecuteContext ctx, int index, ModDef mod)
+    {
+        return ctx.Choice?.Rerolls?.TryGetValue(index, out var values) == true ? CheckedValues(mod, values) : RollValues(mod, ctx.Rng);
+    }
+
+    /// <summary>Manually chosen values of a mod: one per range, each inside its range.</summary>
+    private static List<double> CheckedValues(ModDef mod, IReadOnlyList<double> values)
+    {
+        if (values.Count != mod.Ranges.Count) throw new InvalidChoiceException($"{mod.Text} needs {mod.Ranges.Count} value(s).");
+        for (int r = 0; r < mod.Ranges.Count; r++)
+        {
+            var (lo, hi) = ModText.Bounds(mod.Ranges[r]);
+            if (values[r] < lo || values[r] > hi) throw new InvalidChoiceException($"{values[r]} is outside the range {lo}–{hi} of {mod.Text}.");
+        }
+        return values.ToList();
+    }
 
     private static readonly string[] NamePrefixes = { "Dusk", "Grim", "Storm", "Soul", "Blood", "Vortex", "Ghoul", "Doom", "Rune", "Spirit", "Dread", "Sol", "Chimeric", "Corpse", "Empyrean", "Torment", "Glyph", "Phoenix", "Viper", "Havoc" };
     private static readonly string[] NameSuffixes = { "Spire", "Song", "Bane", "Roar", "Whisper", "Call", "Grasp", "Beacon", "Weaver", "Cry", "Hold", "Bite", "Knell", "Ward", "Mark", "Blow", "Tear", "Brand", "Coil", "Spell" };

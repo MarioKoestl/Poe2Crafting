@@ -84,6 +84,19 @@ public class CraftingEngineTests
     }
 
     [DataFact]
+    public void Base_items_have_local_icons()
+    {
+        var data = TestData.Data!;
+        var wwwroot = Path.Combine(data.DataFolder, "..", "src", "POE2Crafting.Web", "wwwroot");
+        var visible = data.Bases.Where(b => !b.Hidden).ToList();
+        var withIcon = visible.Where(b => data.BaseIconUrl(b) is { } url && File.Exists(Path.Combine(wwwroot, url))).ToList();
+        // a few special bases have no poe2db page (Shrine Sceptre variants)
+        Assert.True(withIcon.Count >= visible.Count - 5, $"{visible.Count - withIcon.Count} bases without icon: {string.Join(", ", visible.Except(withIcon).Take(10))}");
+        foreach (var name in new[] { TestBases.Amulet, TestBases.Ring, TestBases.Wand, TestBases.Staff, TestBases.Jewel, TestBases.Body })
+            Assert.NotNull(data.BaseIconUrl(data.FindBase(name)));
+    }
+
+    [DataFact]
     public void Hinekoras_lock_fixes_the_outcome_of_each_action_until_the_item_changes()
     {
         var engine = TestData.Engine!;

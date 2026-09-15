@@ -96,15 +96,17 @@ public class FromItemPlannerTests
     {
         // magic amulet with a spirit prefix, target adds a rarity suffix: an essence would make the item rare
         var (current, rarity) = SpiritAmuletAndRaritySuffix();
-        var augment = TestData.Engine!.Preview(current, TestData.Action("Orb of Augmentation")).Additions.Single(a => a.Mod.Id == rarity.Id);
 
         var plan = Plan(current, Rarity.Magic, Defs(current).Append(rarity), better: false);
         var strategy = Assert.Single(plan.Strategies);
         var step = Assert.Single(strategy.Steps);
         Assert.Contains("Augmentation", step.CurrencyName);
-        Assert.Equal(augment.Probability, step.SuccessProbability, 6);
-        // the best rarity suffix tier is level 40: Greater (min level 44) and Perfect (70) augmentations cannot roll it, and the step says so
-        Assert.Contains(step.Notes, n => n.Contains("Greater Orb of Augmentation") && n.Contains("(minimum modifier level 44: no matching tier can roll)"));
+        var chosen = TestData.Engine!.Preview(current, TestData.Action(step.CurrencyName)).Additions.Single(a => a.Mod.Id == rarity.Id);
+        Assert.Equal(chosen.Probability, step.SuccessProbability, 6);
+        // the best rarity suffix tier (level 40) is below the minimum modifier level of Greater (44) and Perfect (70) orbs, but as the highest tier
+        // of its type it still rolls — and more likely, since the low tiers of the other types are gone
+        var normal = TestData.Engine.Preview(current, TestData.Action("Orb of Augmentation")).Additions.Single(a => a.Mod.Id == rarity.Id);
+        Assert.True(step.SuccessProbability > normal.Probability);
     }
 
     [DataFact]
@@ -190,8 +192,11 @@ public class FromItemPlannerTests
     [InlineData(10, 1, 3, 0.3)]
     [InlineData(3, 1, 3, 1.0)]
     [InlineData(10, 0, 3, 0.0)]
-    public void Reveal_chance_draws_options_without_replacement(int pool, int good, int options, double expected) =>
-        Assert.Equal(expected, FromItemPlanner.RevealChance(pool, good, options), 6);
+    public void Offer_chance_draws_equally_weighted_options_without_replacement(int pool, int good, int options, double expected)
+    {
+        var candidates = Enumerable.Range(0, pool).Select(i => new ModCandidate { Mod = new ModDef { Id = i.ToString() }, Weight = 1, Probability = 1.0 / pool }).ToList();
+        Assert.Equal(expected, POE2Crafting.Core.Engine.Operations.DesecrateOperation.OfferChance(candidates, c => int.Parse(c.Mod.Id) < good, options), 6);
+    }
 
     [DataFact]
     public void Better_tiers_count_as_hits()
@@ -202,5 +207,83 @@ public class FromItemPlannerTests
 
         double Chance(bool better) => Plan(baseItem, Rarity.Magic, new[] { t3 }, better).Strategies.Max(s => s.OverallProbability);
         Assert.True(Chance(true) > Chance(false));
+    }
+
+    [DataFact]
+    public void Target_tier_above_the_item_level_is_reported_at_once()
+    {
+        var current = TestData.NewItem(TestBases.Amulet, Rarity.Rare, itemLevel: 79);
+        var best = TestData.Pool!.AllForBase(TestData.NewItem(TestBases.Amulet, Rarity.Rare, itemLevel: 100), AffixType.Suffix)
+            .Where(m => m.Family == "ColdResistance").MaxBy(m => m.Level)!;
+        Assert.True(best.Level > 79);
+
+        var plan = Plan(current, Rarity.Rare, new[] { best });
+        Assert.Empty(plan.Strategies);
+        var problem = Assert.Single(plan.Problems);
+        Assert.Contains($"needs item level {best.Level}", problem);
+        Assert.Contains("item level 79", problem);
+    }
+
+    [DataFact]
+    public void Quality_target_above_the_maximum_uses_essence_of_the_breach_and_removes_its_modifier_again()
+    {
+        // rare amulet: +3 spell skills and a junk suffix; target: the skills with 34% caster quality (maximum without Breach: 20%)
+        var current = TestData.NewItem(TestBases.Amulet, Rarity.Rare, itemLevel: 82);
+        var skills = TestData.BestMod(current, "Level of all Spell Skills");
+        current.AddMod(skills);
+        current.AddMod(TestData.BestMod(current, "Lightning Resistance", AffixType.Suffix));
+        var spec = TestData.Spec(Rarity.Rare, new[] { skills });
+        spec.MinQuality = 34;
+        spec.QualityType = "Caster";
+
+        var plan = TestData.Plan(current, spec);
+        Assert.True(plan.Strategies.Count > 0, string.Join(" / ", plan.Problems));
+        var steps = plan.Strategies[0].Steps;
+        Assert.Contains(steps, s => s.CurrencyName.Contains("Essence of the Breach"));
+        var final = steps.Last().Result!;
+        Assert.True(final.Quality >= 34);
+        Assert.Equal("Caster", final.QualityType);
+        Assert.DoesNotContain(final.Affixes, m => m.Def?.Family == ModFamilies.MaximumQuality);
+    }
+
+    [DataFact]
+    public void Minimum_modifier_level_keeps_the_highest_tier_of_a_type_that_would_be_excluded()
+    {
+        // Mario's case: magic Gold Amulet "of the Sorcerer" + Perfect Orb of Augmentation can give "Hoarder's" (rarity prefix, level 47)
+        var amulet = TestData.NewItem(TestBases.Amulet, Rarity.Magic, itemLevel: 81);
+        amulet.AddMod(TestData.BestMod(amulet, "Level of all Spell Skills"));
+        var additions = TestData.Engine!.Preview(amulet, TestData.Action("Perfect Orb of Augmentation")).Additions;
+
+        var rarity = Assert.Single(additions, a => a.Mod.Family == "ItemFoundRarityIncreasePrefix");
+        Assert.Equal("Hoarder's", rarity.Mod.Name);
+        // types with tiers of level 70+ keep only those
+        Assert.All(additions.Where(a => a.Mod.Level < 70), a =>
+            Assert.Equal(a.Mod.Level, additions.Where(b => ModTiers.TierGroupKey(b.Mod) == ModTiers.TierGroupKey(a.Mod)).Max(b => b.Mod.Level)));
+    }
+
+    [DataFact]
+    public void Unrevealed_desecrated_mod_of_the_target_is_kept_or_added_without_a_reveal()
+    {
+        var wand = TestData.NewItem(TestBases.Wand, Rarity.Rare).WithAffixes(1, 1);
+        var withUnrevealed = TestData.Apply(wand, "Preserved Jawbone", new ManualChoice { SpecialOutcome = "Unrevealed Suffix" }).Item;
+
+        // the target taken over from the item keeps the unrevealed suffix (counts as a slot)
+        var draft = new POE2Crafting.Core.Drafting.ItemDraft(TestData.Data!);
+        draft.LoadFrom(withUnrevealed, copyValues: false);
+        Assert.Single(draft.Selection.Unrevealed);
+        Assert.Equal(2, draft.Selection.Count(AffixType.Suffix));
+        Assert.Single(draft.BuildItem()!.UnrevealedMods);
+        var spec = new TargetItemSpec { TargetRarity = Rarity.Rare, TargetMods = draft.Selection.ToTargetMods(TestData.Pool!, withUnrevealed, true) };
+
+        // same item as source: nothing to do (the unrevealed mod is not an unwanted one)
+        var done = TestData.Plan(withUnrevealed, spec);
+        Assert.Equal("already-done", Assert.Single(done.Strategies).Id);
+
+        // without it: a bone adds an unrevealed suffix, no reveal step
+        var plan = TestData.Plan(wand, spec);
+        Assert.True(plan.Strategies.Count > 0, string.Join(" / ", plan.Problems));
+        var final = plan.Strategies[0].Steps.Last().Result!;
+        Assert.Contains(final.UnrevealedMods, u => u.Mod.Affix == AffixType.Suffix);
+        Assert.DoesNotContain(plan.Strategies[0].Steps, s => s.CurrencyName.Contains("Well of Souls"));
     }
 }

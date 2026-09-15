@@ -12,7 +12,9 @@ namespace POE2Crafting.Core.Drafting;
 public sealed record SelectedMod(ModDef Mod, string Category)
 {
     public List<double?> Values { get; init; } = Mod.StatRanges.Select(_ => (double?)null).ToList();
-    public ModKind Kind => ModCategories.KindFor(Category);
+    /// <summary>The kind of a mod taken over from an item (e.g. a desecrated mod the data only knows as a normal one); null = by category.</summary>
+    public ModKind? KindOnItem { get; init; }
+    public ModKind Kind => KindOnItem ?? ModCategories.KindFor(Category);
 
     /// <summary>
     /// Allowed input range of a value: the roll range, or for planner targets of mods that catalyst quality enhances up to the value at the
@@ -33,13 +35,16 @@ public sealed class ModSelection
 {
     private readonly SimAssumptions _rules;
     private readonly List<SelectedMod> _mods = new();
+    private readonly List<ItemMod> _unrevealed = new();
 
     public ModSelection(SimAssumptions rules) => _rules = rules;
 
     public IReadOnlyList<SelectedMod> Mods => _mods;
+    /// <summary>Unrevealed desecrated modifiers taken over from an item: they occupy a slot and are wanted as unrevealed ones (what they reveal into is open).</summary>
+    public IReadOnlyList<ItemMod> Unrevealed => _unrevealed;
     /// <summary>Item class of the draft's base (slot limits differ per class, e.g. jewels).</summary>
     public string ItemClass { get; set; } = "";
-    public int Count(AffixType type) => _mods.Count(m => m.Mod.AffixType == type);
+    public int Count(AffixType type) => _mods.Count(m => m.Mod.AffixType == type) + _unrevealed.Count(m => m.Affix == type);
     public int Max(Rarity rarity, AffixType type) => _rules.MaxAffixes(ItemClass, rarity, type, _mods.Select(m => m.Mod.Text));
 
     public bool Contains(ModDef mod) => _mods.Any(m => m.Mod.Id == mod.Id);
@@ -67,8 +72,13 @@ public sealed class ModSelection
     /// <summary>Take over a mod that is already on an item (no browser rules: the item may hold mods the browser does not offer).</summary>
     public void AddExisting(ItemMod mod, bool withValues)
     {
+        if (mod.Unrevealed)
+        {
+            _unrevealed.Add(mod.Clone());
+            return;
+        }
         if (mod.Def == null || Contains(mod.Def)) return;
-        var selected = new SelectedMod(mod.Def, mod.Def.Category);
+        var selected = new SelectedMod(mod.Def, mod.Def.Category) { KindOnItem = mod.Kind };
         if (withValues)
             for (int i = 0; i < selected.Values.Count && i < mod.Values.Count; i++) selected.Values[i] = mod.Values[i];
         _mods.Add(selected);
@@ -79,7 +89,16 @@ public sealed class ModSelection
         if (index >= 0 && index < _mods.Count) _mods.RemoveAt(index);
     }
 
-    public void Clear() => _mods.Clear();
+    public void RemoveUnrevealedAt(int index)
+    {
+        if (index >= 0 && index < _unrevealed.Count) _unrevealed.RemoveAt(index);
+    }
+
+    public void Clear()
+    {
+        _mods.Clear();
+        _unrevealed.Clear();
+    }
 
     /// <summary>Drop mods that no longer fit after a rarity or item level change (latest picks go first).</summary>
     public void Enforce(Rarity rarity, int itemLevel)
@@ -87,13 +106,17 @@ public sealed class ModSelection
         _mods.RemoveAll(m => m.Mod.Level > itemLevel);
         foreach (var type in AffixTypeExtensions.Both)
             while (Count(type) > Max(rarity, type))
-                _mods.Remove(_mods.Last(m => m.Mod.AffixType == type));
+            {
+                // latest picks go first, unrevealed mods of the item last
+                if (_mods.LastOrDefault(m => m.Mod.AffixType == type) is { } picked) _mods.Remove(picked);
+                else _unrevealed.Remove(_unrevealed.Last(m => m.Affix == type));
+            }
     }
 
     /// <summary>
     /// Build an item from a base and the selection; unset values (and the implicit) use the middle of their ranges.
     /// With a <paramref name="template"/> of the same base (an edited item), everything but its affixes is kept (implicits, quality, sockets,
-    /// runes, corruption, unrevealed mods) and re-added mods keep their fractured flag.
+    /// runes, corruption) and re-added mods keep their fractured flag; the unrevealed mods of the selection are added as they were.
     /// </summary>
     public Item BuildItem(BaseItem baseItem, Rarity rarity, int itemLevel, Item? template = null)
     {
@@ -106,10 +129,11 @@ public sealed class ModSelection
             var mod = item.AddMod(sm.Mod, sm.Kind, sm.Values.Take(sm.Mod.Ranges.Count).Select((v, i) => v ?? ModText.MidValue(sm.Mod.Ranges[i])).ToList());
             mod.Fractured = edit && template!.Affixes.Any(a => a.ModId == sm.Mod.Id && a.Fractured);
         }
+        item.Mods.AddRange(_unrevealed.Select(m => m.Clone()));
         return item;
     }
 
-    /// <summary>Target specs for the planner; set values become minimum values.</summary>
+    /// <summary>Target specs for the planner; set values become minimum values, unrevealed mods stay wanted as unrevealed ones of their type.</summary>
     public List<TargetMod> ToTargetMods(ModPool pool, Item virtualItem, bool allowBetterTiers) => _mods.Select(m => new TargetMod
     {
         Family = m.Mod.Family ?? m.Mod.Name,
@@ -120,5 +144,5 @@ public sealed class ModSelection
         DisplayTier = pool.DisplayTier(m.Mod, virtualItem),
         AllowBetterTiers = allowBetterTiers,
         MinValues = m.Values.Any(v => v != null) ? m.Values.ToList() : null,
-    }).ToList();
+    }).Concat(_unrevealed.Select(m => TargetMod.UnrevealedOf(m.Affix))).ToList();
 }

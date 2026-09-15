@@ -57,6 +57,66 @@
             </div>
         }
 
+        @if (Action.Currency.Op == CurrencyOps.Reveal)
+        {
+            <RevealOptions Action="Action" OnChoose="Choose" />
+        }
+
+        @if (preview.Quality is { } quality)
+        {
+            var shownQuality = _quality;
+            var effects = QualityEffects.For(item, quality.Type, shownQuality, quality.Max, Session.Engine.Data.HighestReachableQuality);
+            <div class="distribution-section">
+                <h4>@quality.Type quality after this catalyst: @(shownQuality)%</h4>
+                <div class="quality-choice">
+                    <label for="quality-after">Quality after use</label>
+                    <input id="quality-after" type="number" class="tm-value" min="@quality.Min" max="@quality.Max" step="1" value="@_quality"
+                           @onchange="e => SetQuality(e.Value, quality)" />
+                    <span class="hint">@(quality.Min)–@(quality.Max)%</span>
+                    <button class="btn btn-sm btn-primary" @onclick="() => Choose(new ManualChoice { Quality = _quality })">Apply with @(_quality)%</button>
+                </div>
+                @if (effects.Count > 0)
+                {
+                    <div class="table-scroll">
+                        <table class="materials-table quality-effects">
+                            <thead>
+                                <tr>
+                                    <th>Now</th>
+                                    <th>At @(shownQuality)%</th>
+                                    <th>At max @(quality.Max)%</th>
+                                    <th title="The next quality above @(shownQuality)% where the value rises">Next step</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var effect in effects)
+                                {
+                                    <tr @key="effect.Index">
+                                        <td>@effect.Now</td>
+                                        <td class="@(effect.At != effect.Now ? "value-up" : "")">@effect.At</td>
+                                        <td>@effect.AtMax</td>
+                                        <td>
+                                            @if (effect.NextStepQuality is { } next)
+                                            {
+                                                @($"{effect.NextStepText} at {next}%")
+                                                @if (next > quality.Max)
+                                                {
+                                                    <span class="hint" title="Above this item's maximum quality: raise the maximum first (e.g. Essence of the Breach)"> (above max)</span>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <text>—</text>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        }
+
         @if (preview.Removals.Count > 0)
         {
             <div class="distribution-section">
@@ -65,12 +125,12 @@
                     @foreach (var r in preview.Removals.OrderByDescending(x => x.Probability))
                     {
                         var pending = _pendingRemoval == r.Index;
-                        <DistributionRow @key="r.Index" Probability="r.Probability" Label="@r.Mod.DisplayText()" BarClass="removal" Highlighted="pending"
-                                         ChooseLabel="@(!_manualMode ? null : preview.TwoStepChoice ? (pending ? "Chosen" : "Pick") : "Choose")"
+                        <DistributionRow @key="r.Index" Probability="r.Probability" Label="@r.Mod.DisplayText()" Mod="r.Mod.Def" BarClass="removal" Highlighted="pending"
+                                         ChooseLabel="@(preview.TwoStepChoice ? (pending ? "Chosen" : "Pick") : "Choose")"
                                          OnChoose="() => ChooseRemoval(r.Index, preview.TwoStepChoice)" />
                     }
                 </div>
-                @if (_manualMode && preview.TwoStepChoice)
+                @if (preview.TwoStepChoice)
                 {
                     <div class="note">
                         @if (_pendingRemoval == null)
@@ -87,27 +147,39 @@
             </div>
         }
 
-        @if (preview.Additions.Count > 0)
+        @foreach (var (additions, label, isFirst) in new[] { (preview.Additions, preview.AdditionLabel, true), (preview.OtherAdditions, preview.OtherAdditionLabel, false) })
         {
-            var choosable = _manualMode && preview.AdditionsChoosable && preview.Additions.Count > 1;
-            <div class="distribution-section">
+            if (additions.Count == 0) continue;
+            var choosable = preview.AdditionsChoosable && preview.Additions.Count + preview.OtherAdditions.Count > 1;
+            var showAll = _showAll.Contains(isFirst);
+            <div class="distribution-section" @key="@(isFirst ? "additions" : "other-additions")">
                 <h4>
-                    @(preview.AdditionLabel ?? $"Addition ({preview.AddCount}x)")
-                    @if (preview.PrefixProbability + preview.SuffixProbability > 0)
+                    @(label ?? $"Addition ({preview.AddCount}x)")
+                    @if (isFirst && preview.PrefixProbability + preview.SuffixProbability > 0)
                     {
                         <text> — P(@UiFormat.Probability(preview.PrefixProbability)) / S(@UiFormat.Probability(preview.SuffixProbability))</text>
                     }
                 </h4>
                 <div class="addition-list">
-                    @foreach (var c in preview.Additions.OrderByDescending(c => c.Probability).Take(_showAll ? int.MaxValue : CollapsedAdditions))
+                    @foreach (var c in additions.OrderByDescending(c => c.Probability).Take(showAll ? int.MaxValue : CollapsedAdditions))
                     {
-                        var modId = c.Mod.Id;
-                        <ModOptionRow @key="modId" Mod="c.Mod" Item="item" Probability="c.Probability"
-                                      OnChoose="@(choosable ? EventCallback.Factory.Create(this, () => Choose(new ManualChoice { AddModIds = { modId } })) : default)" />
+                        var mod = c.Mod;
+                        <ModOptionRow @key="mod.Id" Mod="mod" Item="item" Probability="c.Probability"
+                                      OnChoose="@(choosable ? EventCallback.Factory.Create(this, () => PickAddition(mod)) : default)" />
+                        @if (_pickedAddition == mod.Id)
+                        {
+                            <div class="value-pick" @key="@($"pick-{mod.Id}")">
+                                <span class="hint">Rolled value:</span>
+                                <ModValueInputs Mod="mod" Values="_pickedValues" />
+                                <button class="btn btn-xs btn-primary" @onclick="ApplyPickedAddition">Apply</button>
+                                <button class="btn btn-xs" @onclick="() => Choose(new ManualChoice { AddModIds = { mod.Id } })" title="Add this modifier with random values">Random value</button>
+                                <button class="btn btn-xs" @onclick="() => _pickedAddition = null">Cancel</button>
+                            </div>
+                        }
                     }
-                    @if (preview.Additions.Count > CollapsedAdditions && !_showAll)
+                    @if (additions.Count > CollapsedAdditions && !showAll)
                     {
-                        <button class="btn btn-xs show-all-btn" @onclick="() => _showAll = true">Show all @(preview.Additions.Count) candidates...</button>
+                        <button class="btn btn-xs show-all-btn" @onclick="() => _showAll.Add(isFirst)">Show all @(additions.Count) candidates...</button>
                     }
                 </div>
             </div>
@@ -119,17 +191,37 @@
                 <h4>Outcomes</h4>
                 @foreach (var (outcome, chance) in preview.SpecialOutcomes)
                 {
-                    <DistributionRow @key="outcome" Probability="chance" Label="@outcome" BarClass="special" ChooseLabel="@(_manualMode ? "Choose" : null)"
+                    <DistributionRow @key="outcome" Probability="chance" Label="@outcome" BarClass="special" ChooseLabel="Choose"
                                      OnChoose="() => Choose(new ManualChoice { SpecialOutcome = outcome })" />
                 }
             </div>
         }
 
+        @if (preview.ValueRerolls.Count > 0)
+        {
+            <div class="distribution-section">
+                <h4>Rolled values</h4>
+                <p class="hint">Set the value each modifier rolls (inside its tier range), then apply.</p>
+                <div class="reroll-list">
+                    @foreach (var reroll in preview.ValueRerolls)
+                    {
+                        var index = reroll.Index;
+                        var affix = item.Mods[index].Affix;
+                        var values = _rerolls[index];
+                        <div class="add-row reroll-row @AffixUi.Css(affix, "-row")" @key="index">
+                            <span class="add-type @AffixUi.TypeCss(affix)">@AffixUi.Letter(affix)</span>
+                            <span class="add-stat">@reroll.Mod.Text</span>
+                            <ModLevel Mod="reroll.Mod" />
+                            <ModValueInputs Mod="reroll.Mod" Values="values" />
+                        </div>
+                    }
+                </div>
+                <button class="btn btn-sm btn-primary" @onclick="ApplyRerolls">Apply these values</button>
+            </div>
+        }
+
         <div class="sticky-actions">
             <button class="btn btn-primary btn-execute" @onclick="() => Choose(null)">@(item.Foreseeing ? "Apply (foreseen)" : "Roll (Random)")</button>
-            <button class="btn @(_manualMode ? "btn-active" : "")" @onclick="ToggleManual">
-                @(_manualMode ? "Hide Choices" : "Choose Outcome")
-            </button>
         </div>
     }
 </div>
@@ -142,13 +234,22 @@
     /// <summary>Additions listed before "Show all".</summary>
     private const int CollapsedAdditions = 20;
 
-    private bool _manualMode;
-    private bool _showAll;
+    /// <summary>Addition lists shown completely (true = the first list, false = the other one).</summary>
+    private readonly HashSet<bool> _showAll = new();
     private int? _pendingRemoval;
     private CraftAction? _lastAction;
     private Item? _lastItem;
     private StepPreview? _preview;
     private CraftResult? _foreseen;
+    /// <summary>Values chosen per rerolled mod index (Divine Orb), starting from the item's current values.</summary>
+    private Dictionary<int, List<double>> _rerolls = new();
+    private IReadOnlyList<ValueReroll> _rerollsFor = Array.Empty<ValueReroll>();
+    /// <summary>The added modifier whose values are being entered, and those values.</summary>
+    private string? _pickedAddition;
+    private List<double> _pickedValues = new();
+    /// <summary>Chosen catalyst quality after the use, starting at the rolled default (the table shows its effect).</summary>
+    private int _quality;
+    private QualityChoice? _qualityFor;
 
     protected override void OnParametersSet()
     {
@@ -156,24 +257,58 @@
         if (!ReferenceEquals(Action, _lastAction) || !ReferenceEquals(Session.CurrentItem, _lastItem))
         {
             _pendingRemoval = null;
-            _showAll = false;
+            _pickedAddition = null;
+            _showAll.Clear();
             _lastAction = Action;
             _lastItem = Session.CurrentItem;
             _foreseen = Session.Foresee(Action);
         }
         _preview = Session.Preview(Action, _pendingRemoval);
+        if (Session.CurrentItem is { } item && !_preview.ValueRerolls.SequenceEqual(_rerollsFor))
+        {
+            _rerollsFor = _preview.ValueRerolls;
+            _rerolls = _preview.ValueRerolls.ToDictionary(r => r.Index, r => StartValues(item.Mods[r.Index], r.Mod));
+        }
+        if (_preview.Quality != _qualityFor)
+        {
+            _qualityFor = _preview.Quality;
+            _quality = _preview.Quality?.Default ?? 0;
+        }
     }
+
+    private void SetQuality(object? input, QualityChoice choice)
+    {
+        if (int.TryParse(input?.ToString(), out var q)) _quality = Math.Clamp(q, choice.Min, choice.Max);
+    }
+
+    /// <summary>Input start values: the mod's current values where they fit the new ranges (a Flux may change them), otherwise the middle.</summary>
+    private static List<double> StartValues(ItemMod current, ModDef mod) =>
+        mod.Ranges.Select((range, r) =>
+        {
+            var (lo, hi) = ModText.Bounds(range);
+            return r < current.Values.Count && current.Values[r] >= lo && current.Values[r] <= hi ? current.Values[r] : ModText.MidValue(range);
+        }).ToList();
+
+    /// <summary>
+    /// Choose an added modifier: one without rolled values is applied at once; otherwise its value inputs open below the row (start: the middle of the ranges).
+    /// </summary>
+    private Task PickAddition(ModDef mod)
+    {
+        if (!ModValueInputs.HasRolledValues(mod)) return Choose(new ManualChoice { AddModIds = { mod.Id } });
+        _pickedAddition = mod.Id;
+        _pickedValues = ModValueInputs.MiddleValues(mod);
+        return Task.CompletedTask;
+    }
+
+    private Task ApplyPickedAddition() =>
+        Choose(new ManualChoice { AddModIds = { _pickedAddition! }, Values = { _pickedValues.ToList() } });
+
+    private Task ApplyRerolls() => Choose(new ManualChoice { Rerolls = _rerolls.ToDictionary(e => e.Key, e => e.Value.ToList()) });
 
     private void SetPendingRemoval(int? index)
     {
         _pendingRemoval = index;
         _preview = Session.Preview(Action, _pendingRemoval);
-    }
-
-    private void ToggleManual()
-    {
-        _manualMode = !_manualMode;
-        SetPendingRemoval(null);
     }
 
     private Task ChooseRemoval(int index, bool twoStep)

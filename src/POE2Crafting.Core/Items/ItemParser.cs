@@ -8,8 +8,9 @@ namespace POE2Crafting.Core.Items;
 /// Parses the in-game item text (Ctrl+C or Ctrl+Alt+C) into an <see cref="Item"/>.
 /// Sections are separated by "--------". Handles:
 ///   - Header section (item class, rarity, name, base; magic names contain the base)
-///   - Properties (quality, sockets "S S", item level, requirements, weapon/armour stats)
+///   - Properties (quality "Quality: +20% (Life Modifiers)" or "Quality (Caster Modifiers): +34% (augmented)", sockets "S S", item level, ...)
 ///   - Modifier headers: { [Crafted|Desecrated|Fractured] Prefix|Suffix Modifier "Name" (Tier: N) — Tag, Tag }
+///   - "{ Enhancement }" blocks (instilled notables: "Allocates Dominion — Unscalable Value")
 ///   - Stat lines with optional (min-max) ranges and trailing markers (implicit), (rune), (enchant), (crafted), (desecrated), (fractured)
 ///   - Footer flags (Corrupted, Mirrored, Sanctified, Unidentified, Fractured Item)
 /// With game data, mods are resolved against the base's own mod pool by affix name, text template and value ranges.
@@ -21,10 +22,14 @@ public static class ItemParser
     private static readonly Regex ModHeader = new(
         @"^\{\s*(?<flags>(?:(?:Crafted|Desecrated|Fractured|Unrevealed|Unique|Implicit|Corrupted|Enchant)\s+)*)(?<affix>Prefix|Suffix)?\s*Modifier(?:\s+""(?<name>[^""]*)"")?\s*(?:\((?:Tier|Rank):\s*(?<tier>\d+)\))?\s*(?:[—–-]\s*(?<tags>.*?))?\s*\}\s*$",
         RegexOptions.Compiled);
-    private static readonly Regex QualityRx = new(@"^Quality:\s*\+(\d+)%(?:\s*\((.+?)\))?", RegexOptions.Compiled);
+    /// <summary>"Quality: +20% (Life Modifiers)" or the newer "Quality (Caster Modifiers): +34% (augmented)".</summary>
+    private static readonly Regex QualityRx = new(@"^Quality(?:\s*\((?<type>[^)]+)\))?:\s*\+(?<amount>\d+)%(?:\s*\((?<note>.+?)\))?", RegexOptions.Compiled);
+    private static readonly Regex EnhancementHeader = new(@"^\{\s*Enhancement\s*\}$", RegexOptions.Compiled);
+    /// <summary>Reminder after a stat line that belongs to no value ("Allocates Dominion — Unscalable Value").</summary>
+    private static readonly Regex UnscalableSuffix = new(@"\s+[—–-]\s+Unscalable Value\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex ItemLevelRx = new(@"^Item Level:\s*(\d+)", RegexOptions.Compiled);
     private static readonly Regex SocketsRx = new(@"^Sockets:\s*(.*)$", RegexOptions.Compiled);
-    private static readonly Regex PropertyRx = new(@"^[A-Z][A-Za-z' ]{1,40}:(\s|$)", RegexOptions.Compiled);
+    private static readonly Regex PropertyRx = new(@"^[A-Z][A-Za-z'() ]{1,40}:(\s|$)", RegexOptions.Compiled);
     private static readonly Regex MarkerRx = new(@"\s*\((implicit|rune|enchant|crafted|desecrated|fractured|augmented)\)\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static readonly string[] QualityNotCatalyst = { "augmented", "unmet" };
@@ -101,7 +106,7 @@ public static class ItemParser
     {
         if (lines.Count == 1 && ApplyFlag(item, lines[0])) return;
 
-        bool hasHeader = lines.Any(l => ModHeader.IsMatch(l));
+        bool hasHeader = lines.Any(l => ModHeader.IsMatch(l) || EnhancementHeader.IsMatch(l));
         if (!hasHeader && lines.All(l => PropertyRx.IsMatch(l) && !l.StartsWith(ItemTextFormat.GrantsSkill, StringComparison.Ordinal)))
         {
             ParseProperties(item, lines);
@@ -132,8 +137,8 @@ public static class ItemParser
             var qm = QualityRx.Match(line);
             if (qm.Success)
             {
-                item.Quality = int.Parse(qm.Groups[1].Value, CultureInfo.InvariantCulture);
-                var qt = qm.Groups[2].Success ? qm.Groups[2].Value : null;
+                item.Quality = int.Parse(qm.Groups["amount"].Value, CultureInfo.InvariantCulture);
+                var qt = qm.Groups["type"].Success ? qm.Groups["type"].Value : qm.Groups["note"].Success ? qm.Groups["note"].Value : null;
                 item.QualityType = qt != null && !QualityNotCatalyst.Contains(qt, StringComparer.OrdinalIgnoreCase) ? qt : null;
                 continue;
             }
@@ -167,10 +172,15 @@ public static class ItemParser
                     Flush();
                     _current = FromHeader(header);
                 }
+                else if (EnhancementHeader.IsMatch(line))
+                {
+                    Flush();
+                    _current = new ItemMod { Kind = ModKind.Enchant };
+                }
                 else if (IsReminderText(line)) continue;
                 else if (MarkerRx.Match(line) is { Success: true } marker) AddMarkedLine(line[..marker.Index], marker.Groups[1].Value.ToLowerInvariant());
-                else if (_current == null) AddMarkedLine(line, "");
-                else _statTexts.Add(line);
+                else if (_current == null) AddMarkedLine(UnscalableSuffix.Replace(line, ""), "");
+                else _statTexts.Add(UnscalableSuffix.Replace(line, ""));
             }
             Flush();
         }
@@ -215,6 +225,7 @@ public static class ItemParser
             if (_current == null) return;
             _current.RawText = string.Join("\n", _statTexts);
             _current.Values = ModText.RolledTokens(_current.RawText).Select(t => t.Value).ToList();
+            if (ItemTextFormat.UnrevealedLineAffix(_current.RawText) is { } unrevealed) _current.MarkUnrevealed(unrevealed);
             if (_statTexts.Count > 0 || _current.ModId.Length > 0 || _current.Unrevealed) _item.Mods.Add(_current);
             _current = null;
             _statTexts.Clear();
@@ -234,11 +245,14 @@ public static class ItemParser
         var signature = ModText.StatSignature(mod.RawText);
         var itemRanges = ModText.RolledTokens(mod.RawText).Where(t => t.Range != null).Select(t => t.Range!).ToList();
 
-        var candidates = data.Mods.Where(def =>
-            ModCategories.CanAppearAs(def.Category, mod.Kind) &&
+        List<ModDef> Candidates(ModKind kind) => data.Mods.Where(def =>
+            ModCategories.CanAppearAs(def.Category, kind) &&
             (mod.Affix == AffixType.Other || def.AffixType == mod.Affix) &&
             def.IsOnAnyPage(pages) &&
             (def.StatSignature == signature || def.AltTexts.Any(t => ModText.StatSignature(t) == signature))).ToList();
+        var candidates = Candidates(mod.Kind);
+        // the game reveals some desecrated mods that the data only knows as normal mods (e.g. "Countess'" Spirit on amulets): keep the kind
+        if (candidates.Count == 0 && mod.Kind == ModKind.Desecrated) candidates = Candidates(ModKind.Explicit);
         if (candidates.Count == 0) return;
 
         var name = mod.ModId;

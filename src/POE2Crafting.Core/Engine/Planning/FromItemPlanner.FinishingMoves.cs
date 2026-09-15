@@ -72,11 +72,8 @@ internal sealed partial class FromItemPlanner
     {
         if (_data.FindInstill(target.InstillNotable!) is not { } recipe || !_engine.CheckInstill(item, recipe).Ok) return null;
         var result = _engine.Instill(item, recipe);
-        var action = CraftAction.Of(new CurrencyDef { Name = $"Instill {recipe.Notable}" });
-        var materials = recipe.Emotions
-            .Select(e => _data.EmotionCurrency(e)?.Name ?? $"Liquid {e}")
-            .GroupBy(n => n).ToDictionary(g => g.Key, g => g.Count());
-        return new Move(action, 1, 0, result.Item, $"instill {recipe.Notable} with {string.Join(" → ", recipe.Emotions)}", Materials: materials,
+        var action = CraftAction.Of(new CurrencyDef { Name = recipe.ActionName });
+        return new Move(action, 1, 0, result.Item, $"instill {recipe.Notable} with {string.Join(" → ", recipe.Emotions)}", Materials: _data.InstillMaterials(recipe),
             Note: string.Join("; ", recipe.Effects));
     }
 }

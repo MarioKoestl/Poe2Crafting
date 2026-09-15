@@ -69,5 +69,6 @@ research/*.zip
 
 .claude/settings.local.json
 
-# personal crafting projects (saved automatically by the app)
+# personal crafting projects (saved automatically by the app) and guides saved from the simulator
 projects/
+saved-guides/

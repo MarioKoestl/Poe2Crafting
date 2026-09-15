@@ -36,6 +36,9 @@ public static class AffixTypeExtensions
 /// <summary>A modifier instance on an item: a ModDef plus rolled values.</summary>
 public sealed class ItemMod
 {
+    /// <summary>Mod id of an unrevealed desecrated modifier.</summary>
+    public const string UnrevealedDesecratedId = "unrevealed_desecrated";
+
     public string ModId { get; set; } = "";
     public ModKind Kind { get; set; } = ModKind.Explicit;
     /// <summary>Prefix/Suffix slot; Other for implicits, enchantments and lines not (yet) matched to a mod.</summary>
@@ -54,6 +57,17 @@ public sealed class ItemMod
 
     [JsonIgnore] public ModDef? Def { get; set; }
 
+    /// <summary>Make this an unrevealed desecrated modifier of the given affix type (e.g. the game's "Desecrated Suffix" line).</summary>
+    public void MarkUnrevealed(AffixType affix)
+    {
+        ModId = UnrevealedDesecratedId;
+        Kind = ModKind.Desecrated;
+        Affix = affix;
+        Unrevealed = true;
+        RawText = null;
+        Values.Clear();
+    }
+
     public ItemMod Clone()
     {
         var c = (ItemMod)MemberwiseClone();
@@ -68,6 +82,9 @@ public sealed class ItemMod
         if (Def == null) return RawText ?? ModId;
         return ModText.Render(Def.Text, Values);
     }
+
+    /// <summary>The line with the roll ranges, as the advanced item text (Ctrl+Alt+C) shows it.</summary>
+    public string AdvancedText() => Def != null && !Unrevealed ? ModText.RenderWithRanges(Def.Text, Values) : DisplayText();
 
     /// <summary>The values of <see cref="ModDef.StatRanges"/>: the rolled values, or the fixed numbers of a text without ranges.</summary>
     [JsonIgnore] public List<double> StatValues => Def == null || Def.Ranges.Count > 0 ? Values : Def.StatRanges.Select(r => r[0]).ToList();
@@ -221,11 +238,11 @@ public sealed class Item
         return AddMod(def, kind, values, source, index);
     }
 
-    /// <summary>A copy without its known affixes: implicits, enchantments, runes, quality, flags and unrevealed mods stay (e.g. to re-add edited affixes).</summary>
+    /// <summary>A copy without its known and unrevealed affixes (to re-add edited ones): implicits, enchantments, runes, quality, flags and unmatched text lines stay.</summary>
     public Item WithoutAffixes()
     {
         var copy = Clone();
-        copy.Mods.RemoveAll(m => m.IsAffix && m.Def != null && !m.Unrevealed);
+        copy.Mods.RemoveAll(m => m.IsAffix && m.Def != null || m.Unrevealed);
         return copy;
     }
 
@@ -245,6 +262,8 @@ public sealed class Item
         if (Base != null) ItemClass = Base.ItemClass;
         foreach (var m in Mods)
         {
+            // imported before the game's unrevealed format was known: "{ Suffix Modifier "of the Veil" }" + "Desecrated Suffix"
+            if (!m.Unrevealed && m.Def == null && ItemTextFormat.UnrevealedLineAffix(m.RawText) is { } unrevealed) m.MarkUnrevealed(unrevealed);
             m.Def ??= data.FindMod(m.ModId);
             if (m.Def != null && m.Affix == AffixType.Other && m.Def.AffixType != AffixType.Other) m.Affix = m.Def.AffixType;
         }

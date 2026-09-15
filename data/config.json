@@ -44,6 +44,10 @@
   },
   "onlyOneCraftedModPerItem": true,
   "revealOptionCount": 3,
+  "revealGuaranteedExclusiveOptions": 1,
+  "revealRegularOptionChance": 0.5,
+  "revealBossOmenOnlyLichModifiers": true,
+  "revealNote": "Well of Souls: 3 options, at least one exclusive Lich modifier (expertgamereviews.com; Mario in game: Cold Resistance + Mana Regeneration + an Amanamu mod on a ring). poe2db: reveals 'may include base modifiers'. ASSUMPTIONS (no data): each further option is a regular modifier of the same affix type with revealRegularOptionChance (by their normal weights and the bone's minimum modifier level), otherwise another Lich modifier; boss omens make every option a mod of that Lich (poe2db: 'Reveal desecrated modifiers may include base modifiers. Unless you use Omen to guarantee named modifiers'; Mario in game: 3 Kurgal options with Omen of the Blackblooded)",
   "putrefactionUnrevealedCount": 6
  }
 }

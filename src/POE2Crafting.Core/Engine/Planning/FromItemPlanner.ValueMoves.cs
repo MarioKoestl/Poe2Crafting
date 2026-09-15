@@ -4,7 +4,10 @@ using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Core.Engine.Planning;
 
-/// <summary>Moves for value targets (Divine Orb, catalyst quality, Essence of the Breach) and catalyst quality for Omen of Catalysing Exaltation.</summary>
+/// <summary>
+/// Moves for value targets (Divine Orb, catalyst quality), Essence of the Breach when value or quality targets need more than the maximum quality,
+/// and catalyst quality for Omen of Catalysing Exaltation.
+/// </summary>
 internal sealed partial class FromItemPlanner
 {
     /// <summary>Highest catalyst quality considered when looking for the quality a value target needs.</summary>
@@ -12,13 +15,15 @@ internal sealed partial class FromItemPlanner
 
     private readonly Dictionary<string, int?> _neededQuality = new();
 
-    private IEnumerable<Move> ValueMoves(Item item, ItemGoal goal, Tools tools)
+    private IEnumerable<Move> ValueMoves(Item item, ItemGoal goal, TargetItemSpec target, Tools tools)
     {
-        if (goal.ValuesUnmet.Count == 0) yield break;
-        if (goal.AffixesDone && DivineMove(item, goal) is { } divine) yield return divine;
-        foreach (var m in CatalystValueMoves(item, goal)) yield return m;
-        if (tools.HasFlag(Tools.Essences) && NeedsMaximumQuality(item, goal))
-            foreach (var m in MaximumQualityMoves(item, goal, tools)) yield return m;
+        if (goal.ValuesUnmet.Count > 0)
+        {
+            if (goal.AffixesDone && DivineMove(item, goal) is { } divine) yield return divine;
+            foreach (var m in CatalystValueMoves(item, goal)) yield return m;
+        }
+        if (tools.HasFlag(Tools.Essences) && NeedsMaximumQuality(item, goal, target))
+            foreach (var m in MaximumQualityMoves(item, goal, target, tools)) yield return m;
     }
 
     /// <summary>Catalyst currencies whose quality enhances some of the mods (e.g. Reaver Catalyst for "+# to Level of all Melee Skills").</summary>
@@ -50,10 +55,17 @@ internal sealed partial class FromItemPlanner
         return _neededQuality[key] = needed;
     }
 
-    /// <summary>Catalyst quality would meet the value targets, but only above the item's maximum quality (and no "+% to Maximum Quality" mod yet).</summary>
-    private bool NeedsMaximumQuality(Item item, ItemGoal goal) =>
-        goal.ValuesUnmet.Count > 0 && !item.HasFamily(ModFamilies.MaximumQuality)
-        && NeededCatalystQuality(item, goal) is { } needed && needed > _engine.MaxQuality(item);
+    /// <summary>The quality the unmet value targets (via catalyst quality) and the quality target need, or null when neither needs any.</summary>
+    private int? NeededQuality(Item item, ItemGoal goal, TargetItemSpec target)
+    {
+        int? values = goal.ValuesUnmet.Count > 0 ? NeededCatalystQuality(item, goal) : null;
+        int? quality = goal.QualityUnmet ? target.MinQuality : null;
+        return values == null ? quality : quality == null ? values : Math.Max(values.Value, quality.Value);
+    }
+
+    /// <summary>Value or quality targets need more quality than the item's maximum (and it has no "+% to Maximum Quality" mod yet).</summary>
+    private bool NeedsMaximumQuality(Item item, ItemGoal goal, TargetItemSpec target) =>
+        !item.HasFamily(ModFamilies.MaximumQuality) && NeededQuality(item, goal, target) is { } needed && needed > _engine.MaxQuality(item);
 
     /// <summary>Catalysts of the type that enhances unmet value mods, repeated until their values reach the target (within the maximum quality).</summary>
     private IEnumerable<Move> CatalystValueMoves(Item item, ItemGoal goal)
@@ -72,9 +84,9 @@ internal sealed partial class FromItemPlanner
     /// The value targets need more catalyst quality than the maximum: an essence adding "+% to Maximum Quality" (Essence of the Breach) on an
     /// unwanted mod's place. The added mod is temporary — the quality stays when it is whittled off later (level 1 = lowest level).
     /// </summary>
-    private IEnumerable<Move> MaximumQualityMoves(Item item, ItemGoal goal, Tools tools)
+    private IEnumerable<Move> MaximumQualityMoves(Item item, ItemGoal goal, TargetItemSpec target, Tools tools)
     {
-        if (goal.ToRemove.Count == 0 || NeededCatalystQuality(item, goal) is not { } needed) yield break;
+        if (goal.ToRemove.Count == 0 || NeededQuality(item, goal, target) is not { } needed) yield break;
 
         bool RaisesMaximum(CurrencyDef c) => _data.EssenceModsFor(c, item).Any(m => m.Family == ModFamilies.MaximumQuality);
         foreach (var (action, preview) in Actions(item, CurrencyOps.Essence, tools, RaisesMaximum))
@@ -84,7 +96,7 @@ internal sealed partial class FromItemPlanner
             if (EssenceRemoval(item, action, preview, goal, choice) is not { } removal || _engine.MaxQuality(removal.Next) < needed) continue;
             yield return new Move(action, added.Probability * removal.Ok, removal.Brick, removal.Next,
                 $"{added.Mod.Text} (temporary) so catalyst quality can reach {needed}%",
-                Note: $"The value targets need {needed}% catalyst quality. The \"{added.Mod.Text}\" modifier has level {added.Mod.Level} — Omen of Whittling + Chaos Orb removes it again once the quality is applied (assumption: the quality stays).");
+                Note: $"The targets need {needed}% quality. The \"{added.Mod.Text}\" modifier has level {added.Mod.Level} — Omen of Whittling + Chaos Orb removes it again once the quality is applied (assumption: the quality stays).");
         }
     }
 

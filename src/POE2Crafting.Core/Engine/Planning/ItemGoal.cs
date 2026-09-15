@@ -18,6 +18,8 @@ public sealed class ItemGoal
     /// <summary>The item is already above the target rarity (rarity cannot be lowered).</summary>
     public bool RarityImpossible { get; private set; }
     public bool QualityUnmet { get; private set; }
+    /// <summary>The quality target is above the item's maximum quality: a "+% to Maximum Quality" modifier has to come (and go) first.</summary>
+    public bool MaximumQualityMissing { get; private set; }
     /// <summary>Augment sockets that still have to be added for the wanted augments.</summary>
     public int SocketsMissing { get; private set; }
     public List<AugmentTarget> AugmentsMissing { get; } = new();
@@ -29,9 +31,12 @@ public sealed class ItemGoal
     /// <summary>Everything about prefixes and suffixes is done (only values, quality and finishing work may be left).</summary>
     public bool AffixesDone => Missing.Count == 0 && ToRemove.Count == 0 && RarityGap == 0;
 
-    /// <summary>Remaining work: removals + additions + rarity steps + one value reroll if any value target is unmet + finishing steps.</summary>
+    /// <summary>
+    /// Remaining work: removals + additions + rarity steps + one value reroll if any value target is unmet + finishing steps; a quality target above
+    /// the maximum quality adds the "+% to Maximum Quality" modifier and its removal, so adding that modifier counts as progress.
+    /// </summary>
     public int Distance => ToRemove.Count + Missing.Count + RarityGap + (ValuesUnmet.Count > 0 ? 1 : 0)
-                           + (QualityUnmet ? 1 : 0) + SocketsMissing + AugmentsMissing.Count + (InstillMissing ? 1 : 0);
+                           + (QualityUnmet ? 1 : 0) + (MaximumQualityMissing ? 2 : 0) + SocketsMissing + AugmentsMissing.Count + (InstillMissing ? 1 : 0);
     public bool Reached => Distance == 0;
 
     public bool IsKept(int index) => _keptIndices.Contains(index);
@@ -44,15 +49,16 @@ public sealed class ItemGoal
     public static bool QualityMet(Item item, TargetItemSpec target) =>
         item.Quality >= (target.MinQuality ?? 0) && (target.QualityType == null || item.QualityType == target.QualityType && item.Quality > 0);
 
-    public static ItemGoal Compare(Item item, TargetItemSpec target)
+    /// <param name="defaultMaxQuality">Maximum quality of bases without their own (config defaultMaxQuality).</param>
+    public static ItemGoal Compare(Item item, TargetItemSpec target, int defaultMaxQuality)
     {
         var goal = new ItemGoal();
-        var open = target.TargetMods.Where(t => t.ResolvedMod != null).ToList();
+        var open = target.TargetMods.Where(t => t.ResolvedMod != null || t.Unrevealed).ToList();
         for (int i = 0; i < item.Mods.Count; i++)
         {
             var mod = item.Mods[i];
             if (!mod.IsAffix) continue;
-            var match = open.FirstOrDefault(t => t.Matches(mod.Def));
+            var match = open.FirstOrDefault(t => t.Matches(mod));
             if (match == null)
             {
                 goal.ToRemove.Add((i, mod));
@@ -68,6 +74,7 @@ public sealed class ItemGoal
         goal.RarityImpossible = item.Rarity > target.TargetRarity;
         goal.RarityGap = Math.Max(0, (int)target.TargetRarity - (int)item.Rarity);
         goal.QualityUnmet = !QualityMet(item, target);
+        goal.MaximumQualityMissing = goal.QualityUnmet && target.MinQuality > item.MaxQuality(defaultMaxQuality);
 
         var socketed = item.Runes.ToList();
         foreach (var augment in target.Augments)

@@ -25,10 +25,12 @@ var engine = new CraftingEngine(gameData);
 builder.Services.AddSingleton(gameData);
 builder.Services.AddSingleton(engine.Pool);
 builder.Services.AddSingleton(engine);
-builder.Services.AddSingleton(new GuideLibrary(engine));
 // crafting projects: saved automatically next to the data folder (or configured path)
 var projectsFolder = Path.GetFullPath(builder.Configuration["ProjectsFolder"] ?? Path.Combine(dataFolder, "..", "projects"));
 builder.Services.AddSingleton(sp => new ProjectStore(projectsFolder, gameData, sp.GetRequiredService<ILogger<ProjectStore>>()));
+// guides saved from simulator histories: next to the projects (or configured path)
+var savedGuidesFolder = Path.GetFullPath(builder.Configuration["SavedGuidesFolder"] ?? Path.Combine(dataFolder, "..", "saved-guides"));
+builder.Services.AddSingleton(sp => new GuideCatalog(savedGuidesFolder, new GuideLibrary(engine), engine, sp.GetRequiredService<ILogger<GuideCatalog>>()));
 builder.Services.AddScoped<CraftingSession>();
 builder.Services.AddScoped<PlannerState>();
 

@@ -8,6 +8,10 @@ public static class ModTiers
     /// <summary>Mods with the same key are tiers of one another (same family, stat, affix type and category).</summary>
     public static string TierGroupKey(ModDef mod) => $"{mod.Category}|{mod.Gen}|{mod.Family ?? mod.Name}|{mod.StatSignature}";
 
+    /// <summary>A tier of the reference's tier group at the reference's level or higher (higher level = better tier).</summary>
+    public static bool IsSameOrBetterTier(ModDef mod, ModDef reference) =>
+        mod.Id == reference.Id || (TierGroupKey(mod) == TierGroupKey(reference) && mod.Level >= reference.Level);
+
     /// <summary>Ranks every mod with a family among the given set (e.g. all mods of a base, or all mods globally).</summary>
     public static Dictionary<string, Rank> RankAll(IEnumerable<ModDef> mods)
     {

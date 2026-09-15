@@ -1,17 +1,27 @@
-@* Guides tab, right pane: the chosen guide — summary, key ideas, every step played through the engine (StrategyGuide), what comes afterwards. *@
-@inject GuideLibrary Guides
+@* Guides tab, right pane: the chosen guide — summary, starting base, key ideas, every step (StrategyGuide), what comes afterwards.
+   Curated guides are played through the engine; guides saved from the simulator show the recorded path and can be deleted. *@
+@inject GuideCatalog Guides
 @inherits PlannerStateComponentBase
 @inject CraftingSession Session
 
-@if (Guides.Find(Planner.SelectedGuideId) is not { } guide)
+@if (Guides.Find(Planner.SelectedGuideId) is not { } walkthrough)
 {
-    <EmptyState Icon="⟡" Hint="Every step is played through the simulator: chances, mod changes and the item after each step.">Choose a guide to see its steps.</EmptyState>
+    <EmptyState Icon="⟡" Hint="Every step shows its chance, mod changes and the item after it. Save your own crafts from the simulator's history.">Choose a guide to see its steps.</EmptyState>
 }
 else
 {
-    var walkthrough = Guides.Walkthrough(guide);
+    var guide = walkthrough.Guide;
+    var recorded = Guides.FindRecorded(guide.Id);
     <h3 class="pane-title">@guide.Name</h3>
     <p class="guide-summary">@guide.Summary</p>
+    @if (walkthrough.Start is { } baseItem)
+    {
+        <div class="guide-source">Base: <strong>@baseItem.BaseName</strong> (@baseItem.Rarity, ilvl @baseItem.ItemLevel)</div>
+    }
+    @if (recorded != null)
+    {
+        <div class="guide-source">Saved from the simulator on @recorded.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
+    }
     @if (guide.Source != null)
     {
         <div class="guide-source">
@@ -30,16 +40,32 @@ else
     <PlannerProblems Problems="walkthrough.Problems" />
     <GuideBulletList Title="How it works" Items="guide.KeyIdeas" />
 
-    @if (walkthrough.Start is { } start)
-    {
-        <div class="guide-actions">
+    <div class="guide-actions">
+        @if (walkthrough.Start is { } start)
+        {
             <button class="btn btn-sm btn-primary" @onclick="() => LoadStart(guide, start)"
                     title="Add the starting item to the current project and switch to the simulator to craft along">
                 Craft along in the Simulator
             </button>
-        </div>
+            <GuideExportButton Export="@(new GuideExport(guide.Name, guide.Summary, start, walkthrough.Strategy)
+                                       { KeyIdeas = guide.KeyIdeas, NextSteps = guide.NextSteps, Problems = walkthrough.Problems, Source = guide.Source })" />
+        }
+        @if (recorded != null)
+        {
+            @if (_confirmDelete == guide.Id)
+            {
+                <button class="btn btn-sm btn-danger" @onclick="() => Delete(guide.Id)">Delete?</button>
+            }
+            else
+            {
+                <button class="btn btn-sm" title="Delete this saved guide" @onclick="() => _confirmDelete = guide.Id">🗑 Delete</button>
+            }
+        }
+    </div>
+    @if (walkthrough.Start is { } first)
+    {
         <div class="strategy-detail">
-            <StrategyGuide Strategy="walkthrough.Strategy" Start="start" />
+            <StrategyGuide Strategy="walkthrough.Strategy" Start="first" />
         </div>
     }
 
@@ -50,9 +76,18 @@ else
     /// <summary>The guide's starting item was loaded into the session.</summary>
     [Parameter] public EventCallback OnStartItemLoaded { get; set; }
 
+    private string? _confirmDelete;
+
     private Task LoadStart(CraftingGuide guide, Item start)
     {
         Session.SetItem(start.Clone(), $"Guide: {guide.Name}");
         return OnStartItemLoaded.InvokeAsync();
+    }
+
+    private void Delete(string id)
+    {
+        Guides.Delete(id);
+        _confirmDelete = null;
+        Planner.SelectGuide(null);
     }
 }

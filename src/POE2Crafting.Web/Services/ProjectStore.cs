@@ -1,6 +1,6 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using POE2Crafting.Core.Data;
+using POE2Crafting.Core.Engine.Planning;
 using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Web.Services;
@@ -25,13 +25,6 @@ public sealed class ProjectItem
     [JsonIgnore] public Item? Current => History.Count > 0 ? History[^1].Item : null;
 }
 
-public sealed class HistoryEntry
-{
-    public string Action { get; init; } = "";
-    public Item Item { get; init; } = null!;
-    public string Summary { get; init; } = "";
-}
-
 /// <summary>What the project selector lists.</summary>
 public sealed record ProjectSummary(string Id, string Name, int ItemCount, DateTime UpdatedAt);
 
@@ -41,30 +34,15 @@ public sealed record ProjectSummary(string Id, string Name, int ItemCount, DateT
 /// </summary>
 public sealed class ProjectStore
 {
-    private const string Extension = ".json", TempExtension = ".json.tmp";
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() },
-    };
-
-    private readonly string _folder;
+    private readonly JsonDocumentFolder<CraftingProject> _files;
     private readonly GameData _data;
-    private readonly ILogger<ProjectStore> _logger;
     private readonly object _lock = new();
     private Dictionary<string, ProjectSummary>? _summaries;
 
     public ProjectStore(string folder, GameData data, ILogger<ProjectStore> logger)
     {
-        _folder = folder;
+        _files = new JsonDocumentFolder<CraftingProject>(folder, logger);
         _data = data;
-        _logger = logger;
-        Directory.CreateDirectory(folder);
-        // a crash between writing and renaming leaves a temp file behind
-        foreach (var stale in Directory.EnumerateFiles(folder, "*" + TempExtension)) TryDelete(stale);
     }
 
     /// <summary>All projects, most recently changed first.</summary>
@@ -72,10 +50,7 @@ public sealed class ProjectStore
     {
         lock (_lock)
         {
-            _summaries ??= Directory.EnumerateFiles(_folder, "*" + Extension)
-                .Select(TryRead)
-                .OfType<CraftingProject>()
-                .ToDictionary(p => p.Id, Summary);
+            _summaries ??= _files.ReadAll().ToDictionary(p => p.Id, Summary);
             return _summaries.Values.OrderByDescending(p => p.UpdatedAt).ToList();
         }
     }
@@ -85,35 +60,21 @@ public sealed class ProjectStore
     {
         lock (_lock)
         {
-            var project = TryRead(PathOf(id));
+            var project = _files.Read(id);
             foreach (var entry in project?.Items.SelectMany(i => i.History) ?? Enumerable.Empty<HistoryEntry>()) entry.Item.Bind(_data);
             return project;
         }
     }
 
-    /// <summary>Write the project (atomically: temp file, flushed, then renamed).</summary>
+    /// <summary>Write the project (atomically).</summary>
     /// <param name="touch">Update the "last changed" time (false for pure selection changes).</param>
     /// <exception cref="IOException">The file could not be written.</exception>
     public void Save(CraftingProject project, bool touch = true)
     {
         if (touch) project.UpdatedAt = DateTime.UtcNow;
-        var json = JsonSerializer.SerializeToUtf8Bytes(project, JsonOptions);
         lock (_lock)
         {
-            var path = PathOf(project.Id);
-            try
-            {
-                using (var stream = new FileStream(path + ".tmp", FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    stream.Write(json);
-                    stream.Flush(flushToDisk: true);
-                }
-                File.Move(path + ".tmp", path, overwrite: true);
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                throw new IOException($"The project file {path} is not writable.", ex);
-            }
+            _files.Write(project.Id, project);
             _summaries?.Remove(project.Id);
             _summaries?.Add(project.Id, Summary(project));
         }
@@ -123,39 +84,10 @@ public sealed class ProjectStore
     {
         lock (_lock)
         {
-            TryDelete(PathOf(id));
-            TryDelete(PathOf(id) + ".tmp");
+            _files.Delete(id);
             _summaries?.Remove(id);
         }
     }
 
     private static ProjectSummary Summary(CraftingProject p) => new(p.Id, p.Name, p.Items.Count, p.UpdatedAt);
-
-    private string PathOf(string id) => Path.Combine(_folder, Path.GetFileName(id) + Extension);
-
-    /// <summary>A project file, or null when it is missing, locked or not a (valid) project: one bad file never breaks the list.</summary>
-    private CraftingProject? TryRead(string path)
-    {
-        try
-        {
-            return File.Exists(path) ? JsonSerializer.Deserialize<CraftingProject>(File.ReadAllBytes(path), JsonOptions) : null;
-        }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or NotSupportedException)
-        {
-            _logger.LogWarning(ex, "Skipping unreadable project file {Path}", path);
-            return null;
-        }
-    }
-
-    private void TryDelete(string path)
-    {
-        try
-        {
-            File.Delete(path);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            _logger.LogWarning(ex, "Could not delete {Path}", path);
-        }
-    }
 }

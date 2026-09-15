@@ -43,7 +43,7 @@ public static class ItemTextWriter
                 var flags = (mod.Fractured ? "Fractured " : "") + (mod.Unrevealed ? "Unrevealed " : ItemTextFormat.HeaderFlag(mod.Kind));
                 var tier = mod.Def != null && mod.Kind == ModKind.Explicit ? $" (Tier: {tierOf(mod.Def)})" : "";
                 sb.AppendLine($"{{ {flags}{mod.Affix} Modifier \"{mod.Def?.Name ?? mod.ModId}\"{tier} }}");
-                if (!mod.Unrevealed) sb.AppendLine(mod.DisplayText());
+                if (!mod.Unrevealed) sb.AppendLine(mod.AdvancedText());
             }
         }
 
@@ -61,7 +61,7 @@ public static class ItemTextWriter
     /// <summary>An implicit-like line with its marker; "Grants Skill:" lines are implicit without one.</summary>
     private static string ImplicitLine(ItemMod mod)
     {
-        var text = mod.DisplayText();
+        var text = mod.AdvancedText();
         bool unmarked = mod.Kind == ModKind.Implicit && text.StartsWith(ItemTextFormat.GrantsSkill, StringComparison.Ordinal);
         return unmarked ? text : $"{text} ({ItemTextFormat.Marker(mod.Kind)})";
     }

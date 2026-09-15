@@ -1,3 +1,5 @@
+using POE2Crafting.Core.Data;
+
 namespace POE2Crafting.Core.Items;
 
 /// <summary>The vocabulary of the in-game item text (Ctrl+Alt+C), shared by <see cref="ItemParser"/>, <see cref="ItemTextWriter"/> and <see cref="ItemDiff"/>.</summary>
@@ -7,6 +9,13 @@ public static class ItemTextFormat
     public const string GrantsSkill = "Grants Skill:";
     public const string RuneMarker = "rune";
     public const string FracturedMarker = "fractured";
+
+    /// <summary>The game shows an unrevealed desecrated modifier as the line "Desecrated Prefix"/"Desecrated Suffix" (header name e.g. "of the Veil").</summary>
+    private static readonly System.Text.RegularExpressions.Regex UnrevealedLine = new(@"^Desecrated (?<affix>Prefix|Suffix)$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>The affix type of an unrevealed desecrated modifier's line, or null for other lines.</summary>
+    public static AffixType? UnrevealedLineAffix(string? line) =>
+        line != null && UnrevealedLine.Match(line.Trim()) is { Success: true } m ? Enum.Parse<AffixType>(m.Groups["affix"].Value) : null;
 
     /// <summary>Kinds with their trailing line marker ("+20 to Strength (crafted)") and modifier header flag ("{ Crafted Prefix Modifier ... }").</summary>
     private static readonly (ModKind Kind, string Marker, string HeaderFlag)[] Kinds =

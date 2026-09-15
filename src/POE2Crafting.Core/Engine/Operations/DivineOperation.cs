@@ -24,8 +24,12 @@ internal sealed class DivineOperation : CraftOperation
         return null;
     }
 
-    public override StepPreview Preview(CraftContext ctx, int? forcedRemovalIndex) =>
-        new() { Notes = { "Every modifier value is rerolled uniformly inside its tier range." } };
+    public override StepPreview Preview(CraftContext ctx, int? forcedRemovalIndex) => new()
+    {
+        Notes = { "Every modifier value is rerolled uniformly inside its tier range." },
+        ValueRerolls = ctx.OmenIs(OmenEffects.ImplicitsOnly) ? new()
+            : ctx.Item.Mods.Select((m, i) => (m, i)).Where(x => Rerollable(x.m)).Select(x => new ValueReroll(x.i, x.m.Def!)).ToList(),
+    };
 
     public override void Execute(ExecuteContext ctx)
     {
@@ -37,7 +41,7 @@ internal sealed class DivineOperation : CraftOperation
                 var m = ctx.Result.Mods[i];
                 if (!Rerollable(m)) continue;
                 var before = m.DisplayText();
-                m.Values = ctx.Choice?.Rerolls?.TryGetValue(i, out var values) == true ? values.ToList() : CraftingEngine.RollValues(m.Def!, ctx.Rng);
+                m.Values = CraftingEngine.RerolledValues(ctx, i, m.Def!);
                 ctx.Details.Add($"{before}  ->  {m.DisplayText()}");
             }
         }

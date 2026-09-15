@@ -37,6 +37,20 @@ public static class ModText
         return RangeRx.Replace(template, m => i < values.Count ? FormatValue(values[i++]) : m.Value);
     }
 
+    /// <summary>The roll ranges of a tier as text ("41–45", several joined by " / "), or null when the tier has no range (fixed values).</summary>
+    public static string? RangesText(IReadOnlyList<double[]> ranges)
+    {
+        var rolled = ranges.Select(Bounds).Where(b => b.Lo != b.Hi).Select(b => $"{FormatValue(b.Lo)}–{FormatValue(b.Hi)}").ToList();
+        return rolled.Count > 0 ? string.Join(" / ", rolled) : null;
+    }
+
+    /// <summary>Like <see cref="Render"/>, but each value keeps its range as the advanced item text shows it: "+74(71-79) to maximum Energy Shield".</summary>
+    public static string RenderWithRanges(string template, IReadOnlyList<double> values)
+    {
+        int i = 0;
+        return RangeRx.Replace(template, m => i < values.Count ? FormatValue(values[i++]) + m.Value : m.Value);
+    }
+
     public static string FormatValue(double v) =>
         v == Math.Floor(v) ? ((long)v).ToString(CultureInfo.InvariantCulture) : v.ToString("0.##", CultureInfo.InvariantCulture);
 
@@ -92,15 +106,6 @@ public static class ModText
         if (min > hi) return 0;
         return IsIntegerRange(lo, hi) ? (hi - Math.Ceiling(min) + 1) / (hi - lo + 1) : (hi - min) / (hi - lo);
     }
-
-    /// <summary>Map rolled values to other ranges keeping each value's relative position (e.g. 38 in 36-40 → 22 in 20-23).</summary>
-    public static List<double> RescaleValues(IReadOnlyList<double> values, IReadOnlyList<double[]> from, IReadOnlyList<double[]> to) =>
-        to.Select((range, i) =>
-        {
-            if (i >= values.Count || i >= from.Count || from[i][1] == from[i][0]) return MidValue(range);
-            double position = (values[i] - from[i][0]) / (from[i][1] - from[i][0]);
-            return RoundForRange(range[0] + position * (range[1] - range[0]), range);
-        }).ToList();
 
     /// <summary>A template with every range replaced by its middle value (e.g. a base implicit for display).</summary>
     public static string RenderMid(string template) => Render(template, ParseRanges(template).Select(MidValue).ToList());

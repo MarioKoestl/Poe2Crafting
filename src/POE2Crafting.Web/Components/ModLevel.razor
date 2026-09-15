@@ -1,0 +1,10 @@
+@* The modifier level (item level the mod needs; Omen of Whittling removes the lowest) as a small label; nothing for unknown mods. *@
+
+@if (Mod != null)
+{
+    <span class="mod-level" title="Modifier level @Mod.Level (required item level; Omen of Whittling removes the lowest)">ilvl @Mod.Level</span>
+}
+
+@code {
+    [Parameter] public ModDef? Mod { get; set; }
+}

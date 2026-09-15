@@ -44,6 +44,11 @@ public sealed class TargetMod
     /// <summary>True (default): any tier at least as good as the target counts as a hit. False: only the exact tier.</summary>
     public bool AllowBetterTiers { get; set; } = true;
 
+    /// <summary>An unrevealed desecrated modifier of <see cref="AffixType"/> is wanted (whatever it reveals into).</summary>
+    public bool Unrevealed { get; set; }
+
+    public static TargetMod UnrevealedOf(AffixType type) => new() { Unrevealed = true, AffixType = type, Category = ModCategories.Desecrated, AllowBetterTiers = false };
+
     /// <summary>Optional minimum value per <see cref="ModDef.StatRanges"/> entry of the mod (null entries = any value).</summary>
     public List<double?>? MinValues { get; set; }
 
@@ -55,17 +60,21 @@ public sealed class TargetMod
         return MinValues.Select((min, i) => min == null || i < values.Count && values[i] >= min.Value).All(ok => ok);
     }
 
+    /// <summary>Whether a modifier on an item satisfies this target: an unrevealed one of the wanted type, or a known mod (see <see cref="Matches(ModDef?)"/>).</summary>
+    public bool Matches(ItemMod mod) => Unrevealed ? mod.Unrevealed && mod.Affix == AffixType : !mod.Unrevealed && Matches(mod.Def);
+
     /// <summary>Whether a rolled/present modifier satisfies this target (same family and affix type, and the tier is good enough).</summary>
     public bool Matches(ModDef? mod)
     {
-        if (mod == null || mod.Family != Family || mod.AffixType != AffixType) return false;
+        if (Unrevealed || mod == null || mod.Family != Family || mod.AffixType != AffixType) return false;
         if (ResolvedMod == null) return true;
         if (!AllowBetterTiers) return mod.Id == ResolvedMod.Id;
         // one family can hold several stats (e.g. Fire/Physical spell skill levels); tiers of one stat differ by level, higher = better
         return mod.StatSignature == ResolvedMod.StatSignature && mod.Level >= ResolvedMod.Level;
     }
 
-    public string DisplayName => ResolvedMod != null
+    public string DisplayName => Unrevealed ? $"Unrevealed Desecrated {AffixType}"
+        : ResolvedMod != null
         ? $"T{DisplayTier ?? ResolvedMod.Tier} {ResolvedMod.DisplayName}"
         : $"{Family} (T{DisplayTier ?? Tier})";
 }

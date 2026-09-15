@@ -1,9 +1,14 @@
 @* Displays an item in a POE-style tooltip layout *@
 @inject ModPool Pool
 @inject GameData Data
+@inject CraftingEngine Engine
+@inject IJSRuntime JS
 
 <div class="item-box @UiFormat.RarityCss(Item.Rarity)">
+    <button type="button" class="item-copy @(_copyState)" title="Copy the item text (game format, Ctrl+Alt+C style) — import it again or paste it anywhere"
+            aria-label="Copy item text" @onclick="CopyText">@(_copyState switch { "copied" => "✓ Copied", "failed" => "Copy failed", _ => "⧉ Copy" })</button>
     <div class="item-header">
+        <CraftIcon Url="@Data.BaseIconUrl(Item.Base)" Class="item-base-icon" />
         @if (Item.Rarity is Rarity.Rare or Rarity.Unique && Item.Name != null)
         {
             <div class="item-name">@Item.Name</div>
@@ -43,6 +48,7 @@
     @* Explicit mods *@
     @foreach (var mod in Item.Affixes.OrderBy(m => m.Affix))
     {
+        var modIndex = Item.Mods.IndexOf(mod);
         var enhanced = Item.QualityEnhances(mod);
         <div class="mod-line @AffixUi.Css(mod.Affix) @(mod.Kind == ModKind.Crafted ? "crafted" : "") @(mod.Fractured ? "fractured" : "") @(mod.Kind == ModKind.Desecrated ? "desecrated" : "")">
             <span class="mod-indicator" title="@ModTooltip(mod)">@AffixUi.Letter(mod.Affix)</span>
@@ -50,12 +56,44 @@
             {
                 <span class="mod-tier" title="@mod.Def.DisplayName">T@(tier)</span>
             }
-            <span class="mod-text" title="@(enhanced ? $"Base value: {mod.DisplayText()}" : null)">@Item.EffectiveText(mod)</span>
-            @if (enhanced) { <span class="mod-badge quality-badge" title="Values increased by @Item.QualityText quality (base: @mod.DisplayText())">+@(Item.Quality)% Q</span> }
-            @if (mod.Fractured) { <span class="mod-badge fractured-badge">Fractured</span> }
-            @if (mod.Kind == ModKind.Crafted) { <span class="mod-badge crafted-badge">Crafted</span> }
-            @if (mod.Kind == ModKind.Desecrated) { <span class="mod-badge desecrated-badge">Desecrated</span> }
+            @* text, tier range and badges wrap together in a narrow column; the level stays on the right *@
+            <span class="mod-body">
+                <span class="mod-text" title="@(enhanced ? $"Base value: {mod.DisplayText()}" : null)">@Item.EffectiveText(mod)</span>
+                @if (!mod.Unrevealed && mod.Def != null && ModText.RangesText(mod.Def.Ranges) is { } range)
+                {
+                    <span class="mod-range" title="Roll range of this tier: @mod.Def.Text">(@range)</span>
+                }
+                @if (enhanced) { <span class="mod-badge quality-badge" title="Values increased by @Item.QualityText quality (base: @mod.DisplayText())">+@(Item.Quality)% Q</span> }
+                @if (mod.Fractured) { <span class="mod-badge fractured-badge">Fractured</span> }
+                @if (mod.Kind == ModKind.Crafted) { <span class="mod-badge crafted-badge">Crafted</span> }
+                @if (mod.Kind == ModKind.Desecrated) { <span class="mod-badge desecrated-badge">Desecrated</span> }
+                @if (mod.Unrevealed)
+                {
+                    <button type="button" class="btn btn-xs reveal-toggle" aria-expanded="@(_openReveals.Contains(modIndex) ? "true" : "false")"
+                            title="What this modifier can be revealed as (bone and omen used: @(mod.Reveal?.Describe() ?? "any"))"
+                            @onclick="() => _openReveals.Toggle(modIndex)">
+                        @(_openReveals.Contains(modIndex) ? "▾" : "▸") can become
+                    </button>
+                }
+            </span>
+            <ModLevel Mod="mod.Def" />
         </div>
+        @if (mod.Unrevealed && _openReveals.Contains(modIndex))
+        {
+            var (exclusive, regular) = Engine.RevealOffers(Item, modIndex);
+            <div class="reveal-pool">
+                <div class="hint">@(mod.Reveal?.Describe() is { Length: > 0 } context ? $"{context} — " : "")% = chance to be offered at the Well of Souls; counts as level 1 for Omen of Whittling until revealed (community-reported)</div>
+                @foreach (var (group, title) in new[] { (exclusive, Engine.RevealExclusiveLabel(Item, modIndex)), (regular, "Other options — regular modifiers") })
+                {
+                    if (group.Count == 0) continue;
+                    <div class="reveal-group-title">@title — @group.Count</div>
+                    @foreach (var c in group)
+                    {
+                        <ModOptionRow @key="c.Mod.Id" Mod="c.Mod" Item="Item" Probability="c.Probability" />
+                    }
+                }
+            </div>
+        }
     }
 
     @* Lines that could not be matched to a prefix/suffix (e.g. unique mods, simple Ctrl+C text) *@
@@ -83,6 +121,31 @@
     [Parameter, EditorRequired] public Item Item { get; set; } = null!;
 
     private SimAssumptions Rules => Data.Config.Assumptions;
+
+    /// <summary>"", "copied" or "failed": feedback of the copy button for a moment.</summary>
+    private string _copyState = "";
+
+    private async Task CopyText()
+    {
+        var text = ItemTextWriter.ToText(Item, mod => Pool.DisplayTier(mod, Item));
+        _copyState = await JS.InvokeAsync<bool>("copyText", text) ? "copied" : "failed";
+        StateHasChanged();
+        await Task.Delay(1500);
+        _copyState = "";
+    }
+
+    /// <summary>Unrevealed mods (by index) whose possible reveals are shown.</summary>
+    private readonly HashSet<int> _openReveals = new();
+
+    /// <summary>Another item (or state) closes the lists: mod indices refer to the shown item.</summary>
+    private Item? _shownItem;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_shownItem, Item)) return;
+        _shownItem = Item;
+        _openReveals.Clear();
+    }
 
     private IEnumerable<ItemMod> ImplicitLines => Item.Mods.Where(m => m.Kind.IsImplicitLine()).OrderBy(m => m.Kind == ModKind.CorruptedImplicit ? 0 : 1);
 

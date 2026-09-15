@@ -13,6 +13,36 @@ window.positionPopover = function (wrap) {
     popover.style.left = left + 'px';
 };
 
+// Copy a text to the clipboard (item text in the game's format); falls back to a hidden textarea where the Clipboard API is unavailable.
+window.copyText = async function (text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        const ok = document.execCommand('copy');
+        area.remove();
+        return ok;
+    }
+};
+
+// Save a text as a file (exported crafting guide).
+window.downloadFile = function (fileName, content, mimeType) {
+    const url = URL.createObjectURL(new Blob([content], { type: mimeType }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 // Mermaid: themed with the page's design tokens (site.css :root)
 (function () {
     if (!window.mermaid) return;

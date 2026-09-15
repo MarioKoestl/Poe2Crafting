@@ -12,12 +12,6 @@ public class ModTextTests
     }
 
     [Fact]
-    public void Rescale_keeps_the_relative_position()
-    {
-        Assert.Equal(new List<double> { 22 }, ModText.RescaleValues(new[] { 38.0 }, new[] { new[] { 36.0, 40.0 } }, new[] { new[] { 20.0, 23.0 } }));
-    }
-
-    [Fact]
     public void Quality_tag_is_read_from_catalyst_and_item_text_names()
     {
         Assert.Equal("life", CatalystDef.QualityTagFor("Life"));
@@ -42,5 +36,21 @@ public class ModTextTests
         Assert.Equal(1.0, ModText.ChanceAtLeast(new[] { 10.0, 20.0 }, 5), 6);
         Assert.Equal(0.0, ModText.ChanceAtLeast(new[] { 10.0, 20.0 }, 21), 6);
         Assert.Equal(new[] { 1.0, 2.0, 3.0 }, ModText.PossibleRolls(new[] { 3.0, 1.0 }));
+    }
+
+    [Fact]
+    public void Ranges_text_shows_rolled_ranges_only()
+    {
+        Assert.Equal("41–45", ModText.RangesText(ModText.ParseRanges("+(41-45)% to Lightning Resistance")));
+        Assert.Equal("5–8 / 10–15", ModText.RangesText(ModText.ParseRanges("Adds (5-8) to (10-15) Fire Damage")));
+        Assert.Null(ModText.RangesText(new List<double[]> { new[] { 3.0, 3.0 } }));
+    }
+
+    [Fact]
+    public void Advanced_text_shows_each_value_with_its_range()
+    {
+        Assert.Equal("+74(71-79) to maximum Energy Shield", ModText.RenderWithRanges("+(71-79) to maximum Energy Shield", new[] { 74.0 }));
+        Assert.Equal("Adds 6(5-8) to 12(10-15) Fire Damage", ModText.RenderWithRanges("Adds (5-8) to (10-15) Fire Damage", new[] { 6.0, 12.0 }));
+        Assert.Equal("+3 to Level of all Spell Skills", ModText.RenderWithRanges("+3 to Level of all Spell Skills", Array.Empty<double>()));
     }
 }

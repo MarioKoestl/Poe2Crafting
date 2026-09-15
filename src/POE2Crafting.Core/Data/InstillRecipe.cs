@@ -18,6 +18,15 @@ public sealed class InstillRecipe
 
     public static string EnchantTextFor(string notable) => EnchantPrefix + notable;
 
+    /// <summary>Name of the instill action in histories and plans ("Instill Flamekeeper").</summary>
+    private const string ActionPrefix = "Instill ";
+
+    [JsonIgnore] public string ActionName => ActionPrefix + Notable;
+
+    /// <summary>The notable of an instill action name, or null for other actions.</summary>
+    public static string? NotableOfAction(string action) =>
+        action.StartsWith(ActionPrefix, StringComparison.Ordinal) ? action[ActionPrefix.Length..] : null;
+
     /// <summary>The notable of an enchantment line ("Allocates Flamekeeper" → Flamekeeper), or null for other lines.</summary>
     public static string? NotableOf(string enchantText) =>
         enchantText.StartsWith(EnchantPrefix, StringComparison.Ordinal) ? enchantText[EnchantPrefix.Length..] : null;

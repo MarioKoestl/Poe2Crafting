@@ -48,7 +48,8 @@ public sealed class CraftingStrategy
             Type = brick > CraftStep.BrickThreshold ? CraftStepType.Brick : chance >= 1 ? CraftStepType.Checkpoint : CraftStepType.Normal,
             RestartFromStepId = chance < 1 ? (Steps.Count > 0 ? Steps[^1].Id : StartStepId) : null,
             Result = result,
-            Materials = action.Omens.Select(o => o.Name).Prepend(action.Currency.Name).ToDictionary(n => n, _ => uses),
+            Materials = (action.Currency.Consumed ? action.Omens.Select(o => o.Name).Prepend(action.Currency.Name) : action.Omens.Select(o => o.Name))
+                .ToDictionary(n => n, _ => uses),
         };
         step.Notes.Add(CraftStep.HitChanceNote(chance));
         return step;
@@ -80,7 +81,8 @@ public sealed class CraftStep
     /// <summary>Expected attempts for this step (1/probability).</summary>
     public double ExpectedAttempts => SuccessProbability > 0 ? 1.0 / SuccessProbability : double.PositiveInfinity;
 
-    public static string HitChanceNote(double p) => $"Hit chance: {p:P2} (1 in {(p > 0 ? Math.Ceiling(1.0 / p).ToString("N0") : "∞")})";
+    /// <summary>"Hit chance: 25.00% (1 in 4)"; rounding noise (0.9999999) must not turn "1 in 1" into "1 in 2".</summary>
+    public static string HitChanceNote(double p) => $"Hit chance: {p:P2} (1 in {(p > 0 ? Math.Ceiling(1.0 / p - 1e-9).ToString("N0") : "∞")})";
 }
 
 public enum CraftStepType

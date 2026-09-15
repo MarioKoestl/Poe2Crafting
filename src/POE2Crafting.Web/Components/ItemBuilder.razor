@@ -1,22 +1,46 @@
-@* Planner: the target item (built from the current item, then edited) and "Path from Current Item". State lives in PlannerState. *@
+@* Planner: source and target items chosen from the open project (the target is loaded into a draft and edited), then "Find Paths".
+   State lives in PlannerState. *@
 @inherits PlannerStateComponentBase
 @inject CraftingSession Session
 
 <div class="item-builder">
-    <h3 class="pane-title">Target Item</h3>
+    <h3 class="pane-title">Source &amp; Target</h3>
 
-    @if (Session.CurrentItem is { Base: not null } currentItem)
+    @if (Session.CurrentItem is not { } currentItem)
     {
-        <div class="hint">
-            <button class="btn btn-sm" @onclick="() => LoadTarget(currentItem)"
-                    title="Take base, rarity, item level, modifiers, quality, augments and instill of the current item as the target, then edit it">
-                Load current item as target
-            </button>
-        </div>
+        <p class="hint">Import or compose an item on the left first; source and target are items of your project.</p>
     }
     else
     {
-        <p class="hint">Import or compose an item on the left first; the target is built from that item.</p>
+        var items = Session.Project?.Items.Where(i => i.Current?.Base != null).ToList() ?? new();
+        <div class="builder-form planner-items">
+            <div class="form-row">
+                <label for="planner-source">Source item:</label>
+                <select id="planner-source" value="@(Session.FindProjectItem(Planner.SourceItemId) != null ? Planner.SourceItemId : "")"
+                        @onchange="e => Planner.SourceItemId = NullIfEmpty(e.Value)">
+                    <option value="">Current item: @currentItem.Title</option>
+                    @foreach (var entry in items)
+                    {
+                        <option value="@entry.Id">@Label(entry, items)</option>
+                    }
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="planner-target">Target item:</label>
+                <select id="planner-target" value="@(Planner.TargetItemId ?? "")" @onchange="e => LoadTarget(NullIfEmpty(e.Value))"
+                        title="Take base, rarity, item level, modifiers, quality, augments and instill of the item as the target, then edit it">
+                    <option value="">-- choose the target --</option>
+                    @foreach (var entry in items)
+                    {
+                        <option value="@entry.Id">@Label(entry, items)</option>
+                    }
+                </select>
+                @if (Session.FindProjectItem(Planner.TargetItemId) != null)
+                {
+                    <button class="btn btn-sm" title="Load the item again (discards the edits of the target)" @onclick="() => LoadTarget(Planner.TargetItemId)">Reload</button>
+                }
+            </div>
+        </div>
     }
 
     @if (Draft.Base != null)
@@ -45,11 +69,12 @@
         }
         <div class="sticky-actions">
             @{
-                var sameBase = Session.CurrentItem != null && ReferenceEquals(Session.CurrentItem.Base, Draft.Base);
+                var source = SourceItem;
+                var sameBase = source != null && ReferenceEquals(source.Base, Draft.Base);
             }
             <button class="btn btn-primary btn-execute" @onclick="FindPaths" disabled="@(!sameBase || Planner.Planning)"
-                    title="@(sameBase ? "Calculate the steps from the current item to this target" : "The item on the left has a different base: load it as target again")">
-                @(Planner.Planning ? "Planning…" : "Path from Current Item")
+                    title="@(sameBase ? "Calculate the steps from the source item to this target" : "Source and target have different bases: choose items of the same base")">
+                @(Planner.Planning ? "Planning…" : "Find Paths")
             </button>
         </div>
     }
@@ -61,15 +86,31 @@
 
     private ItemDraft Draft => Planner.Draft;
 
-    private void LoadTarget(Item item)
+    /// <summary>The chosen project item, or the current item (also when the chosen one is gone, e.g. after switching projects).</summary>
+    private Item? SourceItem => Session.FindProjectItem(Planner.SourceItemId) ?? Session.CurrentItem;
+
+    private static string? NullIfEmpty(object? value) => value?.ToString() is { Length: > 0 } id ? id : null;
+
+    /// <summary>"Title (Rare, 1P/2S, 3 steps)", numbered when several project items have the same title.</summary>
+    private static string Label(ProjectItem entry, List<ProjectItem> items)
     {
+        var item = entry.Current!;
+        var sameTitle = items.Where(i => i.Current!.Title == item.Title).ToList();
+        var number = sameTitle.Count > 1 ? $" #{sameTitle.IndexOf(entry) + 1}" : "";
+        return $"{item.Title}{number} ({item.Rarity}, {item.PrefixCount}P/{item.SuffixCount}S, {UiFormat.Plural(entry.History.Count - 1, "step")})";
+    }
+
+    private void LoadTarget(string? itemId)
+    {
+        Planner.TargetItemId = itemId;
+        if (Session.FindProjectItem(itemId) is not { } item) return;
         Draft.LoadFrom(item, copyValues: false);
         Planner.Finishing.LoadFrom(item, Session.Engine.Data);
     }
 
     private async Task FindPaths()
     {
-        if (Session.CurrentItem is not { } start) return;
+        if (SourceItem is not { } start) return;
         var spec = new TargetItemSpec
         {
             TargetRarity = Draft.Rarity,

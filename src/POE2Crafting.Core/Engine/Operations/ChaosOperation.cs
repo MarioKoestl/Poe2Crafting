@@ -15,9 +15,17 @@ internal sealed class ChaosOperation : CraftOperation
         var removals = CraftingEngine.Removable(ctx.Item, ctx.Omens);
         var considered = forcedRemovalIndex is { } fi ? removals.Where(r => r.Index == fi).ToList() : removals;
         var notes = new List<string>();
-        if (ctx.OmenIs(OmenEffects.RemoveLowestLevel)) notes.Add("Omen of Whittling: removes the modifier with the lowest modifier level (assumption: ties are broken randomly).");
+        string? removalLabel = null;
+        if (ctx.OmenIs(OmenEffects.RemoveLowestLevel) && removals.Count > 0)
+        {
+            int level = CraftingEngine.ModLevel(removals[0].Mod);
+            removalLabel = $"Removal — lowest modifier level {level}";
+            notes.Add(removals.Count == 1
+                ? $"Omen of Whittling: removes the modifier with the lowest modifier level — here \"{removals[0].Mod.DisplayText()}\" (level {level}) for sure."
+                : $"Omen of Whittling: removes the modifier with the lowest modifier level; {removals.Count} modifiers share level {level}, one of them is removed (assumption: at random).");
+        }
         if (considered.Count == 0)
-            return new StepPreview { RemoveCount = 1, AddCount = 1, Removals = removals, Notes = { "The chosen modifier cannot be removed by this Chaos Orb." }, TwoStepChoice = true };
+            return new StepPreview { RemoveCount = 1, AddCount = 1, Removals = removals, RemovalLabel = removalLabel, Notes = { "The chosen modifier cannot be removed by this Chaos Orb." }, TwoStepChoice = true };
 
         // marginal distribution of the added mod over the (considered) removal outcomes
         var probability = new Dictionary<string, double>();
@@ -36,7 +44,7 @@ internal sealed class ChaosOperation : CraftOperation
         }
         return new StepPreview
         {
-            RemoveCount = 1, AddCount = 1, Removals = removals,
+            RemoveCount = 1, AddCount = 1, Removals = removals, RemovalLabel = removalLabel,
             Additions = candidates.Values.Select(c => new ModCandidate { Mod = c.Mod, Weight = c.Weight, Probability = probability[c.Mod.Id] })
                 .OrderByDescending(x => x.Probability).ToList(),
             PrefixProbability = pPrefix, SuffixProbability = 1 - pPrefix, Notes = notes, TwoStepChoice = true,

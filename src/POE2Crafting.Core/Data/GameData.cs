@@ -43,6 +43,13 @@ public sealed class GameData
     /// <summary>Value multiplier of catalyst quality at <see cref="HighestReachableQuality"/>.</summary>
     public double HighestCatalystFactor => 1 + HighestReachableQuality / 100.0;
 
+    /// <summary>Revealing an unrevealed desecrated modifier, offered like a currency so Omen of Abyssal Echoes can be added (no item is used up).</summary>
+    public static readonly CurrencyDef WellOfSouls = new()
+    {
+        Name = "Well of Souls", Slug = "Abyssal_Depths", Op = CurrencyOps.Reveal, Consumed = false,
+        Description = { "Reveals an unrevealed Desecrated modifier: choose one of the offered modifiers (Omen of Abyssal Echoes rerolls the options once)." },
+    };
+
     public const string EssenceSection = "Essences", AlloySection = "Alloys", CatalystSection = "Catalysts",
         LiquidSection = "Liquid Emotions", AugmentSection = "Runes & Soul Cores";
 
@@ -55,6 +62,8 @@ public sealed class GameData
     private readonly Dictionary<string, List<ModDef>> _essenceModsByName;
     private readonly Dictionary<string, CraftItemInfo> _craftItemByName;
     private readonly Dictionary<string, InstillRecipe> _instillByNotable;
+    /// <summary>Local icon path per poe2db slug (data/icons.json): currencies, omens, augments and base items.</summary>
+    private readonly Dictionary<string, string> _iconsBySlug;
 
     private GameData(string folder, List<BaseItem> bases, List<ModDef> mods, List<CurrencyDef> currencies, List<EssenceDef> essences,
         List<EssenceDef> alloys, List<OmenDef> omens, List<CatalystDef> catalysts, List<ItemClassDef> classes, SimConfig config,
@@ -77,6 +86,7 @@ public sealed class GameData
         AllCurrencies = BuildCurrencies(currencies, essences.Concat(alloys));
         _currencyByName = ByName(AllCurrencies, c => c.Name);
         _currenciesByOp = AllCurrencies.Where(c => c.Op != null).ToLookup(c => c.Op!);
+        _iconsBySlug = iconsBySlug;
         _craftItemByName = BuildCraftItemInfo(iconsBySlug);
 
         HighestReachableQuality = config.Assumptions.DefaultMaxQuality
@@ -113,8 +123,11 @@ public sealed class GameData
             Name = a.Name, Slug = AugmentDef.SlugOf(a.Name), Section = AugmentSection,
             Description = AugmentLines(a), Op = CurrencyOps.SocketAugment, Augment = a,
         });
-        return currencies.Except(liquids).Concat(essenceCurrencies).Concat(catalystCurrencies).Concat(augmentCurrencies).ToList();
+        return currencies.Except(liquids).Concat(essenceCurrencies).Concat(catalystCurrencies).Concat(augmentCurrencies).Append(WellOfSouls).ToList();
     }
+
+    /// <summary>The local icon of a base item (its id is the poe2db slug, e.g. "Gold_Amulet"), or null.</summary>
+    public string? BaseIconUrl(BaseItem? baseItem) => baseItem != null && _iconsBySlug.TryGetValue(baseItem.Id, out var url) ? url : null;
 
     private Dictionary<string, CraftItemInfo> BuildCraftItemInfo(Dictionary<string, string> iconsBySlug)
     {
@@ -281,4 +294,9 @@ public sealed class GameData
     public CurrencyDef? EmotionCurrency(string emotion) =>
         AllCurrencies.FirstOrDefault(c => c.Section == LiquidSection && !c.Name.StartsWith("Ancient ", StringComparison.Ordinal)
                                           && c.Name.EndsWith("Liquid " + emotion, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The Liquid Emotions an instill consumes (currency name → count).</summary>
+    public Dictionary<string, int> InstillMaterials(InstillRecipe recipe) => recipe.Emotions
+        .Select(e => EmotionCurrency(e)?.Name ?? $"Liquid {e}")
+        .GroupBy(n => n).ToDictionary(g => g.Key, g => g.Count());
 }

@@ -1,5 +1,6 @@
 using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Engine;
+using POE2Crafting.Core.Engine.Planning;
 using POE2Crafting.Core.Items;
 
 namespace POE2Crafting.Web.Services;
@@ -12,16 +13,18 @@ public sealed class CraftingSession
 {
     private readonly GameData _data;
     private readonly ProjectStore _store;
+    private readonly GuideCatalog _guides;
     private readonly Rng _rng = new();
     /// <summary>Options rolled at the Well of Souls per unrevealed mod index (cleared whenever the item changes).</summary>
     private readonly Dictionary<int, RevealState> _reveals = new();
     private bool _projectLoaded;
 
-    public CraftingSession(GameData data, CraftingEngine engine, ProjectStore store)
+    public CraftingSession(GameData data, CraftingEngine engine, ProjectStore store, GuideCatalog guides)
     {
         _data = data;
         Engine = engine;
         _store = store;
+        _guides = guides;
     }
 
     public CraftingEngine Engine { get; }
@@ -80,6 +83,9 @@ public sealed class CraftingSession
         SelectItem(null);
         if (_store.List().FirstOrDefault() is { } next) OpenProject(next.Id);
     }
+
+    /// <summary>The latest state of an item of the open project, or null when the project has no such item.</summary>
+    public Item? FindProjectItem(string? itemId) => itemId == null ? null : Project?.Items.FirstOrDefault(i => i.Id == itemId)?.Current;
 
     /// <summary>Make an item of the project the current item (nothing happens when it already is).</summary>
     public void OpenItem(string itemId)
@@ -169,10 +175,38 @@ public sealed class CraftingSession
         CurrentItem is { Foreseeing: true } item && Engine.Check(item, action).Ok ? Engine.Foresee(item, action) : null;
 
     /// <summary>Instill a notable on the current amulet.</summary>
-    public void Instill(InstillRecipe recipe) => Apply($"Instill {recipe.Notable}", item => Engine.Instill(item, recipe));
+    public void Instill(InstillRecipe recipe) => Apply(recipe.ActionName, item => Engine.Instill(item, recipe));
 
     public Applicability CheckInstill(InstillRecipe recipe) =>
         CurrentItem != null ? Engine.CheckInstill(CurrentItem, recipe) : Applicability.No("No item loaded.");
+
+    /// <summary>Whether the current item's history has crafting steps that can be saved as a guide.</summary>
+    public bool CanSaveAsGuide => History.Count > 1;
+
+    /// <summary>Save the current item's history (starting item and every step) as a guide; returns its id, or null when saving failed (LastError).</summary>
+    public string? SaveAsGuide(string name, string notes)
+    {
+        if (!CanSaveAsGuide) return null;
+        var start = History[0].Item;
+        var guide = new RecordedGuide
+        {
+            Name = string.IsNullOrWhiteSpace(name) ? $"{start.BaseName} → {CurrentItem!.Title}" : name.Trim(),
+            Notes = notes.Trim(),
+            History = History.Select(e => new HistoryEntry { Action = e.Action, Summary = e.Summary, Item = e.Item.Clone() }).ToList(),
+        };
+        foreach (var entry in guide.History) entry.Item.Bind(_data);
+        try
+        {
+            _guides.Save(guide);
+            LastError = null;
+            return guide.Id;
+        }
+        catch (IOException ex)
+        {
+            LastError = $"Saving the guide failed: {ex.Message}";
+            return null;
+        }
+    }
 
     public void Undo()
     {
@@ -223,9 +257,6 @@ public sealed class CraftingSession
         state.Options = Engine.RollRevealOptions(CurrentItem, modIndex, _rng);
         state.RerollUsed = true;
     }
-
-    public void Reveal(int modIndex, string modId) =>
-        Apply("Well of Souls", item => Engine.Reveal(item, modIndex, modId, _rng));
 
     // ---- state changes ----
 

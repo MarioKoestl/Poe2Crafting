@@ -1,6 +1,7 @@
 @* Project selector (saved automatically) and the items of the open project: open one, remove one. New/imported items are added to the project. *@
 @inherits ChangingComponentBase
 @inject CraftingSession Session
+@inject GameData Data
 
 <div class="project-panel">
     <div class="project-bar">
@@ -51,6 +52,7 @@
                 var item = entry.Current;
                 var active = ReferenceEquals(entry, Session.ProjectItem);
                 <div class="project-item @(active ? "active" : "") @UiFormat.RarityCss(item?.Rarity)" @key="entry.Id">
+                    <CraftIcon Url="@Data.BaseIconUrl(item?.Base)" Class="project-item-icon" />
                     <button type="button" class="project-item-text" aria-pressed="@(active ? "true" : "false")" @onclick="() => Change(() => Session.OpenItem(entry.Id))">
                         <span class="project-item-name">@(item?.Title ?? "(empty)")</span>
                         <span class="project-item-meta">@item?.Rarity · @item?.PrefixCount P / @item?.SuffixCount S · @UiFormat.Plural(entry.History.Count - 1, "step")</span>

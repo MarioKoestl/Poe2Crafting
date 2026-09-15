@@ -1,0 +1,27 @@
+@* Small button that downloads a crafting guide (curated, saved or a planner strategy) as a self-contained HTML file to send to someone. *@
+@inject IJSRuntime JS
+@inject ModPool Pool
+@inject GameData Data
+@inject IWebHostEnvironment Env
+
+<button class="btn btn-sm" title="Download this guide as an HTML file (opens in any browser, no app needed)" @onclick="Download">⤓ HTML</button>
+
+@code {
+    [Parameter, EditorRequired] public GuideExport Export { get; set; } = null!;
+
+    private async Task Download()
+    {
+        // the file has to work without the app: item icons are embedded, each file read once per export
+        var embedded = new Dictionary<string, string?>();
+        string? Icon(Item item)
+        {
+            if (Data.BaseIconUrl(item.Base) is not { } url) return null;
+            if (!embedded.TryGetValue(url, out var dataUri))
+                embedded[url] = dataUri = Env.WebRootFileProvider.GetFileInfo(url) is { Exists: true } file
+                    ? $"data:image/webp;base64,{Convert.ToBase64String(File.ReadAllBytes(file.PhysicalPath!))}"
+                    : null;
+            return dataUri;
+        }
+        await JS.InvokeVoidAsync("downloadFile", GuideHtmlExport.FileName(Export.Title), GuideHtmlExport.ToHtml(Export, Pool, Icon), "text/html");
+    }
+}

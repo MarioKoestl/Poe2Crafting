@@ -1,5 +1,6 @@
 @page "/"
 @inject CraftingSession Session
+@inject PlannerState Planner
 
 @* Desktop: every column/pane is its own (single) scroll area; narrow screens stack everything and the page scrolls. *@
 <div class="crafting-page @(_composing ? "composing" : "")">
@@ -67,6 +68,10 @@
                                 </div>
                             }
                         </div>
+                        <button class="btn btn-sm history-save" @onclick="ShowSaveGuide" disabled="@(!Session.CanSaveAsGuide)"
+                                title="@(Session.CanSaveAsGuide ? "Save this crafting path (base, currencies, every step) as a guide to reuse it later" : "Apply a currency first")">
+                            Save as Guide
+                        </button>
                     </div>
                 }
             }
@@ -88,7 +93,6 @@
             {
                 case Mode.Simulator when Session.CurrentItem != null:
                     <div class="pane">
-                        <RevealPanel OnChanged="StateHasChanged" />
                         <InstillPanel OnChanged="StateHasChanged" />
                         <CurrencySelector @bind-Selected="_selectedAction" />
                     </div>
@@ -135,19 +139,54 @@
     </div>
 }
 
+@if (_showSaveGuide && Session.CurrentItem is { } guideItem)
+{
+    <div class="modal-backdrop" @onclick="CloseModals">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="save-guide-title" @onclick:stopPropagation @onkeydown="OnModalKey">
+            <h3 id="save-guide-title">Save as Guide</h3>
+            <p>@Session.History[0].Item.BaseName → @guideItem.Title · @UiFormat.Plural(Session.History.Count - 1, "step"). The guide appears under <strong>My Guides</strong> in the Guides tab.</p>
+            <label for="guide-name">Name</label>
+            <input id="guide-name" type="text" @bind="_guideName" @bind:event="oninput" placeholder="@($"{Session.History[0].Item.BaseName} → {guideItem.Title}")" />
+            <label for="guide-notes">Notes (optional)</label>
+            <textarea id="guide-notes" @bind="_guideNotes" @bind:event="oninput" rows="4" placeholder="What the craft is for, what to watch out for..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-primary" @onclick="SaveGuide">Save</button>
+                <button class="btn" @onclick="CloseModals">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private enum Mode { Simulator, Planner, Guides }
 
     private static string TabLabel(Mode mode) => mode == Mode.Planner ? "Crafting Planner" : mode.ToString();
 
     private Mode _mode = Mode.Simulator;
-    private bool _showImport;
+    private bool _showImport, _showSaveGuide;
+    private string _guideName = "", _guideNotes = "";
     private bool _composing, _editing;
     private string _importText = "";
     private CraftAction? _selectedAction;
 
     private void ShowImport() { CloseModals(); _showImport = true; }
-    private void CloseModals() => _showImport = false;
+    private void CloseModals() => _showImport = _showSaveGuide = false;
+
+    private void ShowSaveGuide()
+    {
+        CloseModals();
+        _guideName = _guideNotes = "";
+        _showSaveGuide = true;
+    }
+
+    /// <summary>Save the history as a guide and show it in the Guides tab.</summary>
+    private void SaveGuide()
+    {
+        if (Session.SaveAsGuide(_guideName, _guideNotes) is not { } id) return;
+        CloseModals();
+        Planner.SelectGuide(id);
+        _mode = Mode.Guides;
+    }
 
     private void OnModalKey(KeyboardEventArgs e)
     {

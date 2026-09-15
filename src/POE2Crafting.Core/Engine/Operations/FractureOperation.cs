@@ -17,7 +17,7 @@ internal sealed class FractureOperation : CraftOperation
     public override Applicability? Check(CraftContext ctx)
     {
         int minMods = ctx.Currency.MinMods ?? Assumptions.FractureMinMods;
-        if (ctx.Item.AffixCount < minMods) return Applicability.No($"Fracturing Orb needs at least {minMods} modifiers.");
+        if (ctx.Item.AffixCount < minMods) return Applicability.No($"Fracturing Orb needs at least {minMods} prefixes/suffixes (has {ctx.Item.AffixCount}; implicits don't count).");
         if (ctx.Item.Affixes.Any(m => m.Fractured)) return Applicability.No("The item already has a fractured modifier (only one per item).");
         if (Fracturable(ctx.Item).Count == 0) return Applicability.No("No modifier can be fractured (desecrated modifiers cannot be fractured).");
         if (ctx.Item.HasDesecratedMod) ctx.Notes.Add("Desecrated modifiers cannot be fractured: the fracture lands on one of the other modifiers.");

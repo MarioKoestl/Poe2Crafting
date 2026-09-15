@@ -6,6 +6,7 @@
     </div>
     <span class="dist-pct">@UiFormat.Probability(Probability)</span>
     <span class="dist-label">@Label</span>
+    <ModLevel Mod="Mod" />
     @if (ChooseLabel != null)
     {
         <button class="btn btn-xs @(Highlighted ? "btn-active" : "")" @onclick="OnChoose">@ChooseLabel</button>
@@ -16,6 +17,8 @@
     [Parameter] public double Probability { get; set; }
     [Parameter] public string Label { get; set; } = "";
     [Parameter] public string BarClass { get; set; } = "";
+    /// <summary>The modifier of the row (removals), shown with its level.</summary>
+    [Parameter] public ModDef? Mod { get; set; }
     [Parameter] public bool Highlighted { get; set; }
     /// <summary>Button text; null hides the button.</summary>
     [Parameter] public string? ChooseLabel { get; set; }

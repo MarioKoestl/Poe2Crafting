@@ -149,4 +149,102 @@ Item Level: 80
         Assert.Equal((item.Sanctified, item.Identified, item.Corrupted), (again.Sanctified, again.Identified, again.Corrupted));
         Assert.Equal(item.Mods.Select(m => (m.Kind, m.Affix, m.Unrevealed, m.DisplayText())), again.Mods.Select(m => (m.Kind, m.Affix, m.Unrevealed, m.DisplayText())));
     }
+
+    /// <summary>A crafted amulet in the newer item text format (quality type in the label, Enhancement block, desecrated normal-pool mod).</summary>
+    private const string WoeBraid = @"Item Class: Amulets
+Rarity: Rare
+Woe Braid
+Gold Amulet
+--------
+Quality (Caster Modifiers): +34% (augmented)
+--------
+Requires: Level 64
+--------
+Item Level: 81
+--------
+{ Enhancement }
+Allocates Dominion — Unscalable Value
+--------
+{ Implicit Modifier }
+17(12-20)% increased Rarity of Items found
+--------
+{ Prefix Modifier ""Incandescent"" (Tier: 1) — Energy Shield }
++80(80-89) to maximum Energy Shield
+{ Prefix Modifier ""Unassailable"" (Tier: 1) — Energy Shield }
+45(45-50)% increased maximum Energy Shield
+{ Desecrated Prefix Modifier ""Countess'"" (Tier: 1) }
++50(47-50) to Spirit
+{ Fractured Suffix Modifier ""of the Cloud"" (Tier: 8) — Elemental, Lightning, Resistance }
++9(6-10)% to Lightning Resistance
+{ Suffix Modifier ""of the Sorcerer"" (Tier: 1) — Caster, Gem — 34% Increased }
++3 to Level of all Spell Skills
+{ Suffix Modifier ""of Euphoria"" (Tier: 2) — Mana }
+56(50-59)% increased Mana Regeneration Rate
+--------
+Fractured Item
+";
+
+    [DataFact]
+    public void Newer_item_text_format_reads_quality_type_instill_and_desecrated_normal_pool_mods()
+    {
+        var item = ItemParser.Parse(WoeBraid, TestData.Data!);
+
+        Assert.Equal((34, "Caster"), (item.Quality, item.QualityType));
+        Assert.Equal(81, item.ItemLevel);
+        Assert.Equal("Dominion", item.InstilledNotableName);
+        Assert.Equal(6, item.AffixCount);
+        Assert.All(item.Affixes, m => Assert.NotNull(m.Def));
+        var spirit = Assert.Single(item.Affixes, m => m.Def!.Name == "Countess'");
+        Assert.Equal(ModKind.Desecrated, spirit.Kind);
+        Assert.True(Assert.Single(item.Affixes, m => m.Fractured).Def!.Name == "of the Cloud");
+        Assert.Equal("+4 to Level of all Spell Skills", item.EffectiveText(item.Affixes.Single(m => m.Def!.Name == "of the Sorcerer")));
+
+        // editing the item keeps the desecrated kind (the Countess' Spirit mod is a normal mod in the data)
+        var draft = new POE2Crafting.Core.Drafting.ItemDraft(TestData.Data!);
+        draft.LoadFrom(item, copyValues: true);
+        var edited = draft.BuildItem()!;
+        Assert.Equal(ModKind.Desecrated, edited.Affixes.Single(m => m.Def!.Name == "Countess'").Kind);
+        Assert.False(TestData.Engine!.Check(edited, TestData.Action("Preserved Collarbone")).Ok);
+    }
+
+    [DataFact]
+    public void Unrevealed_desecrated_line_of_the_game_is_an_unrevealed_modifier_that_cannot_be_fractured()
+    {
+        const string text = @"Item Class: Amulets
+Rarity: Rare
+Behemoth Beads
+Gold Amulet
+--------
+Item Level: 81
+--------
+{ Implicit Modifier }
+15(12-20)% increased Rarity of Items found
+--------
+{ Prefix Modifier ""Hoarder's"" (Tier: 1) }
+16(16-19)% increased Rarity of Items found
+{ Prefix Modifier ""Unassailable"" (Tier: 1) — Energy Shield }
+45(45-50)% increased maximum Energy Shield
+{ Suffix Modifier ""of the Sorcerer"" (Tier: 1) — Caster, Gem }
++3 to Level of all Spell Skills
+{ Suffix Modifier ""of the Veil"" }
+Desecrated Suffix
+";
+        var item = ItemParser.Parse(text, TestData.Data!);
+        var (mod, _) = Assert.Single(item.UnrevealedMods);
+        Assert.Equal((ModKind.Desecrated, AffixType.Suffix), (mod.Kind, mod.Affix));
+        Assert.Equal(4, item.AffixCount);
+
+        var fracture = TestData.Engine!.Preview(item, TestData.Action("Fracturing Orb"));
+        Assert.Equal(3, fracture.Removals.Count);
+        Assert.All(fracture.Removals, r => Assert.Equal(1.0 / 3, r.Probability, 6));
+        // an item with a desecrated modifier (revealed or not) cannot be desecrated again
+        var bone = TestData.Engine.Check(item, TestData.Action("Preserved Collarbone"));
+        Assert.False(bone.Ok);
+        Assert.Contains("cannot be desecrated again", bone.Reason);
+
+        // an item saved with the old import (plain "Desecrated Suffix" text) is repaired when it is bound again
+        var old = new Item { BaseName = "Gold Amulet", Rarity = Rarity.Rare, Mods = { new ItemMod { ModId = "of the Veil", Affix = AffixType.Suffix, RawText = "Desecrated Suffix" } } };
+        old.Bind(TestData.Data!);
+        Assert.True(old.Mods[0].Unrevealed);
+    }
 }

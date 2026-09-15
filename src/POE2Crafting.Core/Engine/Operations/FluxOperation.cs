@@ -6,7 +6,8 @@ namespace POE2Crafting.Core.Engine.Operations;
 /// <summary>
 /// Blazing/Chilling/Crackling/Void Flux: transforms the other single-element resistance modifiers into equivalent resistance
 /// modifiers of the flux's element (Void: Fire, Cold and Lightning into Chaos). Equivalent = the target resistance tier with the
-/// highest level not above the source mod's level; the rolled value keeps its relative position in the range.
+/// highest level not above the source mod's level; the value is rolled anew inside that tier's range (poe2wiki; seen in game:
+/// 41% Lightning → 45% Cold), so a flux doubles as a value reroll.
 /// </summary>
 internal sealed class FluxOperation : CraftOperation
 {
@@ -43,26 +44,25 @@ internal sealed class FluxOperation : CraftOperation
         if (ctx.Currency.Element == null) return Applicability.No("Flux element missing in the data.");
         if (Transformations(ctx.Item, ctx.Currency).Count == 0)
             return Applicability.No($"The item has no {string.Join("/", SourceElements(ctx.Currency))} resistance modifier to transform.");
-        ctx.Notes.Add("Assumption: \"equivalent\" = highest target tier not above the source mod's level, value at the same relative position (UNVERIFIED).");
+        ctx.Notes.Add("The value is rolled anew inside the new tier's range (poe2wiki). Same tier = the target tier with the highest modifier level not above the source mod's level.");
         return null;
     }
 
     public override StepPreview Preview(CraftContext ctx, int? forcedRemovalIndex)
     {
-        var preview = new StepPreview();
-        foreach (var t in Transformations(ctx.Item, ctx.Currency))
-            preview.Notes.Add($"{t.Mod.DisplayText()}  →  {ModText.Render(t.Replacement.Text, Rescaled(t.Mod, t.Replacement))}");
+        var transformations = Transformations(ctx.Item, ctx.Currency);
+        var preview = new StepPreview { ValueRerolls = transformations.Select(t => new ValueReroll(t.Index, t.Replacement)).ToList() };
+        foreach (var t in transformations)
+            preview.Notes.Add($"{t.Mod.DisplayText()}  →  {t.Replacement.Text}");
         return preview;
     }
-
-    private static List<double> Rescaled(ItemMod mod, ModDef replacement) => ModText.RescaleValues(mod.Values, mod.Def!.Ranges, replacement.Ranges);
 
     public override void Execute(ExecuteContext ctx)
     {
         foreach (var t in Transformations(ctx.Result, ctx.Currency))
         {
             var before = t.Mod.DisplayText();
-            var added = ctx.Result.ReplaceMod(t.Index, t.Replacement, t.Mod.Kind, Rescaled(t.Mod, t.Replacement), t.Mod.SourceName);
+            var added = ctx.Result.ReplaceMod(t.Index, t.Replacement, t.Mod.Kind, CraftingEngine.RerolledValues(ctx, t.Index, t.Replacement), t.Mod.SourceName);
             added.Fractured = t.Mod.Fractured;
             ctx.Details.Add($"{before}  →  {added.DisplayText()}");
         }

@@ -20,6 +20,10 @@ public sealed class PlannerState
     public ItemDraft Draft { get; }
     public FinishingTarget Finishing { get; } = new();
     public bool AllowBetterTiers { get; set; } = true;
+    /// <summary>Project item the planner starts from; null = the current item of the simulator.</summary>
+    public string? SourceItemId { get; set; }
+    /// <summary>Project item the target was last loaded from (shown in the selector).</summary>
+    public string? TargetItemId { get; set; }
 
     /// <summary>The last planning result and the item it starts from, or null.</summary>
     public PlannerResult? Result { get; private set; }
@@ -37,7 +41,7 @@ public sealed class PlannerState
 
     public void SelectStrategy(CraftingStrategy strategy) => Update(() => SelectedStrategy = strategy);
 
-    public void SelectGuide(string guideId) => Update(() => SelectedGuideId = guideId);
+    public void SelectGuide(string? guideId) => Update(() => SelectedGuideId = guideId);
 
     private void Update(Action change)
     {

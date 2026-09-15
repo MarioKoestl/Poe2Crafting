@@ -19,9 +19,23 @@
 <div class="target-mods-section">
     <h4>@Title <span class="mod-count">(@Selection.Count(AffixType.Prefix)P / @Selection.Count(AffixType.Suffix)S)</span></h4>
 
-    @if (Selection.Mods.Count > 0)
+    @if (Selection.Mods.Count > 0 || Selection.Unrevealed.Count > 0)
     {
         <div class="target-mod-list">
+            @for (int i = 0; i < Selection.Unrevealed.Count; i++)
+            {
+                var idx = i;
+                var unrevealed = Selection.Unrevealed[i];
+                <div class="target-mod-row @AffixUi.Css(unrevealed.Affix, "-row") desecrated-row" @key="@($"unrevealed-{idx}")">
+                    <span class="tm-type @AffixUi.TypeCss(unrevealed.Affix)">@AffixUi.Letter(unrevealed.Affix)</span>
+                    <span class="tm-name">@unrevealed.DisplayText()</span>
+                    <span class="tm-text" title="Taken over from the item: stays an unrevealed desecrated modifier of this type, whatever it reveals into">
+                        @(unrevealed.Reveal?.Describe() is { Length: > 0 } context ? context : "any desecrated modifier")
+                    </span>
+                    <span class="tm-cat-badge cat-badge-desecrated">Des</span>
+                    <button class="icon-remove" title="Remove modifier" aria-label="Remove modifier" @onclick="() => ChangeSelection(() => Selection.RemoveUnrevealedAt(idx))">✕</button>
+                </div>
+            }
             @for (int i = 0; i < Selection.Mods.Count; i++)
             {
                 var idx = i;
@@ -32,6 +46,7 @@
                     <span class="tm-tier">T@(Pool.DisplayTier(sm.Mod, _virtualItem))</span>
                     <span class="tm-name">@sm.Mod.DisplayName</span>
                     <span class="tm-text">@sm.Mod.Text</span>
+                    <ModLevel Mod="sm.Mod" />
                     @for (int r = 0; r < sm.Values.Count; r++)
                     {
                         var ri = r;
@@ -115,7 +130,7 @@
                                                         <span class="tier-name">@mod.DisplayName</span>
                                                         <span class="tier-text">@mod.Text</span>
                                                         <span class="tier-weight" title="Estimated weight (poe2db)">@Pool.WeightForItem(mod, _virtualItem)</span>
-                                                        <span class="tier-level">ilvl @mod.Level</span>
+                                                        <ModLevel Mod="mod" />
                                                     </button>
                                                 }
                                             </div>

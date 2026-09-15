@@ -41,12 +41,25 @@ public sealed class ModPool
     public List<ModCandidate> Candidates(Item item, AffixType type, int minModLevel = 0, Func<ModDef, bool>? filter = null, string category = ModCategories.Normal)
     {
         var pages = PagesFor(item);
-        return ModCandidate.Normalised(AllForBaseByCategory(item, category, type)
-            .Where(mod => mod.Level <= item.ItemLevel && mod.Level >= minModLevel && !item.HasFamily(mod.Family) && (filter == null || filter(mod)))
+        var eligible = AllForBaseByCategory(item, category, type)
+            .Where(mod => mod.Level <= item.ItemLevel && !item.HasFamily(mod.Family) && (filter == null || filter(mod)))
             .Select(mod => new ModCandidate { Mod = mod, Weight = WeightOn(mod, pages) })
-            .Where(c => c.Weight > 0)
+            .Where(c => c.Weight > 0);
+        return ModCandidate.Normalised(AtLeastMinimumLevel(eligible, minModLevel)
             .OrderByDescending(c => c.Weight).ThenBy(c => c.Mod.Family).ThenBy(c => c.Mod.Tier));
     }
+
+    /// <summary>
+    /// The minimum modifier level of Greater/Perfect currencies, per modifier type (tier group): tiers below it cannot roll — unless that would exclude
+    /// the type entirely, then its highest eligible tier still can (poe2wiki: e.g. the level-47 "Hoarder's" rarity prefix with a Perfect Orb of Augmentation).
+    /// </summary>
+    private static IEnumerable<ModCandidate> AtLeastMinimumLevel(IEnumerable<ModCandidate> candidates, int minModLevel) =>
+        minModLevel <= 0 ? candidates
+            : candidates.GroupBy(c => ModTiers.TierGroupKey(c.Mod)).SelectMany(group =>
+            {
+                var high = group.Where(c => c.Mod.Level >= minModLevel).ToList();
+                return high.Count > 0 ? high : group.Where(c => c.Mod.Level == group.Max(x => x.Mod.Level));
+            });
 
     /// <summary>All normal mods that can ever appear on the item's base (ignoring current mods and item level).</summary>
     public IEnumerable<ModDef> AllForBase(Item item, AffixType? type = null) => AllForBaseByCategory(item, ModCategories.Normal, type);

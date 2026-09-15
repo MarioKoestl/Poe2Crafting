@@ -1,0 +1,41 @@
+@* Well of Souls in the preview: roll the offered options for an unrevealed modifier, reroll them once with Omen of Abyssal Echoes, pick one. *@
+@inject CraftingSession Session
+
+@if (Session.CurrentItem is { } item)
+{
+    @foreach (var (mod, index) in item.UnrevealedMods.ToList())
+    {
+        var idx = index;
+        var options = Session.RevealOptions(idx);
+        <div class="distribution-section" @key="idx">
+            <h4>@mod.DisplayText() <span class="mod-count">@mod.Reveal?.Describe()</span></h4>
+            @if (options == null)
+            {
+                <button class="btn btn-sm btn-primary" @onclick="() => Session.RollRevealOptions(idx)">Roll @Session.Engine.Assumptions.RevealOptionCount options</button>
+            }
+            else
+            {
+                <div class="addition-list">
+                    @foreach (var option in options)
+                    {
+                        <ModOptionRow @key="option.Id" Mod="option" Item="item"
+                                      OnChoose="() => OnChoose.InvokeAsync(new ManualChoice { RemoveIndices = { idx }, AddModIds = { option.Id } })" />
+                    }
+                </div>
+                @if (Action.Omens.Any(o => o.Effect == OmenEffects.RerollRevealOnce))
+                {
+                    <button class="btn btn-sm" disabled="@(!Session.CanRerollReveal(idx))" @onclick="() => Session.RerollRevealOptions(idx)"
+                            title="Omen of Abyssal Echoes: reroll the options once">
+                        @(Session.CanRerollReveal(idx) ? "Reroll options (Abyssal Echoes)" : "Options rerolled")
+                    </button>
+                }
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public CraftAction Action { get; set; } = null!;
+    /// <summary>Reveal with the picked option.</summary>
+    [Parameter] public EventCallback<ManualChoice> OnChoose { get; set; }
+}

@@ -34,6 +34,9 @@ public sealed class CurrencyDef
     /// <summary>Class group the currency can be used on (Target, or QualityTarget for quality currencies).</summary>
     [JsonIgnore] public string? ClassTarget => Target ?? QualityTarget;
 
+    /// <summary>False for actions that use up no item (the Well of Souls): not listed as material.</summary>
+    [JsonIgnore] public bool Consumed { get; init; } = true;
+
     [JsonIgnore] public string DescriptionText => string.Join(" ", Description);
     public override string ToString() => Name;
 }
@@ -47,7 +50,7 @@ public static class CurrencyOps
     public const string Essence = "essence", Desecrate = "desecrate";
     public const string Vaal = "vaal", Sacrifice = "sacrifice", Architect = "architect";
     public const string Quality = "quality", VaalQuality = "vaal_quality", Catalyst = "catalyst";
-    public const string Socket = "socket", Extract = "extract", Flux = "flux", SocketAugment = "socket_augment";
+    public const string Socket = "socket", Extract = "extract", Flux = "flux", SocketAugment = "socket_augment", Reveal = "reveal";
 }
 
 /// <summary>A crafting item (currency, essence, alloy, catalyst or omen) with what the UI shows about it: kind, icon, description and rule facts.</summary>
