@@ -12,7 +12,7 @@ internal sealed class ChanceOperation : CraftOperation
 
     public override Applicability? Check(CraftContext ctx)
     {
-        ctx.Notes.Add($"Assumption: {Assumptions.ChanceUniqueChance:P0} unique chance (config chanceUniqueChance, UNVERIFIED); the resulting unique is not modelled (item becomes a placeholder unique).");
+        ctx.Notes.Add($"Assumption: {Assumptions.ChanceUniqueChance:P0} unique chance; the resulting unique is not modelled (the item becomes a placeholder unique).");
         return null;
     }
 

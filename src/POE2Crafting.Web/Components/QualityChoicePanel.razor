@@ -1,0 +1,77 @@
+@* Catalysts: the quality the item has after the use, and what that does to the modifiers it enhances (now / at the chosen quality / at the maximum / next step up). *@
+
+<div class="distribution-section">
+    <h4>@Choice.Type quality after this catalyst: @(_quality)%</h4>
+    <div class="quality-choice">
+        <label for="quality-after">Quality after use</label>
+        <input id="quality-after" type="number" class="tm-value" min="@Choice.Min" max="@Choice.Max" step="1" value="@_quality" @onchange="SetQuality" />
+        <span class="hint">@(Choice.Min)–@(Choice.Max)%</span>
+        <button class="btn btn-sm btn-primary" @onclick="() => OnApply.InvokeAsync(_quality)">Apply with @(_quality)%</button>
+    </div>
+    @if (Effects is { Count: > 0 } effects)
+    {
+        <div class="table-scroll">
+            <table class="materials-table quality-effects">
+                <thead>
+                    <tr>
+                        <th>Now</th>
+                        <th>At @(_quality)%</th>
+                        <th>At max @(Choice.Max)%</th>
+                        <th title="The next quality above @(_quality)% where the value rises">Next step</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var effect in effects)
+                    {
+                        <tr @key="effect.Index">
+                            <td>@effect.Now</td>
+                            <td class="@(effect.At != effect.Now ? "value-up" : "")">@effect.At</td>
+                            <td>@effect.AtMax</td>
+                            <td>
+                                @if (effect.NextStepQuality is { } next)
+                                {
+                                    @($"{effect.NextStepText} at {next}%")
+                                    @if (next > Choice.Max)
+                                    {
+                                        <span class="hint" title="Above this item's maximum quality: raise the maximum first (e.g. Essence of the Breach)"> (above max)</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <text>—</text>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Item Item { get; set; } = null!;
+    [Parameter, EditorRequired] public QualityChoice Choice { get; set; } = null!;
+    /// <summary>Highest quality any item can reach, for the "next step" column (it may lie above this item's maximum).</summary>
+    [Parameter, EditorRequired] public int HighestReachableQuality { get; set; }
+    /// <summary>Apply the catalyst with the chosen quality.</summary>
+    [Parameter] public EventCallback<int> OnApply { get; set; }
+
+    /// <summary>Chosen quality after the use, starting at the rolled default.</summary>
+    private int _quality;
+    private QualityChoice? _choiceFor;
+
+    protected override void OnParametersSet()
+    {
+        if (Choice == _choiceFor) return;
+        _choiceFor = Choice;
+        _quality = Choice.Default;
+    }
+
+    private List<QualityEffect> Effects => QualityEffects.For(Item, Choice.Type, _quality, Choice.Max, HighestReachableQuality);
+
+    private void SetQuality(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var q)) _quality = Math.Clamp(q, Choice.Min, Choice.Max);
+    }
+}

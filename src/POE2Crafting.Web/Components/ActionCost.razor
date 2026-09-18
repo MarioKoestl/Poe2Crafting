@@ -1,0 +1,23 @@
+@* What the consumed items of an action (currency + omens) or of a step cost on the Currency Exchange, with the unpriced ones named. *@
+@inject MarketDataService Market
+
+@if (Market.Prices is { HasPrices: true } prices)
+{
+    var list = Items.ToList();
+    var cost = prices.Cost(list.Select(n => (n, Count)));
+    @if (list.Count > 0 && cost.Chaos > 0)
+    {
+        <div class="action-cost" title="Currency Exchange buy prices, @prices.League">
+            Cost per use: <strong>@UiFormat.Cost(cost.Chaos, prices)</strong>
+            @if (!cost.IsComplete)
+            {
+                <span class="hint"> + @string.Join(", ", cost.Unpriced) (no exchange price)</span>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<string> Items { get; set; } = Array.Empty<string>();
+    [Parameter] public double Count { get; set; } = 1;
+}

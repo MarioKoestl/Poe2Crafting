@@ -41,7 +41,7 @@ internal sealed partial class FromItemPlanner
         var key = (op, tools & Tools.Omens);
         if (_omenSets.TryGetValue(key, out var sets)) return sets;
         var omens = tools.HasFlag(Tools.Omens)
-            ? _data.Omens.Where(o => o.Crafting && PlannableOmenEffects.Contains(o.Effect) && _data.OpOfOmenTarget(o.TargetCurrency) == op).ToList()
+            ? _data.CraftingOmens.Where(o => PlannableOmenEffects.Contains(o.Effect) && _data.OpOfOmenTarget(o.TargetCurrency) == op).ToList()
             : new List<OmenDef>();
         return _omenSets[key] = omens.Select((a, i) => omens.Skip(i + 1).Select(b => new[] { a, b }).Prepend(new[] { a }))
             .SelectMany(pairs => pairs)

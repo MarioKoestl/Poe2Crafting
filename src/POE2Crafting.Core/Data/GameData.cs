@@ -30,6 +30,8 @@ public sealed class GameData
     public IReadOnlyList<InstillRecipe> Instills { get; }
     /// <summary>Curated crafting sequences with explanations (data/guides.json).</summary>
     public IReadOnlyList<CraftingGuide> Guides { get; }
+    /// <summary>In-app knowledge base: the rules the simulator implements (data/wiki.json).</summary>
+    public IReadOnlyList<WikiArticle> Wiki { get; }
     /// <summary>Items of the Currency Exchange by GGG metadata id (data/exchange_items.json, optional).</summary>
     public IReadOnlyDictionary<string, ExchangeItemDef> ExchangeItems { get; }
 
@@ -69,11 +71,12 @@ public sealed class GameData
 
     private GameData(string folder, List<BaseItem> bases, List<ModDef> mods, List<CurrencyDef> currencies, List<EssenceDef> essences,
         List<EssenceDef> alloys, List<OmenDef> omens, List<CatalystDef> catalysts, List<ItemClassDef> classes, SimConfig config,
-        Dictionary<string, string> iconsBySlug, List<InstillRecipe> instills, List<CraftingGuide> guides, List<ExchangeItemDef> exchangeItems)
+        Dictionary<string, string> iconsBySlug, List<InstillRecipe> instills, List<CraftingGuide> guides, List<ExchangeItemDef> exchangeItems,
+        List<WikiArticle> wiki)
     {
         DataFolder = folder;
         Bases = bases; Mods = mods; Omens = omens; Catalysts = catalysts;
-        ItemClasses = classes; Config = config; Instills = instills; Guides = guides;
+        ItemClasses = classes; Config = config; Instills = instills; Guides = guides; Wiki = wiki;
         ExchangeItems = exchangeItems.GroupBy(i => i.Id).ToDictionary(g => g.Key, g => g.First());
         _baseByName = ByName(bases, b => b.Name);
         _modById = mods.ToDictionary(m => m.Id);
@@ -188,7 +191,8 @@ public sealed class GameData
             Read<Dictionary<string, string>>("icons.json", required: false),
             Read<List<InstillRecipe>>("instills.json", required: false),
             Read<List<CraftingGuide>>("guides.json", required: false),
-            Read<List<ExchangeItemDef>>("exchange_items.json", required: false));
+            Read<List<ExchangeItemDef>>("exchange_items.json", required: false),
+            Read<List<WikiArticle>>("wiki.json", required: false));
     }
 
     /// <summary>
@@ -210,6 +214,12 @@ public sealed class GameData
     public OmenDef? FindOmen(string name) => _omenByName.TryGetValue(name.Trim(), out var o) ? o : null;
     public ItemClassDef? FindItemClass(string name) => _classByName.TryGetValue(name.Trim(), out var c) ? c : null;
     public InstillRecipe? FindInstill(string notable) => _instillByNotable.TryGetValue(notable.Trim(), out var r) ? r : null;
+
+    /// <summary>False for items the current game no longer has (config unavailableItems); they still resolve by name so old projects and guides load.</summary>
+    public bool IsAvailable(string name) => !Config.UnavailableItems.Contains(name.Trim(), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Omens that modify a crafting currency and can still be obtained: the choices of the simulator and the planner.</summary>
+    public IEnumerable<OmenDef> CraftingOmens => Omens.Where(o => o.Crafting && o.TargetCurrency != null && IsAvailable(o.Name));
 
     /// <summary>Info (kind, icon, description) of a currency, essence, alloy, catalyst or omen by name; null for anything else.</summary>
     public CraftItemInfo? FindCraftItem(string name) => _craftItemByName.TryGetValue(name.Trim(), out var i) ? i : null;
@@ -287,6 +297,21 @@ public sealed class GameData
         AugmentEffectsFor(augment, baseItem, itemClass) is { Count: > 0 } effects
             ? string.Join(", ", effects.Select(e => ModText.RenderMid(e.Text)))
             : null;
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, AugmentDef?> _augmentByEffect = new();
+
+    /// <summary>
+    /// The augment behind a socketed line (Item.Runes holds the effect text an augment grants on the item, e.g. "Can roll Destruction modifiers"):
+    /// the one whose effect text on this base is the line, else the one with an effect line of the same stat; null when unknown.
+    /// </summary>
+    public AugmentDef? FindAugmentByEffect(string runeText, BaseItem? baseItem, string itemClass) =>
+        _augmentByEffect.GetOrAdd($"{itemClass}|{baseItem?.Id}|{runeText}", _ =>
+        {
+            var candidates = AugmentsFor(baseItem, itemClass).ToList();
+            var signature = ModText.StatSignature(runeText);
+            return candidates.FirstOrDefault(a => AugmentEffectText(a, baseItem, itemClass) == runeText)
+                   ?? candidates.FirstOrDefault(a => AugmentEffectsFor(a, baseItem, itemClass).Any(e => e.StatSignature == signature));
+        });
 
     /// <summary>Augments that can be socketed into items of this base.</summary>
     public IEnumerable<AugmentDef> AugmentsFor(BaseItem? baseItem, string itemClass) => Augments.Where(a => AugmentEffectsFor(a, baseItem, itemClass).Count > 0);

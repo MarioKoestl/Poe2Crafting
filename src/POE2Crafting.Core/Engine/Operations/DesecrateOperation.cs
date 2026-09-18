@@ -234,7 +234,7 @@ internal sealed class DesecrateOperation : CraftOperation
 
         if (ctx.OmenIs(OmenEffects.Putrefaction))
         {
-            ctx.Notes.Add($"Assumption: Putrefaction replaces every non-fractured modifier with {Assumptions.PutrefactionUnrevealedCount} unrevealed modifiers (\"up to 6\", config: putrefactionUnrevealedCount) and corrupts the item.");
+            ctx.Notes.Add($"Assumption: Putrefaction replaces every non-fractured modifier with {Assumptions.PutrefactionUnrevealedCount} unrevealed modifiers and corrupts the item.");
             return null;
         }
 
@@ -243,7 +243,9 @@ internal sealed class DesecrateOperation : CraftOperation
         if (hasMark) ctx.Notes.Add("Mark of the Abyssal Lord is replaced by the unrevealed modifier.");
         else if (Engine.FreeSlots(item, Rarity.Rare, ctx.RestrictedType) == 0)
             ctx.Notes.Add("Modifiers are full: a random modifier is removed and the unrevealed modifier takes its slot (assumption: same affix type).");
-        ctx.Notes.Add($"The modifier stays unrevealed (community-reported: counts as level 1 for Omen of Whittling, not officially confirmed) until the Well of Souls reveals it: {Assumptions.RevealOptionCount} options, at least {Assumptions.RevealGuaranteedExclusiveOptions} of them an exclusive Lich modifier, the others regular modifiers or further Lich modifiers (assumption: {Assumptions.RevealRegularOptionChance:P0} regular each, config revealRegularOptionChance). Desecrated weights in the data are all equal (poe2db has no estimates).");
+        ctx.Notes.Add($"The modifier stays unrevealed until the Well of Souls reveals it: {Assumptions.RevealOptionCount} options, at least {Assumptions.RevealGuaranteedExclusiveOptions} of them an exclusive Lich modifier, the others regular modifiers or further Lich modifiers (assumption: {Assumptions.RevealRegularOptionChance:P0} regular each). While unrevealed it counts as level 1 for Omen of Whittling. All desecrated modifiers weigh the same.");
+        if (BossOmen(ctx) is { } bossOmen && !Assumptions.RevealBossOmenOnlyLichModifiers)
+            ctx.Notes.Add($"{bossOmen.Name} guarantees that at least {Assumptions.RevealGuaranteedExclusiveOptions} of the {Assumptions.RevealOptionCount} offered modifiers is one of that Lich — the other options still come from the normal modifier pool.");
         return null;
     }
 

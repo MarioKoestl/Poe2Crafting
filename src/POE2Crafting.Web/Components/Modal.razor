@@ -1,0 +1,26 @@
+@* Modal dialog with a title, free content and the Confirm/Cancel actions; a click on the backdrop or Escape closes it. *@
+
+<div class="modal-backdrop" @onclick="Close">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="@_titleId" @onclick:stopPropagation @onkeydown="OnKey">
+        <h3 id="@_titleId">@Title</h3>
+        @ChildContent
+        <div class="modal-actions">
+            <button class="btn btn-primary" @onclick="OnConfirm">@ConfirmLabel</button>
+            <button class="btn" @onclick="Close">Cancel</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string ConfirmLabel { get; set; } = "OK";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private readonly string _titleId = "modal-title-" + Guid.NewGuid().ToString("N")[..8];
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private Task OnKey(KeyboardEventArgs e) => e.Key == "Escape" ? Close() : Task.CompletedTask;
+}

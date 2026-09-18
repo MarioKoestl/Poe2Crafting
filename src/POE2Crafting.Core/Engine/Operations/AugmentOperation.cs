@@ -7,6 +7,7 @@ namespace POE2Crafting.Core.Engine.Operations;
 /// Socketing a rune, soul core or idol (synthetic currencies with Op socket_augment) into an augment socket: the augment grants the effect of the
 /// item's class (Item.Runes holds one line per filled socket). A free socket is filled first; on a full item the chosen socket is replaced
 /// (config augmentReplacesOccupiedSocket). "Bonded" effects only apply for a specific ascendancy and are not modelled.
+/// Aldur runes transform the element of the item's modifiers when socketed (<see cref="RuneTransformation"/>).
 /// </summary>
 internal sealed class AugmentOperation : CraftOperation
 {
@@ -37,18 +38,44 @@ internal sealed class AugmentOperation : CraftOperation
         if (item.Runes.Count >= item.Sockets)
         {
             if (!Assumptions.AugmentReplacesOccupiedSocket) return Applicability.No("All augment sockets are filled.");
-            ctx.Notes.Add($"All sockets are filled: the augment replaces the chosen one, the old augment is destroyed ({Assumptions.AugmentInstillNote}).");
+            ctx.Notes.Add("All sockets are filled: the augment replaces the chosen one and the old augment is destroyed (assumption).");
         }
+        if (item.Runes.Any(r => ModText.ExtraCraftedAllowed(r) > 0) && item.Runes.Count >= item.Sockets)
+            ctx.Notes.Add("Replacing Astrid's Creativity keeps the crafted modifiers already on the item.");
         if (ctx.Currency.Augment!.Effects.Any(e => e.Category == ModCategories.Bonded))
             ctx.Notes.Add("Bonded effects only apply with the Shaman's \"Wisdom of the Maji\" and are not shown.");
         return null;
     }
 
-    public override StepPreview Preview(CraftContext ctx, int? forcedRemovalIndex) => new()
+    /// <summary>The modifiers an Aldur rune transforms on the item (none for other augments).</summary>
+    private List<RuneTransformation.Change> Transformations(CraftContext ctx, Item item) =>
+        EffectText(ctx) is { } text && RuneTransformation.Parse(text) is { } rule
+            ? RuneTransformation.Plan(item, rule, Engine.Pool, Assumptions.AldurRuneTransformsFractured)
+            : new();
+
+    public override StepPreview Preview(CraftContext ctx, int? forcedRemovalIndex)
     {
-        SpecialOutcomes = Targets(ctx.Item).ToDictionary(kv => Label(ctx.Item, kv.Key), kv => kv.Value),
-        Notes = { $"Adds: {EffectText(ctx)}" },
-    };
+        var preview = new StepPreview
+        {
+            SpecialOutcomes = Targets(ctx.Item).ToDictionary(kv => Label(ctx.Item, kv.Key), kv => kv.Value),
+            Notes = { $"Adds: {EffectText(ctx)}" },
+        };
+        if (EffectText(ctx) is { } text && RuneTransformation.Parse(text) != null)
+        {
+            var changes = Transformations(ctx, ctx.Item);
+            preview.Notes.AddRange(changes.Select(c => $"{c.Mod.DisplayText()}  →  {ModText.Render(c.Replacement.Text, c.Values)}"));
+            if (changes.Count == 0) preview.Notes.Add("No modifier on the item is transformed.");
+            // the unexplained in-game observation is documented in config.json (single source), not repeated here
+            if (Assumptions.AldurRuneObservationNote is { } observation && changes.Any(c => c.Mod.DisplayText().Contains("of Damage as Extra", StringComparison.OrdinalIgnoreCase)))
+                preview.Notes.Add($"Unclear: {observation}");
+            preview.Notes.Add("Only the modifiers on the item now are transformed; modifiers added later stay as they roll. The rune can't be removed again, only replaced.");
+            if (ctx.Item.Affixes.Any(m => m.Fractured))
+                preview.Notes.Add(Assumptions.AldurRuneTransformsFractured
+                    ? "Fractured modifiers are transformed too."
+                    : "Fractured modifiers stay unchanged; only the normal ones are transformed.");
+        }
+        return preview;
+    }
 
     public override void Execute(ExecuteContext ctx)
     {
@@ -62,5 +89,12 @@ internal sealed class AugmentOperation : CraftOperation
             runes[socket] = text;
         }
         ctx.Details.Add($"Socketed {ctx.Currency.Name}: {text}");
+        foreach (var change in Transformations(ctx, ctx.Result))
+        {
+            var before = change.Mod.DisplayText();
+            var transformed = ctx.Result.ReplaceMod(change.Index, change.Replacement, change.Mod.Kind, change.Values, change.Mod.SourceName);
+            transformed.Fractured = change.Mod.Fractured;
+            ctx.Details.Add($"{before}  →  {transformed.DisplayText()}");
+        }
     }
 }

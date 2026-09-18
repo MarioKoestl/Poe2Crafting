@@ -7,6 +7,8 @@ namespace POE2Crafting.Core.Data;
 public sealed class SimConfig
 {
     public SimAssumptions Assumptions { get; init; } = new();
+    /// <summary>Items still in the data (datamined) but no longer obtainable in the current game version, e.g. removed omens; see UnavailableItemsNote in config.json.</summary>
+    public List<string> UnavailableItems { get; init; } = new();
 }
 
 /// <summary>How an addition picks prefix vs. suffix when both are possible.</summary>
@@ -20,7 +22,6 @@ public enum AffixTypeSelection
 
 public sealed class SimAssumptions
 {
-    public string WeightsSource { get; init; } = "";
     public AffixTypeSelection AffixTypeSelection { get; init; } = AffixTypeSelection.Weighted;
     public int MagicMaxPrefixes { get; init; } = 1;
     public int MagicMaxSuffixes { get; init; } = 1;
@@ -41,6 +42,12 @@ public sealed class SimAssumptions
     public double ChanceUniqueChance { get; init; } = 0.05;
     /// <summary>Fracturing Orb: minimum number of affixes when the currency data doesn't say.</summary>
     public int FractureMinMods { get; init; } = 4;
+    /// <summary>Weight of every modifier of a rune-unlocked category (poe2db has no weights for them; see runeModsNote).</summary>
+    public int RuneUnlockedModWeight { get; init; } = 500;
+    /// <summary>Whether an Aldur rune also transforms fractured modifiers: no, tried in game (Mario, 15.09.2026, 0.5.5; see runeModsNote).</summary>
+    public bool AldurRuneTransformsFractured { get; init; }
+    /// <summary>Unexplained in-game observations with Aldur runes (shown in the socketing preview when they may apply).</summary>
+    public string? AldurRuneObservationNote { get; init; }
 
     /// <summary>Maximum quality when the base does not define one.</summary>
     public int DefaultMaxQuality { get; init; } = 20;
@@ -63,12 +70,11 @@ public sealed class SimAssumptions
     /// <summary>Chance that each further option is a regular modifier instead of a Lich modifier (poe2db: "may include base modifiers"). ASSUMPTION, no data.</summary>
     public double RevealRegularOptionChance { get; init; } = 0.5;
     /// <summary>
-    /// True (poe2db: "Reveal desecrated modifiers may include base modifiers. Unless you use Omen to guarantee named modifiers"; Mario in game:
-    /// 3 Kurgal options with Omen of the Blackblooded): with Omen of the Sovereign/Liege/Blackblooded every option is a modifier of that Lich.
-    /// False: only the exclusive option is, the others stay regular.
+    /// Whether Omen of the Sovereign/Liege/Blackblooded makes EVERY offered option a modifier of that Lich.
+    /// False, clarified by Mario (17.09.2026): the omen only guarantees at least <see cref="RevealGuaranteedExclusiveOptions"/> of them —
+    /// the other options come from the normal modifier pool.
     /// </summary>
-    public bool RevealBossOmenOnlyLichModifiers { get; init; } = true;
-    public string? RevealNote { get; init; }
+    public bool RevealBossOmenOnlyLichModifiers { get; init; }
     /// <summary>Unrevealed modifiers created by Omen of Putrefaction ("up to 6").</summary>
     public int PutrefactionUnrevealedCount { get; init; } = 6;
 
@@ -80,7 +86,6 @@ public sealed class SimAssumptions
     public bool AugmentWorksOnCorrupted { get; init; } = true;
     /// <summary>Instilling an amulet that already has an instilled notable replaces it.</summary>
     public bool InstillReplacesExisting { get; init; } = true;
-    public string? AugmentInstillNote { get; init; }
 
     private int DefaultMaxAffixes(Rarity r, AffixType type) => (r, type) switch
     {
@@ -104,4 +109,11 @@ public sealed class SimAssumptions
     }
 
     public int MaxAffixes(Item item, Rarity r, AffixType type) => MaxAffixes(item.ItemClass, r, type, item.Affixes.Select(m => m.DisplayText()));
+
+    /// <summary>
+    /// How many crafted modifiers the item may hold: one (config onlyOneCraftedModPerItem) plus what its socketed augments and modifiers allow
+    /// ("Can have 1 additional Crafted Modifiers", Astrid's Creativity); unlimited without the rule.
+    /// </summary>
+    public int MaxCraftedMods(Item item) =>
+        !OnlyOneCraftedModPerItem ? int.MaxValue : 1 + item.Runes.Concat(item.Mods.Select(m => m.DisplayText())).Sum(ModText.ExtraCraftedAllowed);
 }

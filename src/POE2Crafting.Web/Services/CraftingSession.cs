@@ -166,6 +166,10 @@ public sealed class CraftingSession
     public StepPreview Preview(CraftAction action, int? forcedRemovalIndex = null) =>
         CurrentItem != null ? Engine.Preview(CurrentItem, action, forcedRemovalIndex) : new StepPreview { Applicability = Applicability.No("No item loaded.") };
 
+    /// <summary>Candidates of the next of several additions after the chosen ones (Omen of Greater Exaltation).</summary>
+    public List<ModCandidate> NextAdditions(CraftAction action, IReadOnlyList<string> chosenModIds) =>
+        CurrentItem != null ? Engine.NextAdditions(CurrentItem, action, chosenModIds) : new();
+
     /// <summary>Apply an action; on a foreseeing item (Hinekora's Lock) a random roll gives exactly the foreseen result.</summary>
     public void Execute(CraftAction action, ManualChoice? choice = null) =>
         Apply(action.DisplayName, item => Engine.Execute(item, action, item.Foreseeing && choice == null ? CraftingEngine.ForeseeRng(item, action) : _rng, choice));
@@ -192,7 +196,7 @@ public sealed class CraftingSession
         {
             Name = string.IsNullOrWhiteSpace(name) ? $"{start.BaseName} → {CurrentItem!.Title}" : name.Trim(),
             Notes = notes.Trim(),
-            History = History.Select(e => new HistoryEntry { Action = e.Action, Summary = e.Summary, Item = e.Item.Clone() }).ToList(),
+            History = History.Select(e => new HistoryEntry { Action = e.Action, Summary = e.Summary, Note = e.Note, Item = e.Item.Clone() }).ToList(),
         };
         foreach (var entry in guide.History) entry.Item.Bind(_data);
         try
@@ -206,6 +210,14 @@ public sealed class CraftingSession
             LastError = $"Saving the guide failed: {ex.Message}";
             return null;
         }
+    }
+
+    /// <summary>Set (or clear) the free-text note of a history step of the current item; saved with the project.</summary>
+    public void SetNote(int index, string? note)
+    {
+        if (ProjectItem is not { } item || index < 0 || index >= item.History.Count) return;
+        item.History[index].Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        Save();
     }
 
     public void Undo()
@@ -228,8 +240,7 @@ public sealed class CraftingSession
 
     /// <summary>Crafting omens that can modify the given currency on the current item (each on its own).</summary>
     public List<OmenDef> OmensFor(CurrencyDef currency) =>
-        CurrentItem == null ? new() : _data.Omens.Where(o => o.Crafting && o.TargetCurrency != null &&
-            Engine.Check(CurrentItem, CraftAction.Of(currency, o)).Ok).ToList();
+        CurrentItem == null ? new() : _data.CraftingOmens.Where(o => Engine.Check(CurrentItem, CraftAction.Of(currency, o)).Ok).ToList();
 
     // ---- Well of Souls ----
 

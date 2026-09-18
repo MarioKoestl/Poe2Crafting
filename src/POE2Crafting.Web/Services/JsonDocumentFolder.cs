@@ -45,12 +45,12 @@ public sealed class JsonDocumentFolder<T> where T : class
         var path = PathOf(id);
         try
         {
-            using (var stream = new FileStream(path + ".tmp", FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var stream = new FileStream(TempPathOf(id), FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 stream.Write(json);
                 stream.Flush(flushToDisk: true);
             }
-            File.Move(path + ".tmp", path, overwrite: true);
+            File.Move(TempPathOf(id), path, overwrite: true);
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -61,10 +61,13 @@ public sealed class JsonDocumentFolder<T> where T : class
     public void Delete(string id)
     {
         TryDelete(PathOf(id));
-        TryDelete(PathOf(id) + ".tmp");
+        TryDelete(TempPathOf(id));
     }
 
     private string PathOf(string id) => Path.Combine(_folder, Path.GetFileName(id) + Extension);
+
+    /// <summary>Where a document is written before it replaces the real file (cleaned up at startup).</summary>
+    private string TempPathOf(string id) => Path.Combine(_folder, Path.GetFileName(id) + TempExtension);
 
     /// <summary>A document, or null when the file is missing, locked or not valid: one bad file never breaks a list.</summary>
     private T? TryRead(string path)

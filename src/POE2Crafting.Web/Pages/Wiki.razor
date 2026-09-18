@@ -1,0 +1,157 @@
+@page "/wiki"
+@page "/wiki/{ArticleId}"
+@inject GameData Data
+@inject NavigationManager Navigation
+
+<PageTitle>@(Current?.Title ?? "Wiki") · POE2 Crafting</PageTitle>
+
+<div class="single-page">
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Wiki</h2>
+            <span class="version">The rules this simulator implements — what is confirmed, what is assumed</span>
+        </div>
+
+        <div class="workspace wiki-workspace">
+            <div class="pane">
+                <SearchBox @bind-Value="_search" Placeholder="@($"Search {Data.Wiki.Count} articles...")" />
+                @if (Matching.Count == 0)
+                {
+                    <EmptyState Icon="◇" Hint="Try a modifier name, a currency or a keyword like \"quality\".">No article matches the search.</EmptyState>
+                }
+                @foreach (var category in Matching.GroupBy(a => a.Category))
+                {
+                    <div class="section-title">@category.Key</div>
+                    <div class="wiki-index">
+                        @foreach (var entry in category)
+                        {
+                            <button type="button" class="wiki-index-item @(entry.Id == Current?.Id ? "active" : "")" @key="entry.Id"
+                                    @onclick="() => Open(entry.Id)">
+                                <span class="wiki-index-title">@entry.Title</span>
+                                <span class="wiki-index-summary">@entry.Summary</span>
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="pane">
+                @if (Current is not { } article)
+                {
+                    <EmptyState Icon="📖" Hint="Everything the engine does is written down here, including the parts that are guesses.">
+                        Pick an article on the left.
+                    </EmptyState>
+                }
+                else
+                {
+                    <h3 class="pane-title">@article.Title</h3>
+                    <p class="wiki-summary"><WikiText Text="@article.Summary" /></p>
+
+                    @foreach (var section in article.Sections)
+                    {
+                        <section class="wiki-section">
+                            @if (section.Heading is { Length: > 0 } heading)
+                            {
+                                <h4>@heading</h4>
+                            }
+                            @foreach (var paragraph in section.Text)
+                            {
+                                <p><WikiText Text="@paragraph" /></p>
+                            }
+                            @if (section.Bullets.Count > 0)
+                            {
+                                <ul>
+                                    @foreach (var bullet in section.Bullets)
+                                    {
+                                        <li><WikiText Text="@bullet" /></li>
+                                    }
+                                </ul>
+                            }
+                            @if (section.Table is { } table)
+                            {
+                                <div class="table-scroll">
+                                    <table class="wiki-table">
+                                        <thead>
+                                            <tr>
+                                                @foreach (var column in table.Columns)
+                                                {
+                                                    <th>@column</th>
+                                                }
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var row in table.Rows)
+                                            {
+                                                <tr>
+                                                    @foreach (var cell in row)
+                                                    {
+                                                        <td><WikiText Text="@cell" /></td>
+                                                    }
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @if (table.Caption is { Length: > 0 } caption)
+                                {
+                                    <p class="hint"><WikiText Text="@caption" /></p>
+                                }
+                            }
+                        </section>
+                    }
+
+                    @foreach (var (lines, title, css) in Badges(article))
+                    {
+                        if (lines.Count == 0) continue;
+                        <section class="wiki-facts @css">
+                            <div class="section-title">@title</div>
+                            <ul>
+                                @foreach (var line in lines)
+                                {
+                                    <li><WikiText Text="@line" /></li>
+                                }
+                            </ul>
+                        </section>
+                    }
+
+                    @if (Related(article) is { Count: > 0 } related)
+                    {
+                        <section class="wiki-section">
+                            <div class="section-title">Related</div>
+                            <div class="wiki-related">
+                                @foreach (var other in related)
+                                {
+                                    <button type="button" class="btn btn-sm" @key="other.Id" @onclick="() => Open(other.Id)">@other.Title</button>
+                                }
+                            </div>
+                        </section>
+                    }
+                }
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    [Parameter] public string? ArticleId { get; set; }
+
+    private string _search = "";
+
+    private WikiArticle? Current => Data.Wiki.FirstOrDefault(a => a.Id == ArticleId) ?? Matching.FirstOrDefault();
+
+    /// <summary>Articles matching the search, in data order (the file groups them by category).</summary>
+    private List<WikiArticle> Matching => Data.Wiki.Where(a => TextSearch.Matches(_search, a.SearchTexts)).ToList();
+
+    private List<WikiArticle> Related(WikiArticle article) =>
+        article.Related.Select(id => Data.Wiki.FirstOrDefault(a => a.Id == id)).OfType<WikiArticle>().ToList();
+
+    /// <summary>The three confidence groups under an article.</summary>
+    private static (List<string> Lines, string Title, string Css)[] Badges(WikiArticle a) => new[]
+    {
+        (a.Verified, "Verified in game", "verified"),
+        (a.Assumptions, "Assumptions", "assumed"),
+        (a.Open, "Open questions", "open"),
+    };
+
+    private void Open(string id) => Navigation.NavigateTo($"/wiki/{id}");
+}

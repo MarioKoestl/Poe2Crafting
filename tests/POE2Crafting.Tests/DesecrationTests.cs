@@ -80,21 +80,34 @@ public class DesecrationTests
         Assert.Contains(reason, check.Reason);
     }
 
+    /// <summary>
+    /// A boss omen guarantees at least one modifier of its Lich among the offered options; the others still come from the normal pool
+    /// (clarified by Mario 17.09.2026, config revealBossOmenOnlyLichModifiers = false).
+    /// </summary>
     [DataFact]
-    public void Sovereign_omen_restricts_the_reveal_pool_to_ulaman_mods()
+    public void Sovereign_omen_guarantees_at_least_one_ulaman_mod_among_regular_ones()
     {
+        var rules = TestData.Data!.Config.Assumptions;
+        Assert.False(rules.RevealBossOmenOnlyLichModifiers);
+
         var item = Desecrate(TestData.NewItem(TestBases.Wand, Rarity.Rare).WithAffixes(1, 1), omen: "Omen of the Sovereign").Item;
         var (mod, index) = Unrevealed(item);
 
         var (exclusive, regular) = TestData.Engine!.RevealOffers(item, index);
         Assert.NotEmpty(exclusive);
-        // boss omen: every option is an Ulaman modifier, no regular ones (poe2db note, Mario in game; config revealBossOmenOnlyLichModifiers)
         Assert.All(exclusive, c => Assert.Contains("ulaman_mod", c.Mod.ModTags));
-        Assert.Empty(regular);
-        Assert.All(exclusive, c => Assert.Equal(mod.Affix, c.Mod.AffixType));
-        var offered = Math.Min(1.0, (double)TestData.Data!.Config.Assumptions.RevealOptionCount / exclusive.Count);
-        Assert.All(exclusive, c => Assert.Equal(offered, c.Probability, 6));
-        Assert.All(TestData.Engine.RollRevealOptions(item, index, new Rng(3)), o => Assert.Contains("ulaman_mod", o.ModTags));
+        // the other options are regular modifiers of the same affix type
+        Assert.NotEmpty(regular);
+        Assert.All(regular, c => Assert.Equal(ModCategories.Normal, c.Mod.Category));
+        Assert.All(exclusive.Concat(regular), c => Assert.Equal(mod.Affix, c.Mod.AffixType));
+
+        // every roll offers at least the guaranteed number of Ulaman modifiers
+        for (int seed = 1; seed <= 5; seed++)
+        {
+            var options = TestData.Engine.RollRevealOptions(item, index, new Rng(seed));
+            Assert.Equal(rules.RevealOptionCount, options.Count);
+            Assert.True(options.Count(o => o.ModTags.Contains("ulaman_mod")) >= rules.RevealGuaranteedExclusiveOptions);
+        }
     }
 
     [DataFact]
@@ -140,8 +153,9 @@ public class DesecrationTests
         var action = TestData.Action("Altered Collarbone", "Omen of the Blackblooded");
         var preview = TestData.Engine!.Preview(item, action);
         Assert.False(preview.AdditionsChoosable);
+        // the omen guarantees a Kurgal modifier among the options; the other options are regular ones
         Assert.All(preview.Additions, c => Assert.Contains("kurgal_mod", c.Mod.ModTags));
-        Assert.Empty(preview.OtherAdditions);
+        Assert.All(preview.OtherAdditions, c => Assert.Equal(ModCategories.Normal, c.Mod.Category));
 
         var desecrated = TestData.Engine.Execute(item, action, new Rng(2), new ManualChoice { AddModIds = { preview.Additions[0].Mod.Id } }).Item;
         var (_, index) = Unrevealed(desecrated);
@@ -232,13 +246,14 @@ Desecrated Suffix
         Assert.All(preview.Additions, c => Assert.NotEqual(ModCategories.Normal, c.Mod.Category));
         Assert.All(preview.OtherAdditions, c => Assert.Equal(ModCategories.Normal, c.Mod.Category));
 
-        // with Omen of the Blackblooded: only Kurgal suffixes
+        // with Omen of the Blackblooded: the guaranteed option is a Kurgal suffix, the others stay regular
         Assert.Contains("at least 1 of the 3 options", preview.AdditionLabel);
         var kurgal = TestData.Engine.Preview(amulet, TestData.Action("Preserved Collarbone", "Omen of the Blackblooded"));
-        Assert.StartsWith("Kurgal modifiers — all 3 options", kurgal.AdditionLabel);
+        Assert.StartsWith("Kurgal modifiers — at least 1 of the 3 options", kurgal.AdditionLabel);
         Assert.All(kurgal.Additions, c => Assert.Contains("kurgal_mod", c.Mod.ModTags));
-        Assert.All(kurgal.Additions, c => Assert.Equal(AffixType.Suffix, c.Mod.AffixType));
-        Assert.Empty(kurgal.OtherAdditions);
+        Assert.All(kurgal.Additions.Concat(kurgal.OtherAdditions), c => Assert.Equal(AffixType.Suffix, c.Mod.AffixType));
+        Assert.All(kurgal.OtherAdditions, c => Assert.Equal(ModCategories.Normal, c.Mod.Category));
+        Assert.NotEmpty(kurgal.OtherAdditions);
 
         // full item: prefix or suffix (the removed mod's slot)
         var full = TestData.NewItem(TestBases.Amulet, Rarity.Rare).WithAffixes(3, 3);

@@ -13,8 +13,12 @@ public sealed class ModPool
     /// <summary>Display tiers per (pages, base tags) key.</summary>
     private readonly ConcurrentDictionary<string, Dictionary<string, ModTiers.Rank>> _tierCache = new();
 
-    /// <summary>Non-normal categories that are browsable in the planner / composer UI.</summary>
-    public static readonly string[] BrowsableCategories = { ModCategories.Otherworldly, ModCategories.Desecrated };
+    /// <summary>
+    /// Non-normal categories that are browsable in the planner / composer UI: rune-unlocked ones only roll while their rune is socketed,
+    /// Genesis Tree ones only come from that mechanic — none of them are part of a normal addition.
+    /// </summary>
+    public static readonly string[] BrowsableCategories = new[] { ModCategories.Otherworldly, ModCategories.Desecrated }
+        .Concat(ModCategories.RuneUnlocked).Concat(ModCategories.GenesisTree).ToArray();
 
     /// <summary>Normal plus all browsable categories.</summary>
     public static readonly string[] AllCategories = BrowsableCategories.Prepend(ModCategories.Normal).ToArray();

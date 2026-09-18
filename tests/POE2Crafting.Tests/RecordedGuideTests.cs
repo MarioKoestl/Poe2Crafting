@@ -40,6 +40,20 @@ public class RecordedGuideTests
     }
 
     [DataFact]
+    public void Step_notes_become_the_explanation_of_the_guide_step()
+    {
+        var (guide, _, _) = Record();
+        guide.History[0].Note = "ilvl 82 base from the market";
+        guide.History[1].Note = "need a third suffix before fracturing";
+
+        var walkthrough = new RecordedGuideRunner(TestData.Engine!).Run(guide);
+
+        Assert.Contains("ilvl 82 base from the market", walkthrough.Strategy.StartLabel);
+        Assert.Equal("need a third suffix before fracturing", walkthrough.Strategy.Steps[0].Explanation);
+        Assert.Null(walkthrough.Strategy.Steps[1].Explanation);
+    }
+
+    [DataFact]
     public void Step_chance_is_the_chance_of_the_added_mod_at_its_tier_or_better()
     {
         var (guide, start, exalted) = Record();

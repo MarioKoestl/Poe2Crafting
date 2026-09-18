@@ -18,7 +18,7 @@ public static class ItemDiff
         Flag(lines, "Sanctified", before.Sanctified, after.Sanctified);
         Flag(lines, "Mirrored", before.Mirrored, after.Mirrored);
 
-        var (removedMods, addedMods) = Unmatched(before.Mods.Select(Describe), after.Mods.Select(Describe));
+        var (removedMods, addedMods) = Multiset.Unmatched(before.Mods.Select(Describe), after.Mods.Select(Describe));
         // same modifier with other values = changed (e.g. Divine Orb); otherwise removed/added
         foreach (var (id, text) in removedMods)
         {
@@ -32,20 +32,10 @@ public static class ItemDiff
         }
         lines.AddRange(addedMods.Select(a => new DiffLine(DiffKind.Added, a.Text)));
 
-        var (removedRunes, addedRunes) = Unmatched(before.Runes, after.Runes);
+        var (removedRunes, addedRunes) = Multiset.Unmatched(before.Runes, after.Runes);
         lines.AddRange(removedRunes.Select(r => new DiffLine(DiffKind.Removed, $"{r} (augment)")));
         lines.AddRange(addedRunes.Select(r => new DiffLine(DiffKind.Added, $"{r} (augment)")));
         return lines;
-    }
-
-    /// <summary>Multiset difference: entries of <paramref name="before"/> without an equal partner in <paramref name="after"/>, and the other way round.</summary>
-    private static (List<T> Removed, List<T> Added) Unmatched<T>(IEnumerable<T> before, IEnumerable<T> after)
-    {
-        var removed = new List<T>();
-        var added = after.ToList();
-        foreach (var entry in before)
-            if (!added.Remove(entry)) removed.Add(entry);
-        return (removed, added);
     }
 
     /// <summary>Identity (mod id, empty for text-only lines) and visible text incl. fractured/crafted markers.</summary>

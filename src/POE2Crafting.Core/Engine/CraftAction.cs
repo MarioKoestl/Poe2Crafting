@@ -14,6 +14,9 @@ public sealed class CraftAction
     /// <summary>"Chaos Orb + Omen of Whittling": shown to the user and the identity of an action (Hinekora's Lock, planner caches).</summary>
     public string DisplayName => string.Join(" + ", Omens.Select(o => o.Name).Prepend(Currency.Name));
 
+    /// <summary>The items one use spends: the currency (unless it isn't consumed, e.g. Well of Souls) and every active omen.</summary>
+    public IEnumerable<string> ConsumedItems => Currency.Consumed ? Omens.Select(o => o.Name).Prepend(Currency.Name) : Omens.Select(o => o.Name);
+
     public static CraftAction Of(CurrencyDef currency, params OmenDef?[] omens) =>
         new() { Currency = currency, Omens = omens.OfType<OmenDef>().ToList() };
 }

@@ -41,12 +41,24 @@ builder.Services.AddHttpClient(MarketDataService.HttpClientName, http =>
     http.DefaultRequestHeaders.UserAgent.ParseAdd("POE2CraftingSimulator/1.0 (+https://github.com/MarioKoestl/Poe2Crafting)");
     http.Timeout = TimeSpan.FromSeconds(90);
 });
-builder.Services.AddSingleton(new ExchangeCatalog(gameData));
-builder.Services.AddSingleton(sp => new MarketDataService(sp.GetRequiredService<IHttpClientFactory>(), marketSettings, marketCacheFolder,
+var exchangeCatalog = new ExchangeCatalog(gameData);
+builder.Services.AddSingleton(exchangeCatalog);
+builder.Services.AddSingleton(sp => new MarketDataService(sp.GetRequiredService<IHttpClientFactory>(), marketSettings, exchangeCatalog, marketCacheFolder,
     sp.GetRequiredService<ILogger<MarketDataService>>()));
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MarketDataService>());
+// builds from poe.ninja: searches in memory, sampled characters cached next to the projects (or configured path)
+var ninjaCacheFolder = Path.GetFullPath(builder.Configuration["NinjaCacheFolder"] ?? Path.Combine(dataFolder, "..", "ninja-cache"));
+builder.Services.AddHttpClient(NinjaBuildsService.HttpClientName, http =>
+{
+    http.BaseAddress = new Uri("https://poe.ninja/poe2/api/");
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("POE2CraftingSimulator/1.0 (+https://github.com/MarioKoestl/Poe2Crafting)");
+    http.Timeout = TimeSpan.FromSeconds(60);
+});
+builder.Services.AddSingleton(sp => new NinjaBuildsService(sp.GetRequiredService<IHttpClientFactory>(), gameData, engine.Pool, ninjaCacheFolder,
+    sp.GetRequiredService<ILogger<NinjaBuildsService>>()));
 builder.Services.AddScoped<CraftingSession>();
 builder.Services.AddScoped<PlannerState>();
+builder.Services.AddScoped<BuildsState>();
 
 var app = builder.Build();
 

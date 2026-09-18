@@ -30,15 +30,15 @@ else
         <table class="materials-table market-table">
             <thead>
                 <tr>
-                    <th>@SortButton(SortColumn.Name, "Item")</th>
-                    <th title="What selling 1 item gets you (lowest fills of the latest hours)">@SortButton(SortColumn.Price, "Sell")</th>
+                    <th><SortHeader Label="Item" Active="@(_sort == SortColumn.Name)" Descending="_descending" OnClick="() => SortBy(SortColumn.Name)" /></th>
+                    <th title="What selling 1 item gets you (lowest fills of the latest hours)"><SortHeader Label="Sell" Active="@(_sort == SortColumn.Price)" Descending="_descending" OnClick="() => SortBy(SortColumn.Price)" /></th>
                     <th title="Volume-weighted average of the latest hours">Average</th>
                     <th title="What buying 1 item costs you (highest fills of the latest hours)">Buy</th>
-                    <th title="(Buy − Sell) / Average: what a round trip loses">@SortButton(SortColumn.Spread, "Spread")</th>
+                    <th title="(Buy − Sell) / Average: what a round trip loses"><SortHeader Label="Spread" Active="@(_sort == SortColumn.Spread)" Descending="_descending" OnClick="() => SortBy(SortColumn.Spread)" /></th>
                     <th title="Items you get for 1 @Reference.Name (average)">Per 1 @ShortName</th>
-                    <th title="Average of the last hours against the first hours of the history">@SortButton(SortColumn.Change, $"{HistoryHours} h")</th>
+                    <th title="Average of the last hours against the first hours of the history"><SortHeader Label="@($"{HistoryHours} h")" Active="@(_sort == SortColumn.Change)" Descending="_descending" OnClick="() => SortBy(SortColumn.Change)" /></th>
                     <th>Trend</th>
-                    <th title="Items traded in all pairs during the history (value in @Reference.Name)">@SortButton(SortColumn.Volume, "Traded")</th>
+                    <th title="Items traded in all pairs during the history (value in @Reference.Name)"><SortHeader Label="Traded" Active="@(_sort == SortColumn.Volume)" Descending="_descending" OnClick="() => SortBy(SortColumn.Volume)" /></th>
                     <th title="Items offered in the order books (latest hour)">Stock</th>
                     <th></th>
                 </tr>
@@ -127,8 +127,6 @@ else
         };
         return _descending ? rows.OrderByDescending(key) : rows.OrderBy(key);
     }
-
-    private RenderFragment SortButton(SortColumn column, string label) => @<button class="market-sort @(_sort == column ? "active" : "")" @onclick="() => SortBy(column)">@label@(_sort == column ? (_descending ? " ▾" : " ▴") : "")</button>;
 
     private void SortBy(SortColumn column)
     {

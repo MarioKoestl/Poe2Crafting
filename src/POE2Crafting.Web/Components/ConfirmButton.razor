@@ -1,0 +1,26 @@
+@* Two-step button for destructive actions: the first click arms it ("Delete?"), the second one runs the action. *@
+
+<button type="button" class="@(_armed ? ConfirmClass : Class)" title="@(_armed ? ConfirmTitle ?? Title : Title)"
+        aria-label="@(_armed ? null : AriaLabel)" @onclick="Click">@(_armed ? ConfirmLabel : Label)</button>
+
+@code {
+    /// <summary>Label of the resting button, e.g. "🗑".</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    /// <summary>Label once it asks for confirmation.</summary>
+    [Parameter] public string ConfirmLabel { get; set; } = "Confirm?";
+    [Parameter] public string Class { get; set; } = "btn btn-sm";
+    [Parameter] public string ConfirmClass { get; set; } = "btn btn-sm btn-danger";
+    [Parameter] public string? Title { get; set; }
+    /// <summary>Title while armed — the place to say what exactly gets deleted (defaults to <see cref="Title"/>).</summary>
+    [Parameter] public string? ConfirmTitle { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private bool _armed;
+
+    private Task Click()
+    {
+        _armed = !_armed;
+        return _armed ? Task.CompletedTask : OnConfirm.InvokeAsync();
+    }
+}

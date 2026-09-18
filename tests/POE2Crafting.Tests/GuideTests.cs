@@ -25,7 +25,7 @@ public class GuideTests
         var steps = Run("fracture-abyss-mark").Strategy.Steps;
         Assert.Equal(1.0 / 3, steps.Last().SuccessProbability, 6);
         var final = steps.Last().Result!;
-        Assert.True(final.Affixes.Single(m => m.Fractured).DisplayText().Contains("Melee Skills"));
+        Assert.Contains("Melee Skills", final.Affixes.Single(m => m.Fractured).DisplayText());
         Assert.Single(final.UnrevealedMods);
     }
 

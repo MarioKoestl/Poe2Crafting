@@ -191,4 +191,91 @@ Item Level: 82";
         Assert.Equal(rules.MaxAffixes("Jewel", Rarity.Rare, AffixType.Prefix, Array.Empty<string>()), rules.MaxAffixes("JEWEL", Rarity.Rare, AffixType.Prefix, Array.Empty<string>()));
         Assert.Equal(2, rules.MaxAffixes("jewel", Rarity.Rare, AffixType.Prefix, Array.Empty<string>()));
     }
+
+    /// <summary>
+    /// Mario's Mnemonic Ring (17.09.2026): two of its modifiers come from The Genesis Tree (poe2db breach_caster) and it carries an unrevealed
+    /// desecrated suffix. The unrevealed modifier is only in the advanced item text (Ctrl+Alt+C) — the plain Ctrl+C text does not mention it at all.
+    /// </summary>
+    [DataFact]
+    public void Advanced_text_of_a_genesis_tree_ring_keeps_its_unrevealed_desecrated_suffix()
+    {
+        var text = """
+            Item Class: Rings
+            Rarity: Rare
+            Torment Band
+            Mnemonic Ring
+            --------
+            Requirements:
+            Level: 63
+            --------
+            Item Level: 82
+            --------
+            { Implicit Modifier }
+            6% increased maximum Mana
+            --------
+            { Fractured Prefix Modifier "Occultist's" (Tier: 3) }
+            22% increased Mana Cost Efficiency of Spells
+            { Prefix Modifier "Prince's" (Tier: 2) }
+            +179 to maximum Mana
+            { Prefix Modifier "Passionate" (Tier: 1) }
+            38% increased effect of Arcane Surge on you
+            { Suffix Modifier "of the Veil" }
+            Desecrated Suffix
+            --------
+            Fractured Item
+            """;
+        var item = ItemParser.Parse(text, TestData.Data!);
+
+        Assert.Equal(("Mnemonic Ring", Rarity.Rare, 82), (item.BaseName, item.Rarity, item.ItemLevel));
+        Assert.Equal((3, 1), (item.PrefixCount, item.SuffixCount));
+        // every explicit modifier resolves, including the two of The Genesis Tree
+        Assert.All(item.Affixes.Where(m => !m.Unrevealed), m => Assert.NotNull(m.Def));
+        Assert.Equal(2, item.Affixes.Count(m => m.Def?.Category == ModCategories.GenesisCaster));
+        Assert.True(item.Affixes.Single(m => m.Fractured).Def!.Category == ModCategories.GenesisCaster);
+
+        var unrevealed = Assert.Single(item.UnrevealedMods).Mod;
+        Assert.Equal((ModKind.Desecrated, AffixType.Suffix), (unrevealed.Kind, unrevealed.Affix));
+    }
+
+    /// <summary>
+    /// An unrevealed desecrated modifier is its own line and the wording differs between the plain and the advanced item text (Mario 17.09.2026):
+    /// every variant must become one unrevealed desecrated modifier. When the line names no affix type, the free slot decides — here the three
+    /// prefixes are full, so it is the suffix.
+    /// </summary>
+    [DataTheory]
+    [InlineData("Desecrated Suffix")]
+    [InlineData("Unrevealed Desecrated Suffix")]
+    [InlineData("Desecrated Modifier")]
+    [InlineData("Unrevealed Modifier")]
+    [InlineData("--------\nDesecrated Suffix")]
+    [InlineData("{ Suffix Modifier \"of the Veil\" }\nDesecrated Suffix")]
+    public void Unrevealed_desecrated_lines_are_recognised_in_every_wording(string unrevealedLines)
+    {
+        var text = """
+            Rarity: Rare
+            Torment Band
+            Mnemonic Ring
+            Ring
+            --------
+            Requires: Level 63
+            --------
+            Item Level: 82
+            --------
+            6% increased maximum Mana (implicit)
+            --------
+            22% increased Mana Cost Efficiency of Spells (fractured)
+            +179 to maximum Mana
+            38% increased effect of Arcane Surge on you
+            LINES
+            --------
+            Fractured Item
+            --------
+            Note: 15 divine
+            """.Replace("LINES", unrevealedLines);
+        var item = ItemParser.Parse(text, TestData.Data!);
+
+        Assert.Equal((3, 1), (item.PrefixCount, item.SuffixCount));
+        var unrevealed = Assert.Single(item.UnrevealedMods).Mod;
+        Assert.Equal((ModKind.Desecrated, AffixType.Suffix), (unrevealed.Kind, unrevealed.Affix));
+    }
 }

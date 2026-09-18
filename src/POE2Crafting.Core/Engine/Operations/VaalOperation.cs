@@ -14,6 +14,9 @@ internal sealed class VaalOperation : CraftOperation
 
     public VaalOperation(CraftingEngine engine) : base(engine, CurrencyOps.Vaal) { }
 
+    /// <summary>The reroll outcome replaces modifiers with new random ones.</summary>
+    public override bool AddsRandomModifiers => true;
+
     private bool GetsSocket(Item item) => Engine.Data.ClassMatchesTarget(item.ItemClass, ClassTargets.MartialWeaponOrArmour);
     private bool GetsQuality(Item item) => Engine.Data.ClassMatchesTarget(item.ItemClass, ClassTargets.WandOrStaff) && item.Quality < Assumptions.VaalQualityCap;
 
@@ -41,9 +44,9 @@ internal sealed class VaalOperation : CraftOperation
     public override Applicability? Check(CraftContext ctx)
     {
         if (Outcomes(ctx).Count == 0) return Applicability.No("No Vaal Orb outcome is possible on this item (config: vaalOutcomes).");
-        ctx.Notes.Add($"Outcome weights: {Assumptions.VaalOutcomesNote}");
+        ctx.Notes.Add($"{Assumptions.VaalOutcomesNote}");
         if (IsPossible(Reroll, ctx))
-            ctx.Notes.Add("Assumption: \"affixes are randomized\" replaces each hit modifier with a new random modifier of the same affix type (UNVERIFIED).");
+            ctx.Notes.Add("Assumption: \"affixes are randomized\" replaces each hit modifier with a new random modifier of the same affix type.");
         if (ctx.Item.Rarity == Rarity.Unique)
             ctx.Notes.Add("Unique modifiers are not modelled: the unique value reroll (x0.78-1.22) is not simulated.");
         return null;

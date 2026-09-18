@@ -58,9 +58,6 @@ public sealed class CraftingEngine
     public ModPool Pool => _pool;
     public SimAssumptions Assumptions => _data.Config.Assumptions;
 
-    /// <summary>Whether an operation id is simulated.</summary>
-    public bool HasOperation(string op) => _operations.ContainsKey(op);
-
     // ------------------------------------------------------------------ public API
 
     public Applicability Check(Item item, CraftAction action) => Check(NewContext(item, action));
@@ -70,9 +67,8 @@ public sealed class CraftingEngine
     {
         var ctx = NewContext(item, action);
         var app = Check(ctx);
-        var weights = $"Weights: {Assumptions.WeightsSource}.";
-        if (!app.Ok) return new StepPreview { Applicability = app, WeightsNote = weights };
-        return _operations[action.Currency.Op!].Preview(ctx, forcedRemovalIndex).WithApplicability(app, weights);
+        if (!app.Ok) return new StepPreview { Applicability = app };
+        return _operations[action.Currency.Op!].Preview(ctx, forcedRemovalIndex).WithApplicability(app);
     }
 
     /// <summary>
@@ -119,7 +115,7 @@ public sealed class CraftingEngine
         if (item.InstilledNotable is { } existing)
         {
             if (!Assumptions.InstillReplacesExisting) return Applicability.No($"The amulet is already instilled ({existing.DisplayText()}).");
-            notes.Add($"Replaces {existing.DisplayText()} ({Assumptions.AugmentInstillNote}).");
+            notes.Add($"Replaces {existing.DisplayText()} (assumption).");
         }
         return new Applicability { Ok = true, Notes = notes };
     }
@@ -186,7 +182,20 @@ public sealed class CraftingEngine
 
         if (op.Check(ctx) is { } refusal) return refusal;
         if (c.MinModLevel is { } mml) ctx.Notes.Add($"Minimum Modifier Level {mml}: only modifier tiers with level >= {mml} can be added.");
+        AddRuneUnlockedNote(ctx, op);
         return new Applicability { Ok = true, Notes = ctx.Notes };
+    }
+
+    /// <summary>
+    /// Modifiers the item's socketed runes unlock roll like normal ones but have no weights in the data
+    /// (see <see cref="WithRuneUnlocked"/>): say so wherever an action adds random modifiers.
+    /// </summary>
+    private void AddRuneUnlockedNote(CraftContext ctx, CraftOperation op)
+    {
+        if (!op.AddsRandomModifiers) return;
+        var unlocked = ModCategories.UnlockedFor(ctx.Item).ToList();
+        if (unlocked.Count == 0) return;
+        ctx.Notes.Add($"Socketed runes let {string.Join(", ", unlocked)} modifiers roll as well; each of them is assumed to weigh {Assumptions.RuneUnlockedModWeight}.");
     }
 
     // ------------------------------------------------------------------ shared building blocks
@@ -237,8 +246,23 @@ public sealed class CraftingEngine
         }
         var restricted = OmenEffects.RestrictedType(omens);
         List<ModCandidate> For(AffixType type) =>
-            FreeSlots(item, type, targetRarity, restricted) > 0 ? CatalystBias(item, omens, _pool.Candidates(item, type, minLevel, filter, category)) : new List<ModCandidate>();
+            FreeSlots(item, type, targetRarity, restricted) > 0 ? CatalystBias(item, omens, WithRuneUnlocked(item, type, minLevel, filter, category)) : new List<ModCandidate>();
         return (For(AffixType.Prefix), For(AffixType.Suffix));
+    }
+
+    /// <summary>
+    /// The category's candidates; for normal additions also the categories the item's runes unlock ("Can roll Destruction modifiers"), each of their mods
+    /// weighing config runeUnlockedModWeight (the data has no real weights for them).
+    /// </summary>
+    private List<ModCandidate> WithRuneUnlocked(Item item, AffixType type, int minLevel, Func<ModDef, bool>? filter, string category)
+    {
+        var candidates = _pool.Candidates(item, type, minLevel, filter, category);
+        if (category != ModCategories.Normal) return candidates;
+        var unlocked = ModCategories.UnlockedFor(item)
+            .SelectMany(c => _pool.Candidates(item, type, minLevel, filter, c))
+            .Select(c => new ModCandidate { Mod = c.Mod, Weight = Assumptions.RuneUnlockedModWeight })
+            .ToList();
+        return unlocked.Count == 0 ? candidates : ModCandidate.Normalised(candidates.Concat(unlocked));
     }
 
     /// <summary>Omen of Catalysing Exaltation: mods with the catalyst quality's tag get their weight multiplied (config catalysingWeightBonusPerQuality).</summary>
@@ -275,15 +299,34 @@ public sealed class CraftingEngine
     internal static List<double> ValuesFor(ManualChoice? choice, ModDef mod, Rng rng) =>
         choice?.Values.Count > 0 && choice.Values[0] is { } values ? CheckedValues(mod, values) : RollValues(mod, rng);
 
+    /// <summary>The candidates (with probabilities) of adding one mod to the item as it is now.</summary>
+    private List<ModCandidate> OneAddition(Item item, int minModLevel, AffixType? forcedType, IReadOnlyList<OmenDef> omens)
+    {
+        var target = item.Rarity == Rarity.Normal ? Rarity.Magic : item.Rarity;
+        var (pre, suf) = AdditionCandidates(item, minModLevel, omens, target);
+        if (forcedType == AffixType.Prefix) suf.Clear();
+        if (forcedType == AffixType.Suffix) pre.Clear();
+        return Combined(pre, suf, out _);
+    }
+
+    /// <summary>
+    /// Several additions in one action (Omen of Greater Exaltation): the candidates of the next addition once the already chosen mods are on the item,
+    /// so family exclusivity and the slots they take count — the same pool the execution rolls the next mod from.
+    /// </summary>
+    /// <exception cref="InvalidChoiceException">A chosen id is not a known modifier.</exception>
+    public List<ModCandidate> NextAdditions(Item item, CraftAction action, IReadOnlyList<string> chosenModIds)
+    {
+        var after = item.Clone();
+        foreach (var id in chosenModIds)
+            after.AddMod(Data.FindMod(id) ?? throw new InvalidChoiceException($"Unknown modifier {id}."), ModKind.Explicit);
+        return OneAddition(after, action.Currency.MinModLevel ?? 0, OmenEffects.RestrictedType(action.Omens), action.Omens);
+    }
+
     /// <summary>Add one mod (random or chosen). Returns false when nothing could be added.</summary>
     internal bool AddOne(ExecuteContext ctx, AffixType? forcedType, ManualChoice? choice, IReadOnlyList<OmenDef> omens)
     {
         var item = ctx.Result;
-        var target = item.Rarity == Rarity.Normal ? Rarity.Magic : item.Rarity;
-        var (pre, suf) = AdditionCandidates(item, ctx.MinModLevel, omens, target);
-        if (forcedType == AffixType.Prefix) suf.Clear();
-        if (forcedType == AffixType.Suffix) pre.Clear();
-        var combined = Combined(pre, suf, out _);
+        var combined = OneAddition(item, ctx.MinModLevel, forcedType, omens);
         if (combined.Count == 0) return false;
 
         var chosenId = choice?.AddModIds.FirstOrDefault();

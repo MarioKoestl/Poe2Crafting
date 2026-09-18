@@ -10,12 +10,22 @@ public static class ItemTextFormat
     public const string RuneMarker = "rune";
     public const string FracturedMarker = "fractured";
 
-    /// <summary>The game shows an unrevealed desecrated modifier as the line "Desecrated Prefix"/"Desecrated Suffix" (header name e.g. "of the Veil").</summary>
-    private static readonly System.Text.RegularExpressions.Regex UnrevealedLine = new(@"^Desecrated (?<affix>Prefix|Suffix)$", System.Text.RegularExpressions.RegexOptions.Compiled);
+    /// <summary>
+    /// An unrevealed desecrated modifier is a line of its own ("Desecrated Suffix", header name e.g. "of the Veil"). Accepts the wordings seen in the
+    /// plain and the advanced item text — "Desecrated"/"Unrevealed" in either order, and "Modifier" when the line does not name the affix type.
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex UnrevealedLine = new(
+        @"^(?:Unrevealed|Desecrated)(?:\s+(?:Unrevealed|Desecrated))?\s+(?<affix>Prefix|Suffix|Modifier)$",
+        System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-    /// <summary>The affix type of an unrevealed desecrated modifier's line, or null for other lines.</summary>
+    /// <summary>
+    /// The affix type of an unrevealed desecrated modifier's line, or null for other lines;
+    /// <see cref="AffixType.Other"/> when the line says only "Modifier" (the type is decided by the free slots).
+    /// </summary>
     public static AffixType? UnrevealedLineAffix(string? line) =>
-        line != null && UnrevealedLine.Match(line.Trim()) is { Success: true } m ? Enum.Parse<AffixType>(m.Groups["affix"].Value) : null;
+        line != null && UnrevealedLine.Match(line.Trim()) is { Success: true } m
+            ? Enum.TryParse<AffixType>(m.Groups["affix"].Value, ignoreCase: true, out var affix) ? affix : AffixType.Other
+            : null;
 
     /// <summary>Kinds with their trailing line marker ("+20 to Strength (crafted)") and modifier header flag ("{ Crafted Prefix Modifier ... }").</summary>
     private static readonly (ModKind Kind, string Marker, string HeaderFlag)[] Kinds =

@@ -1,0 +1,25 @@
+@* Wiki prose: [[Essence of the Breach]] becomes a hoverable CraftItemLink, "quoted" parts are emphasised, everything else stays text. *@
+@using System.Text.RegularExpressions
+
+@foreach (var part in Markup.Split(Text))
+{
+    if (part.StartsWith("[[", StringComparison.Ordinal))
+    {
+        <CraftItemLink Name="@part[2..^2]" ShowIcon="false" />
+    }
+    else if (part.StartsWith("\"", StringComparison.Ordinal) && part.Length > 1)
+    {
+        <em class="wiki-quote">@part</em>
+    }
+    else
+    {
+        @part
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+
+    /// <summary>Splits into plain text, [[crafting item]] links and "quoted modifier text".</summary>
+    private static readonly Regex Markup = new("(\\[\\[[^\\]]+\\]\\]|\"[^\"]+\")", RegexOptions.Compiled);
+}

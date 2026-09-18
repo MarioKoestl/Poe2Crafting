@@ -1,3 +1,5 @@
+using POE2Crafting.Core.Items;
+
 namespace POE2Crafting.Core.Data;
 
 /// <summary>Tier numbering as in game: T1 = highest level within one family, stat, generation type and category.</summary>
@@ -7,6 +9,13 @@ public static class ModTiers
 
     /// <summary>Mods with the same key are tiers of one another (same family, stat, affix type and category).</summary>
     public static string TierGroupKey(ModDef mod) => $"{mod.Category}|{mod.Gen}|{mod.Family ?? mod.Name}|{mod.StatSignature}";
+
+    /// <summary>Label of a tier group: the lowest tier's text with the numbers stripped, e.g. "#% increased Spell Damage".</summary>
+    public static string GroupLabel(IEnumerable<ModDef> tiers)
+    {
+        var first = tiers.MinBy(m => m.Level)!;
+        return string.IsNullOrWhiteSpace(first.Text) ? first.Name : ModText.StripNumbers(first.Text);
+    }
 
     /// <summary>A tier of the reference's tier group at the reference's level or higher (higher level = better tier).</summary>
     public static bool IsSameOrBetterTier(ModDef mod, ModDef reference) =>

@@ -83,6 +83,26 @@ internal sealed partial class FromItemPlanner
     }
 
     /// <summary>
+    /// Before fracturing a wanted mod: an unrevealed desecrated modifier (a bone) as the placeholder that fills the item up. It counts towards the
+    /// Fracturing Orb's minimum but can't be fractured itself, so the wanted mod is hit more often than with a normal placeholder (1/3 instead of 1/4
+    /// on a 4-mod item). The placeholder is removed again later (e.g. Omen of Whittling: unrevealed counts as level 1).
+    /// </summary>
+    private IEnumerable<Move> FracturePlaceholderMoves(Item item, ItemGoal goal)
+    {
+        if (goal.FractureMissing == null || item.HasDesecratedMod) yield break;
+        foreach (var (action, preview) in Actions(item, CurrencyOps.Desecrate, Tools.Basic))
+        {
+            // only into a free slot: a bone on a full item removes a random modifier (possibly the wanted one)
+            if (preview.Removals.Count > 0 || preview.SpecialOutcomes.Count == 0) continue;
+            var outcome = preview.SpecialOutcomes.MaxBy(o => o.Value).Key;
+            if (Simulate(item, action, new ManualChoice { SpecialOutcome = outcome }) is not { } next || !next.UnrevealedMods.Any()) continue;
+            yield return new Move(action, 1, 0, next, $"adds an unrevealed desecrated placeholder ({outcome.ToLowerInvariant()}, it can't be fractured)",
+                Note: "Desecrated modifiers count for the Fracturing Orb's minimum but are never fractured: the wanted modifier is hit more often (1/3 instead of 1/4 on a 4-mod item). "
+                      + $"The plan assumes the more likely outcome ({outcome}); the other affix type only changes how the placeholder is removed later.");
+        }
+    }
+
+    /// <summary>
     /// The other variants (Normal/Greater/Perfect) of the chosen currency with the same omen and their chances, so a step shows why they were not taken
     /// (e.g. a Greater Orb of Augmentation cannot roll any tier of the target when its minimum modifier level is above the best tier's level).
     /// </summary>
@@ -141,8 +161,28 @@ internal sealed partial class FromItemPlanner
         }
     }
 
-    private IEnumerable<Move> FractureMoves(Item item, ItemGoal goal)
+    /// <summary>
+    /// Fracturing Orb. A target that wants a specific mod fractured: success = the fracture lands on it (1 in the number of fracturable mods —
+    /// desecrated modifiers can't be fractured), any other landing is a brick (only one fracture per item).
+    /// Otherwise (no fracture wanted): fracture any kept mod to protect it from the following removals.
+    /// </summary>
+    private IEnumerable<Move> FractureMoves(Item item, ItemGoal goal, TargetItemSpec target)
     {
+        if (goal.FractureMissing is { } wanted)
+        {
+            foreach (var (action, preview) in Actions(item, CurrencyOps.Fracture, Tools.Basic))
+            {
+                var hit = preview.Removals.FirstOrDefault(r => r.Index == wanted.Index);
+                if (hit == null || Simulate(item, action, new ManualChoice { RemoveIndices = { hit.Index } }) is not { } fractured) continue;
+                int desecrated = item.Affixes.Count(m => m.Kind == ModKind.Desecrated);
+                yield return new Move(action, hit.Probability, 1 - hit.Probability, fractured, $"fractures {wanted.Mod.DisplayText()}",
+                    Note: $"1 in {preview.Removals.Count} fracturable modifiers" + (desecrated > 0 ? $" — {desecrated} desecrated modifier(s) can't be fractured and raise the chance." : ".")
+                          + " A wrong fracture can't be undone.");
+            }
+            yield break;
+        }
+        // a fracture of another mod would take the target's one fracture
+        if (target.TargetMods.Any(t => t.Fractured)) yield break;
         if (goal.ToRemove.Count == 0 || goal.Kept.Count == 0) yield break; // an already fractured item is refused by the engine
         foreach (var (action, preview) in Actions(item, CurrencyOps.Fracture, Tools.Basic))
         {

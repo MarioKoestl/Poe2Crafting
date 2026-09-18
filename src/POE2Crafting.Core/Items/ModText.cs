@@ -90,6 +90,15 @@ public static class ModText
     /// <summary>Middle of a range, rounded like its rolls.</summary>
     public static double MidValue(double[] range) => RoundForRange((range[0] + range[1]) / 2, range);
 
+    /// <summary>The value at the same relative position of another range (e.g. 60% of the way from min to max stays 60%), rounded like that range.</summary>
+    public static double SamePosition(double value, double[] from, double[] to)
+    {
+        var (lo, hi) = Bounds(from);
+        var (newLo, newHi) = Bounds(to);
+        double position = hi > lo ? Math.Clamp((value - lo) / (hi - lo), 0, 1) : 0.5;
+        return RoundForRange(newLo + position * (newHi - newLo), to);
+    }
+
     /// <summary>Every value a roll of the range can have, ascending: whole numbers, or hundredths for fractional ranges.</summary>
     public static IEnumerable<double> PossibleRolls(double[] range)
     {
@@ -138,6 +147,12 @@ public static class ModText
         ExtraAffixRx.Match(text.Trim()) is { Success: true } m && m.Groups["type"].Value.Equals(type.ToString(), StringComparison.OrdinalIgnoreCase)
             ? int.Parse(m.Groups["n"].Value, CultureInfo.InvariantCulture)
             : 0;
+
+    private static readonly Regex ExtraCraftedRx = new(@"Can have (?<n>\d+) additional Crafted Modifiers?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>Additional crafted modifiers a line allows ("Can have 1 additional Crafted Modifiers", Astrid's Creativity), 0 for other lines.</summary>
+    public static int ExtraCraftedAllowed(string text) =>
+        ExtraCraftedRx.Match(text) is { Success: true } m ? int.Parse(m.Groups["n"].Value, CultureInfo.InvariantCulture) : 0;
 
     private static double ParseNumber(string s) => double.Parse(s, CultureInfo.InvariantCulture);
 }

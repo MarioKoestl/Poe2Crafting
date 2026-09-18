@@ -9,6 +9,7 @@
     }
 
     <h3 class="pane-title"><CraftText Text="@Action.DisplayName" /></h3>
+    <ActionCost Items="Action.ConsumedItems" />
 
     @if (Action.Currency.Description.Count > 0)
     {
@@ -43,16 +44,12 @@
             </div>
         }
 
-        @if (preview.Notes.Count > 0 || preview.WeightsNote != null)
+        @if (preview.Notes.Count > 0)
         {
             <div class="notes-section">
                 @foreach (var note in preview.Notes)
                 {
                     <div class="note">@note</div>
-                }
-                @if (preview.WeightsNote != null)
-                {
-                    <div class="note note-muted">@preview.WeightsNote</div>
                 }
             </div>
         }
@@ -64,57 +61,8 @@
 
         @if (preview.Quality is { } quality)
         {
-            var shownQuality = _quality;
-            var effects = QualityEffects.For(item, quality.Type, shownQuality, quality.Max, Session.Engine.Data.HighestReachableQuality);
-            <div class="distribution-section">
-                <h4>@quality.Type quality after this catalyst: @(shownQuality)%</h4>
-                <div class="quality-choice">
-                    <label for="quality-after">Quality after use</label>
-                    <input id="quality-after" type="number" class="tm-value" min="@quality.Min" max="@quality.Max" step="1" value="@_quality"
-                           @onchange="e => SetQuality(e.Value, quality)" />
-                    <span class="hint">@(quality.Min)–@(quality.Max)%</span>
-                    <button class="btn btn-sm btn-primary" @onclick="() => Choose(new ManualChoice { Quality = _quality })">Apply with @(_quality)%</button>
-                </div>
-                @if (effects.Count > 0)
-                {
-                    <div class="table-scroll">
-                        <table class="materials-table quality-effects">
-                            <thead>
-                                <tr>
-                                    <th>Now</th>
-                                    <th>At @(shownQuality)%</th>
-                                    <th>At max @(quality.Max)%</th>
-                                    <th title="The next quality above @(shownQuality)% where the value rises">Next step</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var effect in effects)
-                                {
-                                    <tr @key="effect.Index">
-                                        <td>@effect.Now</td>
-                                        <td class="@(effect.At != effect.Now ? "value-up" : "")">@effect.At</td>
-                                        <td>@effect.AtMax</td>
-                                        <td>
-                                            @if (effect.NextStepQuality is { } next)
-                                            {
-                                                @($"{effect.NextStepText} at {next}%")
-                                                @if (next > quality.Max)
-                                                {
-                                                    <span class="hint" title="Above this item's maximum quality: raise the maximum first (e.g. Essence of the Breach)"> (above max)</span>
-                                                }
-                                            }
-                                            else
-                                            {
-                                                <text>—</text>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-            </div>
+            <QualityChoicePanel Item="item" Choice="quality" HighestReachableQuality="Session.Engine.Data.HighestReachableQuality"
+                                OnApply="q => Choose(new ManualChoice { Quality = q })" />
         }
 
         @if (preview.Removals.Count > 0)
@@ -147,41 +95,75 @@
             </div>
         }
 
-        @foreach (var (additions, label, isFirst) in new[] { (preview.Additions, preview.AdditionLabel, true), (preview.OtherAdditions, preview.OtherAdditionLabel, false) })
+        var firstAdditions = _chosenAdditions.Count > 0 ? _nextAdditions : preview.Additions;
+        var candidateCount = firstAdditions.Count + preview.OtherAdditions.Count;
+        @* picking a modifier by hand means finding it among hundreds of candidates *@
+        @if (preview.AdditionsChoosable && candidateCount > SearchFrom)
         {
-            if (additions.Count == 0) continue;
+            <SearchBox @bind-Value="_additionFilter" Placeholder="@($"Search {candidateCount} possible modifiers (name, text, tag)...")" />
+        }
+
+        @foreach (var (listed, label, isFirst) in new[] { (firstAdditions, preview.AdditionLabel, true), (preview.OtherAdditions, preview.OtherAdditionLabel, false) })
+        {
+            // several additions (Omen of Greater Exaltation): after the first choice the list shows what the next addition can be
+            var additions = listed;
+            if (additions.Count == 0 && !(isFirst && _chosenAdditions.Count > 0)) continue;
+            var matching = Matching(additions);
             var choosable = preview.AdditionsChoosable && preview.Additions.Count + preview.OtherAdditions.Count > 1;
-            var showAll = _showAll.Contains(isFirst);
             <div class="distribution-section" @key="@(isFirst ? "additions" : "other-additions")">
                 <h4>
-                    @(label ?? $"Addition ({preview.AddCount}x)")
-                    @if (isFirst && preview.PrefixProbability + preview.SuffixProbability > 0)
+                    @(isFirst && preview.AddCount > 1 ? $"Addition {_chosenAdditions.Count + 1} of {preview.AddCount}" : label ?? $"Addition ({preview.AddCount}x)")
+                    @if (matching.Count != additions.Count)
+                    {
+                        <text> — @matching.Count of @additions.Count</text>
+                    }
+                    else if (isFirst && _chosenAdditions.Count == 0 && preview.PrefixProbability + preview.SuffixProbability > 0)
                     {
                         <text> — P(@UiFormat.Probability(preview.PrefixProbability)) / S(@UiFormat.Probability(preview.SuffixProbability))</text>
                     }
                 </h4>
-                <div class="addition-list">
-                    @foreach (var c in additions.OrderByDescending(c => c.Probability).Take(showAll ? int.MaxValue : CollapsedAdditions))
+                @if (isFirst && preview.AddCount > 1)
+                {
+                    <div class="note">
+                        @if (_chosenAdditions.Count == 0)
+                        {
+                            <text>Choose the @preview.AddCount added modifiers one after another, or roll randomly.</text>
+                        }
+                        else
+                        {
+                            <text>Chosen: </text>
+                            @foreach (var (id, _) in _chosenAdditions)
+                            {
+                                <strong>@(Session.Engine.Data.FindMod(id)?.Text ?? id)</strong><text>; </text>
+                            }
+                            <button class="btn btn-xs" @onclick="UndoAddition">Undo</button>
+                            <button class="btn btn-xs" @onclick="ApplyChosenAdditions" title="Keep the chosen modifiers and roll the rest randomly">Roll the rest</button>
+                        }
+                    </div>
+                    @if (additions.Count == 0)
                     {
-                        var mod = c.Mod;
-                        <ModOptionRow @key="mod.Id" Mod="mod" Item="item" Probability="c.Probability"
-                                      OnChoose="@(choosable ? EventCallback.Factory.Create(this, () => PickAddition(mod)) : default)" />
+                        <div class="error-banner">Nothing else can be added after these modifiers.</div>
+                    }
+                }
+                @if (matching.Count == 0 && additions.Count > 0)
+                {
+                    <p class="hint">No possible modifier matches the search.</p>
+                }
+                <ModOptionList Candidates="matching" Item="item" AutoExpand="Searching"
+                               OnChoose="@(choosable ? EventCallback.Factory.Create<ModDef>(this, PickAddition) : default)">
+                    <AfterRow Context="mod">
                         @if (_pickedAddition == mod.Id)
                         {
-                            <div class="value-pick" @key="@($"pick-{mod.Id}")">
+                            <div class="value-pick">
                                 <span class="hint">Rolled value:</span>
                                 <ModValueInputs Mod="mod" Values="_pickedValues" />
                                 <button class="btn btn-xs btn-primary" @onclick="ApplyPickedAddition">Apply</button>
-                                <button class="btn btn-xs" @onclick="() => Choose(new ManualChoice { AddModIds = { mod.Id } })" title="Add this modifier with random values">Random value</button>
+                                <button class="btn btn-xs" @onclick="() => ChooseAddition(mod.Id, null)" title="Add this modifier with random values">Random value</button>
                                 <button class="btn btn-xs" @onclick="() => _pickedAddition = null">Cancel</button>
                             </div>
                         }
-                    }
-                    @if (additions.Count > CollapsedAdditions && !showAll)
-                    {
-                        <button class="btn btn-xs show-all-btn" @onclick="() => _showAll.Add(isFirst)">Show all @(additions.Count) candidates...</button>
-                    }
-                </div>
+                    </AfterRow>
+                </ModOptionList>
             </div>
         }
 
@@ -199,25 +181,7 @@
 
         @if (preview.ValueRerolls.Count > 0)
         {
-            <div class="distribution-section">
-                <h4>Rolled values</h4>
-                <p class="hint">Set the value each modifier rolls (inside its tier range), then apply.</p>
-                <div class="reroll-list">
-                    @foreach (var reroll in preview.ValueRerolls)
-                    {
-                        var index = reroll.Index;
-                        var affix = item.Mods[index].Affix;
-                        var values = _rerolls[index];
-                        <div class="add-row reroll-row @AffixUi.Css(affix, "-row")" @key="index">
-                            <span class="add-type @AffixUi.TypeCss(affix)">@AffixUi.Letter(affix)</span>
-                            <span class="add-stat">@reroll.Mod.Text</span>
-                            <ModLevel Mod="reroll.Mod" />
-                            <ModValueInputs Mod="reroll.Mod" Values="values" />
-                        </div>
-                    }
-                </div>
-                <button class="btn btn-sm btn-primary" @onclick="ApplyRerolls">Apply these values</button>
-            </div>
+            <ValueRerollPanel Item="item" Rerolls="preview.ValueRerolls" OnApply="values => Choose(new ManualChoice { Rerolls = values })" />
         }
 
         <div class="sticky-actions">
@@ -231,25 +195,24 @@
     /// <summary>Apply the action: null = roll randomly, otherwise the manual choice.</summary>
     [Parameter] public EventCallback<ManualChoice?> OnExecute { get; set; }
 
-    /// <summary>Additions listed before "Show all".</summary>
-    private const int CollapsedAdditions = 20;
+    /// <summary>From this many possible modifiers on, the addition lists get a search box.</summary>
+    private const int SearchFrom = 10;
 
-    /// <summary>Addition lists shown completely (true = the first list, false = the other one).</summary>
-    private readonly HashSet<bool> _showAll = new();
+    /// <summary>Search over the modifiers that can be added (for picking one by hand instead of rolling).</summary>
+    private string _additionFilter = "";
+    /// <summary>While searching, the tier groups of the remaining candidates are open.</summary>
+    private bool Searching => !string.IsNullOrWhiteSpace(_additionFilter);
     private int? _pendingRemoval;
     private CraftAction? _lastAction;
     private Item? _lastItem;
     private StepPreview? _preview;
     private CraftResult? _foreseen;
-    /// <summary>Values chosen per rerolled mod index (Divine Orb), starting from the item's current values.</summary>
-    private Dictionary<int, List<double>> _rerolls = new();
-    private IReadOnlyList<ValueReroll> _rerollsFor = Array.Empty<ValueReroll>();
     /// <summary>The added modifier whose values are being entered, and those values.</summary>
     private string? _pickedAddition;
     private List<double> _pickedValues = new();
-    /// <summary>Chosen catalyst quality after the use, starting at the rolled default (the table shows its effect).</summary>
-    private int _quality;
-    private QualityChoice? _qualityFor;
+    /// <summary>Several additions: the modifiers chosen so far (with values; null = random) and the candidates of the next one.</summary>
+    private readonly List<(string Id, List<double>? Values)> _chosenAdditions = new();
+    private List<ModCandidate> _nextAdditions = new();
 
     protected override void OnParametersSet()
     {
@@ -258,52 +221,60 @@
         {
             _pendingRemoval = null;
             _pickedAddition = null;
-            _showAll.Clear();
+            _chosenAdditions.Clear();
+            _additionFilter = "";
             _lastAction = Action;
             _lastItem = Session.CurrentItem;
             _foreseen = Session.Foresee(Action);
         }
         _preview = Session.Preview(Action, _pendingRemoval);
-        if (Session.CurrentItem is { } item && !_preview.ValueRerolls.SequenceEqual(_rerollsFor))
-        {
-            _rerollsFor = _preview.ValueRerolls;
-            _rerolls = _preview.ValueRerolls.ToDictionary(r => r.Index, r => StartValues(item.Mods[r.Index], r.Mod));
-        }
-        if (_preview.Quality != _qualityFor)
-        {
-            _qualityFor = _preview.Quality;
-            _quality = _preview.Quality?.Default ?? 0;
-        }
     }
 
-    private void SetQuality(object? input, QualityChoice choice)
-    {
-        if (int.TryParse(input?.ToString(), out var q)) _quality = Math.Clamp(q, choice.Min, choice.Max);
-    }
-
-    /// <summary>Input start values: the mod's current values where they fit the new ranges (a Flux may change them), otherwise the middle.</summary>
-    private static List<double> StartValues(ItemMod current, ModDef mod) =>
-        mod.Ranges.Select((range, r) =>
-        {
-            var (lo, hi) = ModText.Bounds(range);
-            return r < current.Values.Count && current.Values[r] >= lo && current.Values[r] <= hi ? current.Values[r] : ModText.MidValue(range);
-        }).ToList();
+    /// <summary>The candidates that match the search (most likely first); the shown probabilities stay the real ones.</summary>
+    private List<ModCandidate> Matching(IEnumerable<ModCandidate> candidates) =>
+        candidates.Where(c => TextSearch.Matches(_additionFilter, new[] { c.Mod.DisplayName, c.Mod.Text, c.Mod.Family }.Concat(c.Mod.ModTags)))
+            .OrderByDescending(c => c.Probability).ToList();
 
     /// <summary>
     /// Choose an added modifier: one without rolled values is applied at once; otherwise its value inputs open below the row (start: the middle of the ranges).
     /// </summary>
     private Task PickAddition(ModDef mod)
     {
-        if (!ModValueInputs.HasRolledValues(mod)) return Choose(new ManualChoice { AddModIds = { mod.Id } });
+        if (!ModValueInputs.HasRolledValues(mod)) return ChooseAddition(mod.Id, null);
         _pickedAddition = mod.Id;
         _pickedValues = ModValueInputs.MiddleValues(mod);
         return Task.CompletedTask;
     }
 
-    private Task ApplyPickedAddition() =>
-        Choose(new ManualChoice { AddModIds = { _pickedAddition! }, Values = { _pickedValues.ToList() } });
+    private Task ApplyPickedAddition() => ChooseAddition(_pickedAddition!, _pickedValues.ToList());
 
-    private Task ApplyRerolls() => Choose(new ManualChoice { Rerolls = _rerolls.ToDictionary(e => e.Key, e => e.Value.ToList()) });
+    /// <summary>An added modifier is chosen: applied at once, or — while more additions are open (Omen of Greater Exaltation) — kept until the last one is chosen.</summary>
+    private Task ChooseAddition(string modId, List<double>? values)
+    {
+        _pickedAddition = null;
+        _chosenAdditions.Add((modId, values));
+        if (_chosenAdditions.Count < _preview!.AddCount)
+        {
+            _nextAdditions = Session.NextAdditions(Action, _chosenAdditions.Select(c => c.Id).ToList());
+            return Task.CompletedTask;
+        }
+        return ApplyChosenAdditions();
+    }
+
+    /// <summary>Apply the chosen additions; additions not chosen yet roll randomly.</summary>
+    private Task ApplyChosenAdditions()
+    {
+        var choice = new ManualChoice { AddModIds = _chosenAdditions.Select(c => c.Id).ToList(), Values = _chosenAdditions.Select(c => c.Values).ToList() };
+        _chosenAdditions.Clear();
+        return Choose(choice);
+    }
+
+    private void UndoAddition()
+    {
+        _pickedAddition = null;
+        _chosenAdditions.RemoveAt(_chosenAdditions.Count - 1);
+        if (_chosenAdditions.Count > 0) _nextAdditions = Session.NextAdditions(Action, _chosenAdditions.Select(c => c.Id).ToList());
+    }
 
     private void SetPendingRemoval(int? index)
     {

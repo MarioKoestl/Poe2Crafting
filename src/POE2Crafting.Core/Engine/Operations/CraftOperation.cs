@@ -27,6 +27,12 @@ internal abstract class CraftOperation
     /// <summary>Class group used when the currency data defines none (<see cref="ClassTargets"/>).</summary>
     public virtual string? DefaultClassTarget => null;
 
+    /// <summary>
+    /// Whether the operation adds modifiers from the item's normal pool, so the categories its socketed runes unlock ("Can roll Destruction modifiers")
+    /// can roll too (<see cref="CraftingEngine.AdditionCandidates"/>). Only used to explain that assumption in the preview.
+    /// </summary>
+    public virtual bool AddsRandomModifiers => false;
+
     /// <summary>Whether the omen modifies this operation (by default: the omen's target currency maps to this op).</summary>
     public virtual bool AcceptsOmen(CraftContext ctx, OmenDef omen) => Engine.Data.OpOfOmenTarget(omen.TargetCurrency) == Op;
 

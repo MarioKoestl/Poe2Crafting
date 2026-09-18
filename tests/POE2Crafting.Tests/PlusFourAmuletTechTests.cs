@@ -50,13 +50,24 @@ public class PlusFourAmuletTechTests
     public void Breach_quality_catalysts_and_whittling_keep_the_extra_quality()
     {
         var item = TestData.NewItem(TestBases.Amulet, Rarity.Rare);
+        var spirit = TestData.BestMod(item, "to Spirit");
         item.AddMod(TestData.BestMod(item, "Level of all Melee Skills")).Fractured = true;
-        item.AddMod(TestData.BestMod(item, "to Spirit"));
-        item.AddMod(TestData.Pool!.AllForBase(item, AffixType.Suffix).First(m => m.Text.Contains("Strength")));
+        item.AddMod(spirit);
+        var dead = TestData.Pool!.AllForBase(item, AffixType.Prefix).First(m => m.Family != spirit.Family);
+        item.AddMod(dead);
 
-        // Essence of the Breach replaces the dead suffix (Dextral Crystallisation) with +20% maximum quality
-        var breach = TestData.Apply(item, "Essence of the Breach", omens: "Omen of Dextral Crystallisation").Item;
-        Assert.DoesNotContain(breach.Affixes, m => m.Def!.Text.Contains("Strength"));
+        // the Breach modifier is a prefix, so the essence always removes a prefix: with suffixes only it cannot be used at all
+        var suffixesOnly = TestData.NewItem(TestBases.Amulet, Rarity.Rare);
+        suffixesOnly.AddMod(TestData.BestMod(suffixesOnly, "Level of all Melee Skills"));
+        Assert.False(TestData.Engine!.Check(suffixesOnly, TestData.Action("Essence of the Breach")).Ok);
+        Assert.False(TestData.Engine!.Check(item, TestData.Action("Essence of the Breach", "Omen of Dextral Crystallisation")).Ok);
+
+        // Essence of the Breach replaces the dead prefix with +20% maximum quality
+        var deadIndex = item.Mods.FindIndex(m => ReferenceEquals(m.Def, dead));
+        var breach = TestData.Apply(item, "Essence of the Breach", new ManualChoice { RemoveIndices = { deadIndex } },
+            omens: "Omen of Sinistral Crystallisation").Item;
+        Assert.DoesNotContain(breach.Affixes, m => ReferenceEquals(m.Def, dead));
+        Assert.Contains(breach.Affixes, m => ReferenceEquals(m.Def, spirit));
         Assert.Equal(40, breach.MaxQuality(TestData.Data!.Config.Assumptions.DefaultMaxQuality));
 
         var quality = breach;

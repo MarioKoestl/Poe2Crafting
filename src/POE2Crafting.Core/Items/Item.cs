@@ -175,13 +175,20 @@ public sealed class Item
         return copy;
     }
 
-    private double QualityFactor => 1 + Quality / 100.0;
+    /// <summary>
+    /// Multiplier of the mod's values: catalyst quality of its type plus the item's "increased … Modifier magnitudes" lines (<see cref="ModMagnitudes"/>),
+    /// added together (ASSUMPTION, see runeModsNote in config.json).
+    /// </summary>
+    public double ValueFactor(ItemMod mod) => 1 + ((QualityEnhances(mod) ? Quality : 0) + ModMagnitudes.BonusFor(this, mod)) / 100.0;
 
-    /// <summary>The mod line as it works on the item: catalyst quality increases the values of matching mods (e.g. +3 skills → +4 at 34%).</summary>
-    public string EffectiveText(ItemMod mod) => QualityEnhances(mod) ? ModText.ScaleNumbers(mod.DisplayText(), QualityFactor) : mod.DisplayText();
+    /// <summary>Whether catalyst quality or a magnitude modifier changes the mod's values.</summary>
+    public bool ValuesEnhanced(ItemMod mod) => ValueFactor(mod) != 1;
 
-    /// <summary>The mod's values (<see cref="ItemMod.StatValues"/>) as they work on the item (catalyst quality applied, see <see cref="EffectiveText"/>).</summary>
-    public List<double> EffectiveValues(ItemMod mod) => QualityEnhances(mod) ? ModText.ScaleValues(mod.StatValues, QualityFactor) : mod.StatValues;
+    /// <summary>The mod line as it works on the item: catalyst quality and magnitude modifiers increase the values (e.g. +3 skills → +4 at 34%).</summary>
+    public string EffectiveText(ItemMod mod) => ValuesEnhanced(mod) ? ModText.ScaleNumbers(mod.DisplayText(), ValueFactor(mod)) : mod.DisplayText();
+
+    /// <summary>The mod's values (<see cref="ItemMod.StatValues"/>) as they work on the item (see <see cref="EffectiveText"/>).</summary>
+    public List<double> EffectiveValues(ItemMod mod) => ValuesEnhanced(mod) ? ModText.ScaleValues(mod.StatValues, ValueFactor(mod)) : mod.StatValues;
 
     private IEnumerable<(ItemMod Mod, int Index)> Indexed(Func<ItemMod, bool> filter) => Mods.Select((m, i) => (m, i)).Where(t => filter(t.m));
 
@@ -267,6 +274,17 @@ public sealed class Item
             m.Def ??= data.FindMod(m.ModId);
             if (m.Def != null && m.Affix == AffixType.Other && m.Def.AffixType != AffixType.Other) m.Affix = m.Def.AffixType;
         }
+        foreach (var m in Mods.Where(m => m.Unrevealed && m.Affix == AffixType.Other)) m.Affix = FreeAffixType(data);
+    }
+
+    /// <summary>
+    /// The affix type of an unrevealed desecrated modifier whose line did not name one ("Desecrated Modifier"): the type that still has a free slot,
+    /// suffix first when both do (ASSUMPTION — the text does not say; edit the item to change it).
+    /// </summary>
+    private AffixType FreeAffixType(GameData data)
+    {
+        var rules = data.Config.Assumptions;
+        return new[] { AffixType.Suffix, AffixType.Prefix }.FirstOrDefault(t => CountOf(t) < rules.MaxAffixes(this, Rarity, t), AffixType.Suffix);
     }
 
     public override string ToString() => $"{Title} ({Rarity}, ilvl {ItemLevel}, {PrefixCount}P/{SuffixCount}S)";

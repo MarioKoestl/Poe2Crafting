@@ -30,7 +30,7 @@ internal sealed class QualityOperation : CraftOperation
     public override Applicability? Check(CraftContext ctx)
     {
         if (ctx.Item.Quality >= Cap(ctx.Item)) return Applicability.No($"Quality is already at the maximum of {Cap(ctx.Item)}%.");
-        ctx.Notes.Add($"Adds {Gain(ctx.Item)}% quality on a {ctx.Item.Rarity} item (config qualityPerUse: {Assumptions.QualityPerUseNote}).");
+        ctx.Notes.Add($"Adds {Gain(ctx.Item)}% quality on a {ctx.Item.Rarity} item. {Assumptions.QualityPerUseNote}");
         return null;
     }
 

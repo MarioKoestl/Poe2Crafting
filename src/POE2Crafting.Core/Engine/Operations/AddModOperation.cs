@@ -19,6 +19,8 @@ internal sealed class AddModOperation : CraftOperation
         _requiresNoAffixes = requiresNoAffixes;
     }
 
+    public override bool AddsRandomModifiers => true;
+
     private static int AddCount(CraftContext ctx) => ctx.OmenIs(OmenEffects.AddTwo) ? 2 : 1;
 
     public override Applicability? Check(CraftContext ctx)
@@ -32,7 +34,7 @@ internal sealed class AddModOperation : CraftOperation
         if (ctx.OmenIs(OmenEffects.Catalysing))
         {
             if (ctx.Item.QualityTag == null) return Applicability.No($"{ctx.Omens.WithEffect(OmenEffects.Catalysing)!.Name} needs catalyst quality on the item.");
-            ctx.Notes.Add($"Catalysing Exaltation consumes the {ctx.Item.Quality}% {ctx.Item.QualityType} quality; assumption: {ctx.Item.QualityTag} mods get ×{1 + ctx.Item.Quality * Assumptions.CatalysingWeightBonusPerQuality:0.##} weight (config catalysingWeightBonusPerQuality).");
+            ctx.Notes.Add($"Catalysing Exaltation consumes the {ctx.Item.Quality}% {ctx.Item.QualityType} quality; assumption: {ctx.Item.QualityTag} mods get ×{1 + ctx.Item.Quality * Assumptions.CatalysingWeightBonusPerQuality:0.##} weight.");
         }
         return null;
     }

@@ -1,0 +1,175 @@
+@* Rare items of one item class worn by the sampled characters: bases, modifiers (share, tiers, rolled values), example items to open in the simulator.
+   A click on a base narrows everything below to the items of that base. *@
+@inject GameData Data
+@inject ModPool Pool
+@inject CraftingSession Session
+@inject NavigationManager Navigation
+
+<div class="demand-card">
+    @{
+        var view = View;
+    }
+    <button class="demand-head" @onclick="ToggleExpanded" aria-expanded="@(_expanded ? "true" : "false")">
+        <CraftIcon Url="@Data.BaseIconUrl(Data.FindBase(_baseFilter ?? Demand.Bases.FirstOrDefault()?.Name ?? ""))" Class="base-icon" />
+        <span class="demand-title">@(_baseFilter ?? Demand.ItemClass)</span>
+        <span class="count-pill">@UiFormat.Plural(view.Items.Count, "rare item")</span>
+        <span class="demand-share" title="Sampled characters wearing at least one rare @(_baseFilter ?? Demand.ItemClass)">@UiFormat.WholeShare(Characters > 0 ? (double)view.Characters / Characters : 0) of characters</span>
+        <span class="demand-facts">
+            ilvl ⌀ @view.AverageItemLevel.ToString("0")
+            @if (view.Desecrated > 0) { <span> · desecrated @Percent(view.Desecrated)</span> }
+            @if (view.Fractured > 0) { <span> · fractured @Percent(view.Fractured)</span> }
+            @if (view.Corrupted > 0) { <span> · corrupted @Percent(view.Corrupted)</span> }
+        </span>
+        <span class="demand-toggle">@(_expanded ? "▾" : "▸")</span>
+    </button>
+
+    @* all bases of the class stay listed so the filter can be switched or cleared *@
+    <div class="demand-bases">
+        @foreach (var baseCount in Demand.Bases.Take(_expanded ? 12 : 4))
+        {
+            var name = baseCount.Name;
+            var active = _baseFilter == name;
+            <button type="button" class="demand-base @(active ? "active" : "")" aria-pressed="@(active ? "true" : "false")" @key="name"
+                    title="@(active ? $"Show all {Demand.ItemClass} bases again" : $"Only what the builds roll on a {name}")"
+                    @onclick="() => FilterBase(name)">
+                <CraftIcon Url="@Data.BaseIconUrl(Data.FindBase(name))" Class="craft-link-icon" />@name <span class="share-value">@BaseShare(baseCount.Count)</span>
+            </button>
+        }
+        <a class="demand-base demand-base-link" href="@BasesLink()" title="Compare the base values of all @Demand.ItemClass bases">⚖ Compare bases</a>
+    </div>
+
+    @if (_expanded)
+    {
+        <div class="table-scroll">
+            <table class="materials-table demand-mods">
+                <thead>
+                    <tr>
+                        <th>Modifier</th>
+                        <th title="Rare items of this class with the modifier">Items</th>
+                        <th title="Tiers of the item's base (T1 = best)">Tiers</th>
+                        <th title="Lowest – median – highest rolled value (average of both numbers for 'Adds # to #')">Rolls</th>
+                        <th title="Desecrated / fractured / crafted (essence) occurrences">Source</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var mod in view.Mods.Take(_allMods ? int.MaxValue : ModLimit))
+                    {
+                        <tr @key="mod.Text">
+                            <td class="demand-mod-text"><span class="mod-indicator @AffixUi.TypeCss(mod.Affix)">@AffixUi.Letter(mod.Affix)</span> @mod.Text</td>
+                            <td>@Percent(mod.Count)</td>
+                            <td class="demand-tiers">@string.Join(" ", mod.Tiers.Select(t => $"T{t.Key}·{UiFormat.WholeShare((double)t.Value / mod.Count)}"))</td>
+                            <td>@RollText(mod.Values)</td>
+                            <td class="demand-source">@SourceText(mod)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (view.Mods.Count > ModLimit)
+        {
+            <button class="btn btn-xs" @onclick="() => _allMods = !_allMods">@(_allMods ? "Fewer modifiers" : $"All {view.Mods.Count} modifiers")</button>
+        }
+
+        <h4 class="section-title demand-examples-title">Items of the sampled characters</h4>
+        <div class="demand-examples">
+            @foreach (var sample in view.Items.Take(_allItems ? int.MaxValue : ExampleLimit))
+            {
+                var shown = _shownItems.Contains(sample);
+                <div class="demand-example" @key="sample">
+                    <div class="demand-example-row">
+                        <button class="btn btn-xs" @onclick="() => _shownItems.Toggle(sample)">@(shown ? "Hide" : "Show")</button>
+                        <span class="demand-example-title">@sample.Item.Title</span>
+                        <a class="demand-character" href="@CharacterLink(sample)" target="_blank" rel="noopener" title="Open the character on poe.ninja">@sample.Character.Name · @sample.CharacterClass @sample.CharacterLevel</a>
+                        <button class="btn btn-xs" title="Add this item to the current project and open it in the simulator (e.g. as a planner target)" @onclick="() => Open(sample)">Open in simulator</button>
+                    </div>
+                    @if (shown)
+                    {
+                        <ItemDisplay Item="sample.Item" />
+                    }
+                </div>
+            }
+        </div>
+        @if (view.Items.Count > ExampleLimit)
+        {
+            <button class="btn btn-xs" @onclick="() => _allItems = !_allItems">@(_allItems ? "Fewer items" : $"All {view.Items.Count} items")</button>
+        }
+    }
+</div>
+
+@code {
+    private const int ModLimit = 15, ExampleLimit = 6;
+
+    [Parameter, EditorRequired] public ItemClassDemand Demand { get; set; } = null!;
+    /// <summary>Characters of the sample.</summary>
+    [Parameter, EditorRequired] public int Characters { get; set; }
+    /// <summary>poe.ninja league slug for character links ("forbiddenrites").</summary>
+    [Parameter, EditorRequired] public string LeagueSlug { get; set; } = "";
+    /// <summary>Opened at start (the page remembers opened cards).</summary>
+    [Parameter] public bool Expanded { get; set; }
+    [Parameter] public EventCallback<bool> ExpandedChanged { get; set; }
+
+    private bool _expanded, _allMods, _allItems;
+    private readonly HashSet<SampledItem> _shownItems = new();
+
+    /// <summary>The base the card is narrowed to, or null for the whole item class.</summary>
+    private string? _baseFilter;
+    private ItemClassDemand? _filtered;
+
+    protected override void OnInitialized() => _expanded = Expanded;
+
+    /// <summary>A new analysis invalidates the filtered view.</summary>
+    protected override void OnParametersSet() => _filtered = null;
+
+    /// <summary>What the card shows: the whole item class, or only the items of the chosen base (computed once per filter and analysis).</summary>
+    private ItemClassDemand View => _baseFilter == null ? Demand : _filtered ??= Demand.ForBase(_baseFilter, Pool) ?? Demand;
+
+    /// <summary>Show only the items of this base — the modifiers the builds actually roll on it — or the whole class again.</summary>
+    private void FilterBase(string baseName)
+    {
+        _baseFilter = _baseFilter == baseName ? null : baseName;
+        _filtered = null;
+        _allMods = _allItems = false;
+        _shownItems.Clear();
+        if (_baseFilter != null && !_expanded) ToggleExpanded();
+    }
+
+    private Task ToggleExpanded()
+    {
+        _expanded = !_expanded;
+        return ExpandedChanged.InvokeAsync(_expanded);
+    }
+
+    /// <summary>Share of the shown items (only those of the chosen base while filtered).</summary>
+    private string Percent(int count) => Share(count, View.Items.Count);
+
+    /// <summary>A base's share always counts against all items of the class, so the list stays comparable while filtered.</summary>
+    private string BaseShare(int count) => Share(count, Demand.Items.Count);
+
+    private static string Share(int count, int total) => UiFormat.WholeShare(total > 0 ? (double)count / total : 0);
+
+    private static string RollText(IReadOnlyList<double> values)
+    {
+        if (values.Count == 0) return "";
+        double low = values[0], high = values[^1], median = values[values.Count / 2];
+        return low == high ? ModText.FormatValue(low) : $"{ModText.FormatValue(low)} – {ModText.FormatValue(median)} – {ModText.FormatValue(high)}";
+    }
+
+    private static string SourceText(ModDemand mod) => string.Join(" · ", new[]
+    {
+        mod.Desecrated > 0 ? $"{mod.Desecrated} desecrated" : null,
+        mod.Fractured > 0 ? $"{mod.Fractured} fractured" : null,
+        mod.Crafted > 0 ? $"{mod.Crafted} crafted" : null,
+    }.OfType<string>());
+
+    private string BasesLink() =>
+        $"bases?class={Uri.EscapeDataString(Data.FindBase(Demand.Bases.FirstOrDefault()?.Name ?? "")?.ItemClass ?? Demand.ItemClass)}";
+
+    private string CharacterLink(SampledItem sample) =>
+        $"https://poe.ninja/poe2/builds/{LeagueSlug}/character/{Uri.EscapeDataString(sample.Character.Account)}/{Uri.EscapeDataString(sample.Character.Name)}";
+
+    private void Open(SampledItem sample)
+    {
+        Session.SetItem(sample.Item.Clone(), $"poe.ninja: {sample.Character.Name}");
+        Navigation.NavigateTo("");
+    }
+}

@@ -75,3 +75,5 @@ saved-guides/
 
 # Currency Exchange hourly digests (downloaded by the app)
 market-cache/
+# poe.ninja characters sampled by the Builds page
+ninja-cache/

@@ -61,10 +61,29 @@
                         <div class="history-list">
                             @for (int i = Session.History.Count - 1; i >= 0; i--)
                             {
+                                var index = i;
                                 var entry = Session.History[i];
                                 <div class="history-entry" @key="entry">
                                     <span class="history-action"><CraftText Text="@entry.Action" /></span>
                                     <span class="history-summary" title="@entry.Summary">@entry.Summary</span>
+                                    @if (_editingNote == index)
+                                    {
+                                        <div class="history-note-edit">
+                                            <textarea rows="2" placeholder="Why this step? (shown in a saved guide)" aria-label="Note for this step"
+                                                      @bind="_noteText" @bind:event="oninput" @onkeydown="e => OnNoteKey(e, index)"></textarea>
+                                            <button class="btn btn-xs btn-primary" @onclick="() => SaveNote(index)">Save</button>
+                                            <button class="btn btn-xs" @onclick="() => _editingNote = null">Cancel</button>
+                                        </div>
+                                    }
+                                    else if (entry.Note is { Length: > 0 } note)
+                                    {
+                                        <button class="history-note" title="Edit the note" @onclick="() => EditNote(index, note)">@note</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="history-note history-note-add" title="Why did you do this step? The note is saved with the project and shown in a saved guide"
+                                                @onclick="() => EditNote(index, string.Empty)">＋ note</button>
+                                    }
                                 </div>
                             }
                         </div>
@@ -126,41 +145,30 @@
 @* ---- Modals ---- *@
 @if (_showImport)
 {
-    <div class="modal-backdrop" @onclick="CloseModals">
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="import-title" @onclick:stopPropagation @onkeydown="OnModalKey">
-            <h3 id="import-title">Import Item</h3>
-            <p>Paste the in-game Ctrl+Alt+C text:</p>
-            <textarea @bind="_importText" @bind:event="oninput" rows="20" placeholder="Item Class: Staves&#10;Rarity: Rare&#10;..."></textarea>
-            <div class="modal-actions">
-                <button class="btn btn-primary" @onclick="DoImport">Import</button>
-                <button class="btn" @onclick="CloseModals">Cancel</button>
-            </div>
-        </div>
-    </div>
+    <Modal Title="Import Item" ConfirmLabel="Import" OnConfirm="DoImport" OnClose="CloseModals">
+        <p>Paste the in-game Ctrl+Alt+C text:</p>
+        <textarea @bind="_importText" @bind:event="oninput" rows="20" placeholder="@ImportPlaceholder"></textarea>
+    </Modal>
 }
 
 @if (_showSaveGuide && Session.CurrentItem is { } guideItem)
 {
-    <div class="modal-backdrop" @onclick="CloseModals">
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="save-guide-title" @onclick:stopPropagation @onkeydown="OnModalKey">
-            <h3 id="save-guide-title">Save as Guide</h3>
-            <p>@Session.History[0].Item.BaseName → @guideItem.Title · @UiFormat.Plural(Session.History.Count - 1, "step"). The guide appears under <strong>My Guides</strong> in the Guides tab.</p>
-            <label for="guide-name">Name</label>
-            <input id="guide-name" type="text" @bind="_guideName" @bind:event="oninput" placeholder="@($"{Session.History[0].Item.BaseName} → {guideItem.Title}")" />
-            <label for="guide-notes">Notes (optional)</label>
-            <textarea id="guide-notes" @bind="_guideNotes" @bind:event="oninput" rows="4" placeholder="What the craft is for, what to watch out for..."></textarea>
-            <div class="modal-actions">
-                <button class="btn btn-primary" @onclick="SaveGuide">Save</button>
-                <button class="btn" @onclick="CloseModals">Cancel</button>
-            </div>
-        </div>
-    </div>
+    <Modal Title="Save as Guide" ConfirmLabel="Save" OnConfirm="SaveGuide" OnClose="CloseModals">
+        <p>@Session.History[0].Item.BaseName → @guideItem.Title · @UiFormat.Plural(Session.History.Count - 1, "step"). The guide appears under <strong>My Guides</strong> in the Guides tab.</p>
+        <label for="guide-name">Name</label>
+        <input id="guide-name" type="text" @bind="_guideName" @bind:event="oninput" placeholder="@($"{Session.History[0].Item.BaseName} → {guideItem.Title}")" />
+        <label for="guide-notes">Notes (optional)</label>
+        <textarea id="guide-notes" @bind="_guideNotes" @bind:event="oninput" rows="4" placeholder="What the craft is for, what to watch out for..."></textarea>
+    </Modal>
 }
 
 @code {
     private enum Mode { Simulator, Planner, Guides }
 
     private static string TabLabel(Mode mode) => mode == Mode.Planner ? "Crafting Planner" : mode.ToString();
+
+    /// <summary>Multi-line example of the item text (Razor would escape an entity in the attribute).</summary>
+    private const string ImportPlaceholder = "Item Class: Staves\nRarity: Rare\n...";
 
     private Mode _mode = Mode.Simulator;
     private bool _showImport, _showSaveGuide;
@@ -186,11 +194,6 @@
         CloseModals();
         Planner.SelectGuide(id);
         _mode = Mode.Guides;
-    }
-
-    private void OnModalKey(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape") CloseModals();
     }
 
     /// <summary>Open the composer: a new item, or the current item for editing.</summary>
@@ -222,6 +225,28 @@
     private void OnExecute(ManualChoice? choice)
     {
         if (_selectedAction != null) Session.Execute(_selectedAction, choice);
+    }
+
+    /// <summary>The history step whose note is being edited, and the text.</summary>
+    private int? _editingNote;
+    private string _noteText = "";
+
+    private void EditNote(int index, string note)
+    {
+        _editingNote = index;
+        _noteText = note;
+    }
+
+    private void SaveNote(int index)
+    {
+        Session.SetNote(index, _noteText);
+        _editingNote = null;
+    }
+
+    private void OnNoteKey(KeyboardEventArgs e, int index)
+    {
+        if (e.Key == "Escape") _editingNote = null;
+        else if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey)) SaveNote(index);
     }
 
     private void Undo()

@@ -59,7 +59,7 @@
   "keyIdeas": [
    "Catalyst quality increases the values of modifiers with its tag: +3 melee skills (attack tag) × 1.34 = 4.02 → +4. At 33% it stays +3 (whole numbers round down).",
    "Normal maximum quality is 20%. Essence of the Breach adds \"+20% to Maximum Quality\" (40% total).",
-   "Blocker: add a throwaway modifier on the same side as the fracture, so a side-restricted removal (Crystallisation) can only take that one.",
+   "Essence of the Breach adds a PREFIX, and an essence always removes a modifier of the type it adds (verified in game 18.09.2026) — so the blocker goes on the prefix side, whatever side the fracture is on. An amulet without a removable prefix cannot take the essence at all.",
    "The Breach modifier has level 1: Omen of Whittling (removes the lowest-level modifier) takes it off with certainty. The quality stays (as shown in the video; the simulator assumes it).",
    "Optional bonus: while the quality is still free, defence catalysts + Omen of Catalysing Exaltation push a defensive prefix before the Reaver quality is applied."
   ],
@@ -73,20 +73,20 @@
   },
   "steps": [
    {
-    "title": "Add a suffix blocker",
+    "title": "Add a prefix blocker",
     "currency": "Greater Exalted Orb",
-    "omens": ["Omen of Dextral Exaltation"],
-    "explanation": "The fracture is a suffix, so add a throwaway suffix. It is the only removable suffix now — the next side-restricted removal must take it. A lucky roll (rarity, resistances) can be kept instead and the plan adapted.",
+    "omens": ["Omen of Sinistral Exaltation"],
+    "explanation": "The Breach essence removes a prefix, so the throwaway modifier goes to the prefixes. Spirit is an unfractured prefix and a candidate too — to keep it for certain, do the Breach step before adding it. A lucky roll (rarity, resistances) can be kept instead and the plan adapted.",
     "hit": { "add": "*" },
     "onMiss": "Cannot miss."
    },
    {
     "title": "+20% Maximum Quality",
     "currency": "Essence of the Breach",
-    "omens": ["Omen of Dextral Crystallisation"],
-    "explanation": "The essence removes a suffix (only the blocker is removable — the +3 is fractured) and adds \"+20% to Maximum Quality\" as a prefix. The amulet can now hold 40% catalyst quality.",
+    "omens": ["Omen of Sinistral Crystallisation"],
+    "explanation": "The essence removes one of the removable prefixes and adds \"+20% to Maximum Quality\" as a prefix. The fractured +3 is a suffix and safe; blocker and Spirit are both candidates. The amulet can now hold 40% catalyst quality.",
     "hit": { "select": "*" },
-    "onMiss": "Cannot miss."
+    "onMiss": "If Spirit was removed instead of the blocker, exalt it back once the Breach modifier is whittled off."
    },
    {
     "title": "Defence quality for Catalysing Exaltation (optional)",

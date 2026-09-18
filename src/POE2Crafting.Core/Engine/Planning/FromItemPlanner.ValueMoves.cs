@@ -106,7 +106,7 @@ internal sealed partial class FromItemPlanner
     /// </summary>
     private IEnumerable<Move> CatalysingSetupMoves(Item item, ItemGoal goal)
     {
-        if (item.Rarity != Rarity.Rare || !_data.Omens.Any(o => o.Effect == OmenEffects.Catalysing)) yield break;
+        if (item.Rarity != Rarity.Rare || !_data.CraftingOmens.Any(o => o.Effect == OmenEffects.Catalysing)) yield break;
         foreach (var currency in CatalystsFor(goal.Missing.Select(t => t.ResolvedMod)))
         {
             if (item.QualityType == currency.Catalyst!.QualityType && item.Quality > 0) continue;

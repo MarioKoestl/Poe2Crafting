@@ -23,8 +23,10 @@ internal sealed class RevealOperation : CraftOperation
     {
         if (!ctx.Item.UnrevealedMods.Any()) return Applicability.No("The item has no unrevealed desecrated modifier.");
         ctx.Notes.Add($"The Well of Souls offers {Assumptions.RevealOptionCount} options: at least {Assumptions.RevealGuaranteedExclusiveOptions} exclusive Lich modifier, "
-                      + $"each other one a regular modifier of the same type with {Assumptions.RevealRegularOptionChance:P0} (assumption, config revealRegularOptionChance)"
-                      + (Assumptions.RevealBossOmenOnlyLichModifiers ? "; with a boss omen only that Lich's modifiers" : "")
+                      + $"each other one a regular modifier of the same type with {Assumptions.RevealRegularOptionChance:P0} (assumption)"
+                      + (Assumptions.RevealBossOmenOnlyLichModifiers
+                          ? "; with a boss omen every option is a modifier of that Lich"
+                          : "; a boss omen only narrows the guaranteed option(s) to its Lich — the others stay regular modifiers")
                       + ". Roll them, or choose any modifier below (percentages: chance to be offered).");
         if (ctx.OmenIs(OmenEffects.RerollRevealOnce)) ctx.Notes.Add("Omen of Abyssal Echoes: the options can be rerolled once.");
         return null;

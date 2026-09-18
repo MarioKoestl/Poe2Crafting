@@ -2,6 +2,7 @@ using System.Globalization;
 using POE2Crafting.Core.Data;
 using POE2Crafting.Core.Engine.Planning;
 using POE2Crafting.Core.Items;
+using POE2Crafting.Core.Market;
 
 namespace POE2Crafting.Web.Services;
 
@@ -20,6 +21,9 @@ public static class UiFormat
 
     /// <summary>A chance in a distribution list (two decimals).</summary>
     public static string Share(double p) => Percent(p, "0.00");
+
+    /// <summary>A share in whole percent ("38%"), for counts of a small sample.</summary>
+    public static string WholeShare(double p) => Percent(p, "0");
 
     /// <summary>A CSS length in percent ("12.5%"), always with a dot.</summary>
     public static string CssPercent(double p) => Percent(p, "0.#");
@@ -63,6 +67,10 @@ public static class UiFormat
             _ => value.ToString("0", CultureInfo.InvariantCulture),
         };
     }
+
+    /// <summary>A crafting cost from Chaos Orbs: "12.3c", from two Divine Orbs on in Divine Orbs ("2.45 div"; a Divine Orb itself stays in Chaos).</summary>
+    public static string Cost(double chaos, PriceBook prices) =>
+        prices.ChaosPerDivine > 0 && chaos >= 2 * prices.ChaosPerDivine ? $"{Price(chaos / prices.ChaosPerDivine)} div" : $"{Price(chaos)}c";
 
     /// <summary>A change with sign: "+4.2%", "−12.0%".</summary>
     public static string SignedPercent(double p) => (p > 0 ? "+" : p < 0 ? "−" : "") + Percent(Math.Abs(p), "0.0");

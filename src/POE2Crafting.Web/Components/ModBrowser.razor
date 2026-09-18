@@ -29,7 +29,7 @@
                 <div class="target-mod-row @AffixUi.Css(unrevealed.Affix, "-row") desecrated-row" @key="@($"unrevealed-{idx}")">
                     <span class="tm-type @AffixUi.TypeCss(unrevealed.Affix)">@AffixUi.Letter(unrevealed.Affix)</span>
                     <span class="tm-name">@unrevealed.DisplayText()</span>
-                    <span class="tm-text" title="Taken over from the item: stays an unrevealed desecrated modifier of this type, whatever it reveals into">
+                    <span class="tm-text" title="An unrevealed desecrated modifier of this type, whatever it reveals into">
                         @(unrevealed.Reveal?.Describe() is { Length: > 0 } context ? context : "any desecrated modifier")
                     </span>
                     <span class="tm-cat-badge cat-badge-desecrated">Des</span>
@@ -60,6 +60,9 @@
                     {
                         <span class="tm-cat-badge @cat.BadgeClass">@cat.ShortName</span>
                     }
+                    <button class="tm-fracture @(sm.Fractured ? "active" : "")" aria-pressed="@(sm.Fractured ? "true" : "false")"
+                            title="@(sm.Fractured ? "Fractured — click to unmark" : "Mark as fractured (only one modifier per item)")"
+                            @onclick="() => ChangeSelection(() => Selection.SetFractured(idx, !sm.Fractured))">F</button>
                     <button class="icon-remove" title="Remove modifier" aria-label="Remove modifier" @onclick="() => ChangeSelection(() => Selection.RemoveAt(idx))">✕</button>
                 </div>
             }
@@ -74,6 +77,11 @@
                     + @type (@Selection.Count(type)/@Selection.Max(Draft.Rarity, type))
                 </button>
             }
+            <button class="btn btn-sm btn-unrevealed" disabled="@(!Selection.CanAddUnrevealed(Draft.Rarity, _affixType))"
+                    title="Add an unrevealed desecrated @(_affixType.ToString().ToLowerInvariant()) (a bone was used but the Well of Souls has not revealed it yet)"
+                    @onclick="() => ChangeSelection(() => Selection.AddUnrevealed(_affixType, Draft.Rarity))">
+                + Unrevealed Desecrated
+            </button>
         </div>
 
         <SearchBox @bind-Value="_filter" Placeholder="Search prefixes and suffixes..." />
@@ -129,7 +137,7 @@
                                                         <span class="tier-label">T@(tier)</span>
                                                         <span class="tier-name">@mod.DisplayName</span>
                                                         <span class="tier-text">@mod.Text</span>
-                                                        <span class="tier-weight" title="Estimated weight (poe2db)">@Pool.WeightForItem(mod, _virtualItem)</span>
+                                                        <span class="tier-weight" title="Estimated weight">@Pool.WeightForItem(mod, _virtualItem)</span>
                                                         <ModLevel Mod="mod" />
                                                     </button>
                                                 }
@@ -167,6 +175,8 @@
         new(ModCategories.Normal, "Base", "", "base-label", null, "", ""),
         new(ModCategories.Otherworldly, "Otherworldly", "otherworldly-header", "otherworldly-label", "OW", "cat-badge-otherworldly", "otherworldly-row"),
         new(ModCategories.Desecrated, "Desecrated", "desecrated-header", "desecrated-label", "Des", "cat-badge-desecrated", "desecrated-row"),
+        new(ModCategories.GenesisCaster, "Genesis Tree \u00b7 Caster", "genesis-header", "genesis-label", "Gen", "cat-badge-genesis", "genesis-row"),
+        new(ModCategories.GenesisMinion, "Genesis Tree \u00b7 Minion", "genesis-header", "genesis-label", "Gen", "cat-badge-genesis", "genesis-row"),
     };
     /// <summary>Categories that only appear when taken over from an existing item.</summary>
     private static readonly CategoryInfo[] LoadedOnly =
@@ -196,7 +206,7 @@
         var item = _virtualItem = Item.FromBase(Draft.Base);
         _groups = Categories.ToDictionary(c => c.Key, c => Pool.AllForBaseByCategory(item, c.Key)
             .GroupBy(ModTiers.TierGroupKey)
-            .Select(g => new TierGroup(g.Key, GroupLabel(g), g.First().AffixType,
+            .Select(g => new TierGroup(g.Key, ModTiers.GroupLabel(g), g.First().AffixType,
                 g.SelectMany(m => m.ModTags).Distinct().Take(ShownTags).ToList(),
                 g.Select(m => (Mod: m, Tier: Pool.DisplayTier(m, item))).OrderBy(t => t.Tier).ToList(),
                 string.Join("\n", g.SelectMany(m => new[] { m.Family, m.Text, m.Name }.Concat(m.ModTags)))))
@@ -237,13 +247,6 @@
         change();
         Draft.Refresh();
     });
-
-    /// <summary>Group label = the lowest tier's text with numbers stripped, e.g. "#% increased Spell Damage".</summary>
-    private static string GroupLabel(IEnumerable<ModDef> mods)
-    {
-        var first = mods.MinBy(m => m.Level)!;
-        return string.IsNullOrWhiteSpace(first.Text) ? first.Name : ModText.StripNumbers(first.Text);
-    }
 
     /// <summary>Tag colour classes in site.css (.mod-tag.tag-*): the first known tag word the tag contains.</summary>
     private static readonly string[] ColouredTags =

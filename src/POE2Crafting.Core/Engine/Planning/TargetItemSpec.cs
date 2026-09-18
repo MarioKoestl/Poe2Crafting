@@ -47,6 +47,9 @@ public sealed class TargetMod
     /// <summary>An unrevealed desecrated modifier of <see cref="AffixType"/> is wanted (whatever it reveals into).</summary>
     public bool Unrevealed { get; set; }
 
+    /// <summary>The target wants this mod fractured (Fracturing Orb; an item holds only one fractured modifier).</summary>
+    public bool Fractured { get; set; }
+
     public static TargetMod UnrevealedOf(AffixType type) => new() { Unrevealed = true, AffixType = type, Category = ModCategories.Desecrated, AllowBetterTiers = false };
 
     /// <summary>Optional minimum value per <see cref="ModDef.StatRanges"/> entry of the mod (null entries = any value).</summary>

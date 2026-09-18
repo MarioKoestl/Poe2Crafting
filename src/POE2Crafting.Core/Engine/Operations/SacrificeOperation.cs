@@ -26,7 +26,7 @@ internal sealed class SacrificeOperation : CraftOperation
     {
         if (Upgradable(ctx.Item).Count == 0) return Applicability.No("The item has no corruption enchantment that can be upgraded.");
         if (CraftingEngine.Removable(ctx.Item, OmenEffects.None).Count == 0)
-            ctx.Notes.Add("The item has no removable modifier; assumption: the enchantment is still upgraded (UNVERIFIED).");
+            ctx.Notes.Add("The item has no removable modifier; assumption: the enchantment is still upgraded.");
         return null;
     }
 
@@ -39,7 +39,7 @@ internal sealed class SacrificeOperation : CraftOperation
             Removals = CraftingEngine.Removable(ctx.Item, OmenEffects.None),
             Additions = upgrades.Select(u => new ModCandidate { Mod = u.Mod, Weight = 1, Probability = 1.0 / upgrades.Count }).ToList(),
             AdditionLabel = "Enchantment upgrade",
-            Notes = { upgrades.Count > 1 ? "Assumption: with two upgradable enchantments one is picked at random (UNVERIFIED)." : $"Upgrades: {upgrades[0].Enchant.DisplayText()}" },
+            Notes = { upgrades.Count > 1 ? "Assumption: with two upgradable enchantments one is picked at random." : $"Upgrades: {upgrades[0].Enchant.DisplayText()}" },
         };
     }
 

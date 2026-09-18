@@ -8,12 +8,14 @@ internal sealed class AlchemyOperation : CraftOperation
 {
     public AlchemyOperation(CraftingEngine engine) : base(engine, CurrencyOps.Alchemy) { }
 
+    public override bool AddsRandomModifiers => true;
+
     public override Applicability? Check(CraftContext ctx)
     {
         if (ctx.Item.Rarity == Rarity.Magic)
             ctx.Notes.Add(Assumptions.AlchemyOnMagicKeepsExistingMods
-                ? "Assumption: Orb of Alchemy on a Magic item keeps its mods and fills up to 4 (config: alchemyOnMagicKeepsExistingMods)."
-                : "Assumption: existing magic mods are rerolled (config: alchemyOnMagicKeepsExistingMods).");
+                ? "Assumption: on a Magic item the existing modifiers are kept and the item is filled up to 4."
+                : "Assumption: the existing magic modifiers are rerolled.");
         return null;
     }
 

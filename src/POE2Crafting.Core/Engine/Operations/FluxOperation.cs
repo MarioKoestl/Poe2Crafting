@@ -44,7 +44,7 @@ internal sealed class FluxOperation : CraftOperation
         if (ctx.Currency.Element == null) return Applicability.No("Flux element missing in the data.");
         if (Transformations(ctx.Item, ctx.Currency).Count == 0)
             return Applicability.No($"The item has no {string.Join("/", SourceElements(ctx.Currency))} resistance modifier to transform.");
-        ctx.Notes.Add("The value is rolled anew inside the new tier's range (poe2wiki). Same tier = the target tier with the highest modifier level not above the source mod's level.");
+        ctx.Notes.Add("The value is rolled anew inside the new tier's range. Same tier = the target tier with the highest modifier level not above the source modifier's level.");
         return null;
     }
 

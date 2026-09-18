@@ -1,0 +1,856 @@
+[
+ {
+  "id": "item-level-and-minimum-modifier-level",
+  "title": "Item level and minimum modifier level",
+  "category": "Modifiers",
+  "summary": "The item level is the upper bound on which tiers can roll; Greater and Perfect currencies add a lower bound that works per modifier type, not as a flat cut.",
+  "tags": [
+   "item level",
+   "ilvl",
+   "greater",
+   "perfect",
+   "tier"
+  ],
+  "sections": [
+   {
+    "heading": "Two different limits",
+    "text": [
+     "Two numbers decide which tiers a currency can roll, and they work from opposite ends."
+    ],
+    "table": {
+     "columns": [
+      "Limit",
+      "Comes from",
+      "Effect"
+     ],
+     "rows": [
+      [
+       "Item level",
+       "the item",
+       "a modifier can only roll if its modifier level is at or below the item level"
+      ],
+      [
+       "Minimum modifier level",
+       "the currency",
+       "tiers below it are skipped"
+      ]
+     ],
+     "caption": "No currency raises an item's level, so a target tier above the item level is out of reach for good."
+    }
+   },
+   {
+    "heading": "Which currencies set a minimum",
+    "table": {
+     "columns": [
+      "Currency",
+      "Minimum modifier level"
+     ],
+     "rows": [
+      [
+       "Transmutation, Augmentation, Regal, Exalted, Chaos",
+       "none"
+      ],
+      [
+       "Greater variants",
+       "35"
+      ],
+      [
+       "Perfect variants",
+       "50"
+      ]
+     ],
+     "caption": "The exact number of each currency is shown in its info box."
+    }
+   },
+   {
+    "heading": "The minimum applies per modifier type",
+    "text": [
+     "This is the part that surprises people. A modifier type is one tier row: the same family and the same stat, for example every tier of \"Leech #% of Physical Attack Damage as Mana\".",
+     "Inside each type, tiers below the minimum are dropped. But if that would drop the whole type, its highest tier still rolls. The minimum filters tiers, it never removes a modifier type from the pool."
+    ],
+    "bullets": [
+     "A type with tiers above the minimum: only those tiers can roll.",
+     "A type whose tiers are all below the minimum: its best tier can roll anyway."
+    ]
+   },
+   {
+    "heading": "Worked example: mana leech on a ring",
+    "text": [
+     "The mana leech suffix has four tiers, but the two high ones only exist on gloves:"
+    ],
+    "table": {
+     "columns": [
+      "Tier",
+      "Name",
+      "Modifier level",
+      "Rolls on"
+     ],
+     "rows": [
+      [
+       "T1",
+       "of the Desperate",
+       "65",
+       "gloves only"
+      ],
+      [
+       "T2",
+       "of the Drought",
+       "54",
+       "gloves only"
+      ],
+      [
+       "T3",
+       "of the Arid",
+       "38",
+       "rings and gloves"
+      ],
+      [
+       "T4",
+       "of the Parched",
+       "21",
+       "rings and gloves"
+      ]
+     ],
+     "caption": "Tier numbers are counted per base, so on a ring \"of the Arid\" is the best tier there is."
+    },
+    "bullets": [
+     "On a ring, every tier of the type is below 50. A [[Perfect Exalted Orb]] therefore still offers \"of the Arid\" (level 38) - the type would otherwise vanish.",
+     "On gloves the same orb offers only \"of the Desperate\" and \"of the Drought\", because those reach the minimum."
+    ]
+   }
+  ],
+  "assumptions": [
+   "Nothing here is an assumption of the simulator, but the \"highest tier rolls anyway\" rule comes from the wiki, not from a test in game."
+  ],
+  "open": [
+   "Confirm in game that a [[Perfect Exalted Orb]] on a ring really can roll the level-38 mana leech suffix."
+  ],
+  "related": [
+   "tiers",
+   "modifier-weights"
+  ]
+ },
+ {
+  "id": "tiers",
+  "title": "Tiers",
+  "category": "Modifiers",
+  "summary": "T1 is the best tier. Tiers are counted per family and stat and per base item, so the same modifier can be T1 on one base and T3 on another.",
+  "tags": [
+   "tier",
+   "T1",
+   "family",
+   "stat"
+  ],
+  "sections": [
+   {
+    "heading": "How tiers are counted",
+    "bullets": [
+     "A tier row is one family plus one stat. The family \"increase socketed gem level\" holds separate rows for physical, fire and all-spell skills, each with its own T1.",
+     "Within a row, the higher the modifier level, the better the tier. T1 has the highest level.",
+     "Tiers are ranked per base item: a tier that does not exist on this base is not counted, so the numbering matches what the game shows on that item."
+    ]
+   },
+   {
+    "heading": "Modifiers without a tier",
+    "text": [
+     "Essence, alloy and desecrated modifiers are not part of a tier row and show no tier number."
+    ]
+   }
+  ],
+  "related": [
+   "item-level-and-minimum-modifier-level",
+   "modifier-weights"
+  ]
+ },
+ {
+  "id": "modifier-weights",
+  "title": "Modifier weights",
+  "category": "Modifiers",
+  "summary": "Every chance in the simulator comes from weights. The weights are estimates, not the game's real numbers.",
+  "tags": [
+   "weight",
+   "chance",
+   "probability"
+  ],
+  "sections": [
+   {
+    "heading": "Where the numbers come from",
+    "bullets": [
+     "The weights are drop-chance estimates scraped from the community database; the game files do not expose the real ones.",
+     "A weight is stored per modifier and per item class page, so the same modifier can be more common on gloves than on boots.",
+     "A chance shown anywhere in the app is that weight divided by the sum of all eligible weights, after the item level, minimum modifier level, family and tag filters have run."
+    ]
+   },
+   {
+    "heading": "What that means for you",
+    "text": [
+     "Relative chances are reliable, exact percentages are not. A modifier shown at 4% might really be 3% or 6%, but a modifier shown at 12% is genuinely more likely than one shown at 2%."
+    ]
+   }
+  ],
+  "assumptions": [
+   "All weights are estimates. Desecrated modifiers have no estimates at all and are treated as equally likely."
+  ],
+  "related": [
+   "tiers",
+   "desecration"
+  ]
+ },
+ {
+  "id": "prefixes-suffixes-and-slots",
+  "title": "Prefixes, suffixes and slots",
+  "category": "Modifiers",
+  "summary": "How many modifiers an item can hold, and the family rule that stops two versions of the same modifier from appearing together.",
+  "tags": [
+   "prefix",
+   "suffix",
+   "slot",
+   "family",
+   "rare",
+   "magic"
+  ],
+  "sections": [
+   {
+    "heading": "Slots per rarity",
+    "table": {
+     "columns": [
+      "Rarity",
+      "Prefixes",
+      "Suffixes"
+     ],
+     "rows": [
+      [
+       "Normal",
+       "0",
+       "0"
+      ],
+      [
+       "Magic",
+       "1",
+       "1"
+      ],
+      [
+       "Rare",
+       "3",
+       "3"
+      ],
+      [
+       "Rare jewel",
+       "2",
+       "2"
+      ]
+     ]
+    }
+   },
+   {
+    "heading": "Extra slots",
+    "text": [
+     "A modifier that reads \"+1 Prefix Modifier allowed\" or \"+1 Suffix Modifier allowed\" raises the limit of that type while it is on the item."
+    ]
+   },
+   {
+    "heading": "One modifier per family",
+    "text": [
+     "An item never carries two modifiers of the same family, whatever category they come from. That is why adding a modifier can be impossible even with a free slot, and why an essence that grants a modifier you already have replaces it instead of adding a second one."
+    ]
+   },
+   {
+    "heading": "What occupies a slot",
+    "bullets": [
+     "Explicit, crafted and desecrated modifiers occupy a prefix or suffix slot.",
+     "An unrevealed desecrated modifier occupies its slot too, even before you know what it becomes.",
+     "Implicits, corrupted implicits, enchantments and rune effects do not."
+    ]
+   }
+  ],
+  "related": [
+   "essences-and-alloys",
+   "desecration"
+  ]
+ },
+ {
+  "id": "essences-and-alloys",
+  "title": "Essences and alloys",
+  "category": "Currencies",
+  "summary": "An essence grants one guaranteed modifier. The higher grades remove a modifier first - always one of the same type as the modifier they add.",
+  "tags": [
+   "essence",
+   "alloy",
+   "crystallisation",
+   "perfect essence"
+  ],
+  "sections": [
+   {
+    "heading": "The two grades",
+    "table": {
+     "columns": [
+      "Grade",
+      "What it does"
+     ],
+     "rows": [
+      [
+       "Lesser, normal, greater",
+       "turns a Magic item Rare and adds the guaranteed modifier as a normal explicit one"
+      ],
+      [
+       "Perfect, corrupted, alloy, liquid emotion",
+       "removes one modifier and adds the guaranteed one as a Crafted modifier"
+      ]
+     ]
+    }
+   },
+   {
+    "heading": "Which modifier is removed",
+    "text": [
+     "The removed modifier always has the same affix type as the modifier the essence adds. [[Essence of the Breach]] grants a prefix, so it always eats a prefix - even when prefix slots are free.",
+     "If the item has no removable modifier of that type, the essence cannot be used at all. The game refuses it with \"Item does not have the correct base Type\"."
+    ],
+    "bullets": [
+     "A Crystallisation omen for the opposite side makes the essence unusable, because it would demand a removal of the wrong type.",
+     "Plan a blocker on the side of the guaranteed modifier, not on the side of your fracture.",
+     "A fractured modifier can never be the one removed, which is how you protect what you want to keep."
+    ]
+   },
+   {
+    "heading": "Modifiers that exist on both sides",
+    "text": [
+     "A few guaranteed modifiers exist as a prefix and a suffix of one family - the Mark of the Abyssal Lord from [[Essence of the Abyss]] is the example. Those take the slot of whatever was removed, so a Crystallisation omen decides which side you end up on."
+    ]
+   }
+  ],
+  "verified": [
+   "An essence always removes a modifier of the type it adds, whether or not that type is full; with no modifier of that type on the item the game refuses the essence."
+  ],
+  "assumptions": [
+   "When a modifier of the same family is present, that one is assumed to be the modifier that gets replaced.",
+   "A guaranteed modifier whose level is above the item level is applied anyway; whether the game blocks that is not known."
+  ],
+  "related": [
+   "prefixes-suffixes-and-slots",
+   "crafted-modifiers",
+   "omens",
+   "plus-four-skills-amulet"
+  ]
+ },
+ {
+  "id": "crafted-modifiers",
+  "title": "Crafted modifiers",
+  "category": "Currencies",
+  "summary": "An item holds one crafted modifier. A socketed Astrid's Creativity raises that, and the extra modifier survives when the rune goes.",
+  "tags": [
+   "crafted",
+   "astrid",
+   "rune"
+  ],
+  "sections": [
+   {
+    "heading": "The limit",
+    "bullets": [
+     "One crafted modifier per item.",
+     "A socketed augment that reads \"Can have 1 additional Crafted Modifier\" (Astrid's Creativity) raises the limit while it sits in the socket.",
+     "The trick: socket it, craft the second modifier, then replace the rune with another augment. Both crafted modifiers stay on the item."
+    ]
+   },
+   {
+    "heading": "Where crafted modifiers come from",
+    "text": [
+     "Perfect and corrupted essences, alloys and liquid emotions add their guaranteed modifier as a Crafted modifier. The item text shows it marked as crafted."
+    ]
+   }
+  ],
+  "verified": [
+   "Socketing Astrid's Creativity, crafting a second modifier and taking the rune out again leaves both crafted modifiers on the item."
+  ],
+  "related": [
+   "essences-and-alloys",
+   "runes-and-magnitudes"
+  ]
+ },
+ {
+  "id": "quality-and-catalysts",
+  "title": "Quality and catalysts",
+  "category": "Quality",
+  "summary": "Catalyst quality does not add a modifier - it multiplies the values of the modifiers that carry its tag, which can push a rounded number up a step.",
+  "tags": [
+   "quality",
+   "catalyst",
+   "maximum quality",
+   "breach"
+  ],
+  "sections": [
+   {
+    "heading": "How catalyst quality works",
+    "bullets": [
+     "Each catalyst has a tag (attack, caster, defence, ...). Quality of that type multiplies every number of every modifier carrying that tag by 1 + quality/100.",
+     "Whole numbers round down. A fixed +3 becomes +4 at 34% quality, but stays +3 at 33%.",
+     "Applying a catalyst of a different type replaces the quality type; the amount stays.",
+     "The item display shows the effective value and keeps the base value in the tooltip."
+    ]
+   },
+   {
+    "heading": "The maximum",
+    "text": [
+     "Normal maximum quality is 20%. [[Essence of the Breach]] adds \"+20% to Maximum Quality\", which lifts the ceiling to 40% - long enough to apply the catalysts, after which the Breach modifier can be removed again while the quality stays."
+    ]
+   },
+   {
+    "heading": "Quality currencies",
+    "text": [
+     "Whetstones, scraps and the like add a flat amount per use that depends on the item's rarity. The Vaal Infuser goes ten points past the maximum, with a rising chance to corrupt the item for every point above it."
+    ]
+   }
+  ],
+  "assumptions": [
+   "The amount of quality a quality currency adds per use, the amount a catalyst adds, and that the quality survives a change of quality type.",
+   "That the quality stays when the maximum-quality modifier is removed again."
+  ],
+  "related": [
+   "plus-four-skills-amulet",
+   "essences-and-alloys"
+  ]
+ },
+ {
+  "id": "omens",
+  "title": "Omens",
+  "category": "Currencies",
+  "summary": "Omens steer the next use of a currency. Several can be active at once, as long as they do not contradict each other.",
+  "tags": [
+   "omen",
+   "sinistral",
+   "dextral",
+   "whittling",
+   "crystallisation"
+  ],
+  "sections": [
+   {
+    "heading": "Several omens at once",
+    "text": [
+     "More than one omen can apply to a single action. The currency selector lets you toggle them; an omen that cannot combine is blocked and says why."
+    ],
+    "bullets": [
+     "The same omen twice.",
+     "A prefix restriction together with a suffix restriction.",
+     "Two boss omens.",
+     "Putrefaction together with a side restriction."
+    ]
+   },
+   {
+    "heading": "The common ones",
+    "table": {
+     "columns": [
+      "Omen",
+      "Effect"
+     ],
+     "rows": [
+      [
+       "Sinistral ...",
+       "restricts the action to prefixes"
+      ],
+      [
+       "Dextral ...",
+       "restricts the action to suffixes"
+      ],
+      [
+       "[[Omen of Whittling]]",
+       "removes the modifier with the lowest modifier level"
+      ],
+      [
+       "[[Omen of Greater Exaltation]]",
+       "adds more than one modifier"
+      ],
+      [
+       "[[Omen of Catalysing Exaltation]]",
+       "consumes the quality and favours modifiers carrying its tag"
+      ]
+     ]
+    }
+   },
+   {
+    "heading": "Omens that no longer drop",
+    "text": [
+     "A few omens still exist in the data but are not obtainable in the current patch. They are hidden from the omen choices and from the planner; projects and guides that already use them still load."
+    ]
+   }
+  ],
+  "assumptions": [
+   "How strongly Catalysing Exaltation raises the weight of matching modifiers, and that it consumes the quality.",
+   "Which omen combinations the game rejects."
+  ],
+  "related": [
+   "essences-and-alloys",
+   "desecration"
+  ]
+ },
+ {
+  "id": "desecration",
+  "title": "Desecration and the Well of Souls",
+  "category": "Desecration",
+  "summary": "A bone adds an unrevealed modifier that occupies a slot. The Well of Souls then offers a small set of options to choose from.",
+  "tags": [
+   "desecrate",
+   "bone",
+   "well of souls",
+   "lich",
+   "unrevealed"
+  ],
+  "sections": [
+   {
+    "heading": "Using a bone",
+    "bullets": [
+     "A bone always produces an unrevealed desecrated modifier - it cannot fail.",
+     "If the modifier slots are full, a random modifier is removed and the unrevealed one takes its place.",
+     "Bones do not work on a sanctified item, and not on an item that already carries a desecrated modifier - except the Mark of the Abyssal Lord, which gets replaced.",
+     "A desecrated modifier can never be fractured. That is what makes it useful as a placeholder when you want to fracture at one in three instead of one in four."
+    ]
+   },
+   {
+    "heading": "Revealing",
+    "text": [
+     "The Well of Souls offers three options: at least one exclusive Lich modifier, the rest either regular modifiers of the same affix type or further Lich modifiers. A boss omen guarantees that the exclusive option belongs to that Lich - it does not make every option one of them."
+    ],
+    "bullets": [
+     "[[Omen of Abyssal Echoes]] rerolls the offered options once.",
+     "Until it is revealed, the modifier counts as level 1 - which is exactly what [[Omen of Whittling]] hunts for. Reveal it first if you do not want to lose it."
+    ]
+   }
+  ],
+  "verified": [
+   "A boss omen guarantees only the exclusive option(s) as that Lich's modifiers; the other options still come from the normal pool."
+  ],
+  "assumptions": [
+   "How many of the three options are regular modifiers.",
+   "That an unrevealed modifier counts as level 1 for Omen of Whittling - widely reported, never officially confirmed.",
+   "That the unrevealed modifier takes the affix type of the modifier it displaced."
+  ],
+  "open": [
+   "Tier levels of desecrated modifiers: the data has almost all of them at level 65."
+  ],
+  "related": [
+   "fracturing",
+   "omens",
+   "modifier-weights"
+  ]
+ },
+ {
+  "id": "fracturing",
+  "title": "Fracturing",
+  "category": "Modifiers",
+  "summary": "A fractured modifier is locked: no currency can remove or reroll it. An item holds exactly one.",
+  "tags": [
+   "fracture",
+   "fracturing orb"
+  ],
+  "sections": [
+   {
+    "heading": "The rules",
+    "bullets": [
+     "[[Fracturing Orb]] picks one random non-fractured modifier and locks it.",
+     "Only one modifier per item can be fractured.",
+     "Desecrated modifiers cannot be fractured, so they do not count as targets - four modifiers where one is desecrated means one in three, not one in four.",
+     "A fractured modifier keeps its values through [[Divine Orb]] and is never the modifier an essence removes."
+    ]
+   }
+  ],
+  "related": [
+   "desecration",
+   "essences-and-alloys",
+   "plus-four-skills-amulet"
+  ]
+ },
+ {
+  "id": "corruption",
+  "title": "Corruption",
+  "category": "Corruption",
+  "summary": "A Vaal Orb has four outcomes, and a corrupted item can no longer be changed by normal currency.",
+  "tags": [
+   "vaal",
+   "corrupt",
+   "implicit",
+   "sacrifice"
+  ],
+  "sections": [
+   {
+    "heading": "Vaal Orb outcomes",
+    "table": {
+     "columns": [
+      "Outcome",
+      "What happens"
+     ],
+     "rows": [
+      [
+       "No change",
+       "the item is corrupted and otherwise untouched"
+      ],
+      [
+       "Corrupted implicit",
+       "an enchantment is added"
+      ],
+      [
+       "Modifiers rerolled",
+       "one to three modifiers are replaced by new ones of the same type"
+      ],
+      [
+       "Socket or quality",
+       "one socket past the limit, or quality up to 23%"
+      ]
+     ],
+     "caption": "Outcomes that cannot happen on the item are dropped and the rest share the chance. Jewellery and jewels have no socket-or-quality outcome."
+    }
+   },
+   {
+    "heading": "After corruption",
+    "bullets": [
+     "An Orb of Sacrifice ([[Yaomac's Orb of Sacrifice]] and its three siblings) upgrades an existing enchantment and removes a random modifier.",
+     "[[Architect's Orb]] adds a second enchantment of a different family, or destroys the item."
+    ]
+   }
+  ],
+  "assumptions": [
+   "That each Vaal outcome is about equally likely.",
+   "That \"modifiers are randomized\" means each hit modifier is replaced by a new one of the same affix type."
+  ],
+  "open": [
+   "The Vaal Infuser above maximum quality, the unique value reroll and the jewel-only outcomes are not simulated."
+  ],
+  "related": [
+   "quality-and-catalysts"
+  ]
+ },
+ {
+  "id": "runes-and-magnitudes",
+  "title": "Runes, soul cores and magnitudes",
+  "category": "Runes",
+  "summary": "Socketed augments do more than add a line: some unlock whole modifier categories, some scale the values of what is already there, and the Aldur runes convert elements.",
+  "tags": [
+   "rune",
+   "soul core",
+   "socket",
+   "aldur",
+   "magnitude"
+  ],
+  "sections": [
+   {
+    "heading": "Runes that unlock modifiers",
+    "text": [
+     "A rune reading \"Can roll X modifiers\" adds that category to everything that adds random modifiers - transmute, augment, regal, exalt and chaos. Thrud's Might unlocks Destruction, Kolr's Hunt unlocks Marksman, and so on."
+    ]
+   },
+   {
+    "heading": "Magnitude modifiers",
+    "text": [
+     "\"#% increased Explicit Fire Modifier magnitudes\" raises the values of the item's other explicit modifiers carrying that tag; \"Desecrated Modifier magnitudes\" does the same for desecrated ones. They stack with catalyst quality and round down the same way."
+    ]
+   },
+   {
+    "heading": "Aldur runes",
+    "text": [
+     "Socketing an Aldur rune converts the element of the matching modifiers on the item into the rune's element, keeping the tier and the position inside the roll range. Modifiers added afterwards are not converted, and the rune cannot be taken out again - only replaced."
+    ]
+   }
+  ],
+  "verified": [
+   "A fractured modifier is not converted by an Aldur rune; the normal ones are."
+  ],
+  "assumptions": [
+   "The weight of a modifier unlocked by a rune, because no source lists one.",
+   "That magnitude bonuses add to catalyst quality and do not scale other magnitude modifiers."
+  ],
+  "open": [
+   "Some modifiers are not converted in game although the conversion table lists their tiers as equivalent. The simulator converts everything the table lists."
+  ],
+  "related": [
+   "crafted-modifiers",
+   "quality-and-catalysts"
+  ]
+ },
+ {
+  "id": "plus-four-skills-amulet",
+  "title": "The +4 skills amulet",
+  "category": "Techniques",
+  "summary": "The worked example that ties quality, essences, fracturing and whittling together: turning a fixed +3 to skill levels into +4.",
+  "tags": [
+   "technique",
+   "amulet",
+   "+4",
+   "breach",
+   "whittling"
+  ],
+  "sections": [
+   {
+    "heading": "Why it works",
+    "text": [
+     "\"+3 to Level of all Melee Skills\" carries the attack tag, so attack quality multiplies it. At 34% quality, 3 x 1.34 = 4.02 rounds down to 4. At 33% it is still 3. The amulet only needs to hold 34% quality long enough."
+    ]
+   },
+   {
+    "heading": "The route",
+    "bullets": [
+     "Fracture the +3, so nothing later can take it.",
+     "Put a throwaway modifier on the prefix side - [[Essence of the Breach]] grants a prefix and therefore eats a prefix.",
+     "[[Essence of the Breach]] raises the maximum quality to 40%.",
+     "Apply the matching catalysts until the value flips to +4.",
+     "The Breach modifier has level 1, so [[Omen of Whittling]] takes it off with certainty. The quality, and the +4, stay."
+    ]
+   },
+   {
+    "heading": "Watch out",
+    "bullets": [
+     "Every unfractured prefix is a candidate when the essence removes one. Do the Breach step before you add prefixes you want to keep.",
+     "An unrevealed desecrated modifier also counts as level 1 - reveal it before whittling, or the omen takes that instead."
+    ]
+   }
+  ],
+  "related": [
+   "quality-and-catalysts",
+   "essences-and-alloys",
+   "fracturing",
+   "desecration"
+  ]
+ },
+ {
+  "id": "how-the-planner-searches",
+  "title": "How the planner searches",
+  "category": "Tools",
+  "summary": "The planner runs a beam search over the same rules as the simulator and returns the most likely complete path, plus a cheapest variant when prices are loaded.",
+  "tags": [
+   "planner",
+   "path",
+   "beam search",
+   "strategy"
+  ],
+  "sections": [
+   {
+    "heading": "What it does",
+    "bullets": [
+     "It searches from your source item to your target item; both are items of the open project.",
+     "Every chance it shows comes from the same preview the simulator uses, so the planner can never promise something the simulator would refuse.",
+     "It searches in stages: basic currency first, then omens and chaos, essences, desecration and fracturing. Each stage gives its own strategy.",
+     "With exchange prices loaded, a second search per stage optimises for cost instead of chance."
+    ]
+   },
+   {
+    "heading": "What it understands",
+    "bullets": [
+     "A target modifier counts as hit at its tier or better; that can be switched off.",
+     "Value targets are checked against effective values, so catalyst quality counts towards them.",
+     "Setup moves without direct progress are allowed: blockers, catalyst setup for Catalysing Exaltation, a desecrated placeholder before a fracture.",
+     "A move that would leave the item at a higher rarity than the target is never taken - rarity cannot be lowered again."
+    ]
+   },
+   {
+    "heading": "Where it is weak",
+    "text": [
+     "Paths are found but are not always the best ones. Step order around Catalysing Exaltation and fracture timing are the known weak spots. Treat the result as a good draft, not as the optimum."
+    ]
+   }
+  ],
+  "related": [
+   "item-level-and-minimum-modifier-level",
+   "modifier-weights"
+  ]
+ },
+ {
+  "id": "prices-and-the-exchange",
+  "title": "Prices and the currency exchange",
+  "category": "Tools",
+  "summary": "Prices come from the public hourly currency exchange digests, which are completed-trade summaries - not a live order book.",
+  "tags": [
+   "price",
+   "market",
+   "exchange",
+   "cost"
+  ],
+  "sections": [
+   {
+    "heading": "What the data is",
+    "bullets": [
+     "One digest per completed hour, listing every traded pair per league with volume and the lowest and highest ratio.",
+     "The running hour is not published yet, so the newest data is always up to an hour old.",
+     "There is no order book: what you see is what people actually traded."
+    ]
+   },
+   {
+    "heading": "How a price is derived",
+    "bullets": [
+     "Average: volume weighted over the last few hours in which the pair traded.",
+     "Buy and sell approximate the high and low ends of those fills.",
+     "Fills far away from the hour's average are treated as misclicks and count as the average instead.",
+     "Besides the direct pair, routes through divine, exalted and chaos are checked; the route with the most volume sets the market price."
+    ]
+   },
+   {
+    "heading": "Where prices show up",
+    "text": [
+     "On the currency tiles and omen buttons, in the info box of a crafting item, as cost per use in the preview, in the material table of a guide, and as the cost objective of the planner."
+    ]
+   }
+  ],
+  "assumptions": [
+   "The averaging window, the outlier rule and the routing thresholds are all choices of this app, not of the game."
+  ],
+  "open": [
+   "Gold fees, prices for bases and rare items, and the cost of restarting after a step bricks the item."
+  ],
+  "related": [
+   "how-the-planner-searches"
+  ]
+ },
+ {
+  "id": "what-is-assumed",
+  "title": "Verified, assumed, unknown",
+  "category": "About",
+  "summary": "How this simulator handles rules nobody has confirmed, and what that means for the numbers you see.",
+  "tags": [
+   "assumption",
+   "verified",
+   "source",
+   "accuracy"
+  ],
+  "sections": [
+   {
+    "heading": "Three kinds of rule",
+    "table": {
+     "columns": [
+      "Kind",
+      "How the app treats it"
+     ],
+     "rows": [
+      [
+       "Verified in game",
+       "implemented as a hard rule, even against other sources"
+      ],
+      [
+       "Assumed",
+       "a behaviour is picked and the preview says \"assumption\" where it matters"
+      ],
+      [
+       "Unknown",
+       "the mechanic is not simulated at all and is listed as open here"
+      ]
+     ]
+    }
+   },
+   {
+    "heading": "Reading the numbers",
+    "text": [
+     "Chances are as good as the weights behind them, and the weights are estimates. Use them to compare options, not as a promise.",
+     "Anything an article on this page marks as an assumption can change once someone tries it in the game."
+    ]
+   },
+   {
+    "heading": "Not simulated",
+    "bullets": [
+     "Recombinator, reforging bench and salvage.",
+     "Vaal cultivation, crystallised corruption, core destabiliser, ancient infuser and double corruption.",
+     "The Genesis Tree modifiers: browsable, but no currency rolls them.",
+     "Unique item rerolls and the jewel-only Vaal outcomes.",
+     "Expedition and crest modifiers."
+    ]
+   }
+  ],
+  "related": [
+   "modifier-weights",
+   "how-the-planner-searches"
+  ]
+ }
+]

@@ -9,6 +9,8 @@ public sealed class HistoryEntry
     public string Action { get; init; } = "";
     public Item Item { get; init; } = null!;
     public string Summary { get; init; } = "";
+    /// <summary>Why this step was done — free text the user writes in the simulator; becomes the step's explanation in a saved guide.</summary>
+    public string? Note { get; set; }
 }
 
 /// <summary>A crafting run of the simulator saved as a guide: its recorded history, the first entry being the starting item.</summary>
@@ -56,10 +58,16 @@ public sealed class RecordedGuideRunner
             Tags = start != null ? new() { Tag, start.BaseName } : new() { Tag },
             Start = start != null ? new GuideItem { Base = start.BaseName, Rarity = start.Rarity, ItemLevel = start.ItemLevel } : new(),
         };
+        // the note of the starting item says what the craft starts from
+        var startNote = recorded.History.FirstOrDefault()?.Note;
         var walkthrough = new GuideWalkthrough
         {
             Guide = guide, Start = start,
-            Strategy = new CraftingStrategy { Id = "recorded-" + recorded.Id, Name = recorded.Name, StartLabel = "Starting item" },
+            Strategy = new CraftingStrategy
+            {
+                Id = "recorded-" + recorded.Id, Name = recorded.Name,
+                StartLabel = string.IsNullOrWhiteSpace(startNote) ? "Starting item" : $"Starting item — {startNote}",
+            },
         };
         if (start == null)
         {
@@ -67,7 +75,12 @@ public sealed class RecordedGuideRunner
             return walkthrough;
         }
         for (int i = 1; i < recorded.History.Count; i++)
-            walkthrough.Strategy.Add(Step(recorded.History[i - 1].Item, recorded.History[i], walkthrough));
+        {
+            var entry = recorded.History[i];
+            var step = Step(recorded.History[i - 1].Item, entry, walkthrough);
+            step.Explanation = entry.Note;
+            walkthrough.Strategy.Add(step);
+        }
         return walkthrough;
     }
 
@@ -146,9 +159,8 @@ public sealed class RecordedGuideRunner
     }
 
     /// <summary>Ids of the known mods in <paramref name="mods"/> without a partner in <paramref name="others"/> (multiset).</summary>
-    private static List<string> ModIdsWithout(IEnumerable<ItemMod> mods, IEnumerable<ItemMod> others)
-    {
-        var remaining = others.Where(m => m.Def != null).Select(m => m.ModId).ToList();
-        return mods.Where(m => m.Def != null && !remaining.Remove(m.ModId)).Select(m => m.ModId).ToList();
-    }
+    private static List<string> ModIdsWithout(IEnumerable<ItemMod> mods, IEnumerable<ItemMod> others) =>
+        Multiset.Unmatched(KnownIds(mods), KnownIds(others)).Removed;
+
+    private static IEnumerable<string> KnownIds(IEnumerable<ItemMod> mods) => mods.Where(m => m.Def != null).Select(m => m.ModId);
 }

@@ -26,6 +26,55 @@ public class QualityAndMiscTests
         Assert.Equal((12, true), (edited.Quality, edited.Corrupted));
     }
 
+    /// <summary>
+    /// Minimum Modifier Level works per modifier type (tier group), not as a flat cut: a type whose tiers all sit below the minimum
+    /// still offers its highest tier. On a ring the mana leech suffix tops out at level 38, so a Perfect Exalted Orb can still roll it.
+    /// </summary>
+    [DataFact]
+    public void Minimum_modifier_level_filters_tiers_per_type_but_never_drops_a_type_completely()
+    {
+        var ring = TestData.NewItem(TestBases.Ring, Rarity.Rare, itemLevel: 81);
+        var preview = TestData.Engine!.Preview(ring, TestData.Action("Perfect Exalted Orb"));
+        Assert.True(preview.Applicability.Ok, preview.Applicability.Reason);
+        int minLevel = TestData.Currency("Perfect Exalted Orb").MinModLevel!.Value;
+
+        // every tier group offers only its tiers at or above the minimum ...
+        foreach (var group in preview.Additions.GroupBy(c => ModTiers.TierGroupKey(c.Mod)))
+        {
+            var all = TestData.Pool!.AllForBase(ring).Where(m => ModTiers.TierGroupKey(m) == group.Key).ToList();
+            if (all.Any(m => m.Level >= minLevel)) Assert.All(group, c => Assert.True(c.Mod.Level >= minLevel, c.Mod.Text));
+            // ... unless none of them reaches it: then the highest tier of the type is offered instead
+            else Assert.Equal(all.Max(m => m.Level), Assert.Single(group).Mod.Level);
+        }
+
+        var leech = Assert.Single(preview.Additions, c => c.Mod.Text.Contains("Physical Attack Damage as Mana"));
+        Assert.Equal(("of the Arid", 38), (leech.Mod.Name, leech.Mod.Level));
+    }
+
+    [DataFact]
+    public void Unrevealed_desecrated_modifiers_can_be_added_in_the_composer()
+    {
+        var draft = new POE2Crafting.Core.Drafting.ItemDraft(TestData.Data!) { Rarity = Rarity.Rare };
+        draft.BaseName = TestBases.Wand;
+        var selection = draft.Selection;
+
+        selection.AddUnrevealed(AffixType.Suffix, Rarity.Rare);
+        draft.Refresh();
+        var (mod, _) = Assert.Single(draft.BuildItem()!.UnrevealedMods);
+        Assert.Equal((ModKind.Desecrated, AffixType.Suffix, true), (mod.Kind, mod.Affix, mod.IsAffix));
+
+        // they occupy a slot like any other affix
+        while (selection.CanAddUnrevealed(Rarity.Rare, AffixType.Suffix)) selection.AddUnrevealed(AffixType.Suffix, Rarity.Rare);
+        draft.Refresh();
+        Assert.Equal(selection.Max(Rarity.Rare, AffixType.Suffix), selection.Count(AffixType.Suffix));
+        selection.AddUnrevealed(AffixType.Suffix, Rarity.Rare);
+        Assert.Equal(selection.Max(Rarity.Rare, AffixType.Suffix), selection.Count(AffixType.Suffix));
+
+        // a magic item only holds one per type
+        draft.Rarity = Rarity.Magic;
+        Assert.Equal(1, selection.Count(AffixType.Suffix));
+    }
+
     [DataFact]
     public void Only_one_modifier_can_be_fractured_and_divine_keeps_its_values()
     {
@@ -162,5 +211,28 @@ public class QualityAndMiscTests
         var cold = Assert.Single(TestData.Apply(ring, "Chilling Flux", new ManualChoice { Rerolls = new() { [reroll.Index] = best } }).Item.Affixes);
         Assert.Equal(reroll.Mod.Id, cold.ModId);
         Assert.Equal(best, cold.Values);
+    }
+}
+
+public class GameVersionTests
+{
+    [DataFact]
+    public void Omens_no_longer_in_the_game_are_not_offered_but_still_resolve()
+    {
+        var data = TestData.Data!;
+        Assert.False(data.IsAvailable("Omen of Sinistral Coronation"));
+        Assert.DoesNotContain(data.CraftingOmens, o => o.Name == "Omen of Sinistral Coronation");
+        Assert.Contains(data.CraftingOmens, o => o.Name == "Omen of Whittling");
+        // old projects and guides that used a removed omen still load
+        Assert.NotNull(data.FindOmen("Omen of Sinistral Coronation"));
+        Assert.All(data.Config.UnavailableItems, name => Assert.True(data.FindOmen(name) != null || data.FindCurrency(name) != null, $"{name} is not in the data"));
+    }
+
+    [DataFact]
+    public void Omen_data_has_no_duplicate_or_nameless_entries()
+    {
+        var names = TestData.Data!.Omens.Select(o => o.Name).ToList();
+        Assert.DoesNotContain("", names);
+        Assert.Equal(names.Count, names.Distinct().Count());
     }
 }

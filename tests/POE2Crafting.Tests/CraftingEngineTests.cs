@@ -112,3 +112,25 @@ public class CraftingEngineTests
         Assert.Throws<InvalidOperationException>(() => engine.Foresee(applied, exalt));
     }
 }
+
+public class GreaterExaltationChoiceTests
+{
+    [DataFact]
+    public void Both_additions_of_Omen_of_Greater_Exaltation_can_be_chosen()
+    {
+        var item = TestData.NewItem("Gold Amulet", Rarity.Rare, 82).WithAffixes(1, 1);
+        var action = TestData.Action("Exalted Orb", "Omen of Greater Exaltation");
+        var life = TestData.BestMod(item, "to maximum Life", AffixType.Prefix);
+        var resistance = TestData.BestMod(item, "to Fire Resistance", AffixType.Suffix);
+
+        // after choosing the life mod, the next addition can't be another life mod (same family), the resistance still can
+        var next = TestData.Engine!.NextAdditions(item, action, new[] { life.Id });
+        Assert.DoesNotContain(next, c => c.Mod.Family == life.Family);
+        Assert.Contains(next, c => c.Mod.Id == resistance.Id);
+
+        var result = TestData.Engine.Execute(item, action, new Rng(1), new ManualChoice { AddModIds = { life.Id, resistance.Id } });
+        Assert.Contains(result.Item.Affixes, m => m.Def?.Id == life.Id);
+        Assert.Contains(result.Item.Affixes, m => m.Def?.Id == resistance.Id);
+        Assert.Equal(4, result.Item.AffixCount);
+    }
+}

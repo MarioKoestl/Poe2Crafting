@@ -14,6 +14,8 @@ public sealed record SelectedMod(ModDef Mod, string Category)
     public List<double?> Values { get; init; } = Mod.StatRanges.Select(_ => (double?)null).ToList();
     /// <summary>The kind of a mod taken over from an item (e.g. a desecrated mod the data only knows as a normal one); null = by category.</summary>
     public ModKind? KindOnItem { get; init; }
+    /// <summary>Fractured (Composer: the item keeps it fractured; Planner: the target wants this mod fractured). At most one per selection.</summary>
+    public bool Fractured { get; set; }
     public ModKind Kind => KindOnItem ?? ModCategories.KindFor(Category);
 
     /// <summary>
@@ -69,6 +71,18 @@ public sealed class ModSelection
         else _mods.Add(new SelectedMod(mod, category));
     }
 
+    /// <summary>An unrevealed desecrated modifier needs a free slot of its type (it has no family to replace).</summary>
+    public bool CanAddUnrevealed(Rarity rarity, AffixType type) => type != AffixType.Other && Count(type) < Max(rarity, type);
+
+    /// <summary>Add an unrevealed desecrated modifier of the given type (what it reveals into is open).</summary>
+    public void AddUnrevealed(AffixType type, Rarity rarity)
+    {
+        if (!CanAddUnrevealed(rarity, type)) return;
+        var mod = new ItemMod();
+        mod.MarkUnrevealed(type);
+        _unrevealed.Add(mod);
+    }
+
     /// <summary>Take over a mod that is already on an item (no browser rules: the item may hold mods the browser does not offer).</summary>
     public void AddExisting(ItemMod mod, bool withValues)
     {
@@ -78,10 +92,19 @@ public sealed class ModSelection
             return;
         }
         if (mod.Def == null || Contains(mod.Def)) return;
-        var selected = new SelectedMod(mod.Def, mod.Def.Category) { KindOnItem = mod.Kind };
+        var selected = new SelectedMod(mod.Def, mod.Def.Category) { KindOnItem = mod.Kind, Fractured = mod.Fractured };
         if (withValues)
             for (int i = 0; i < selected.Values.Count && i < mod.Values.Count; i++) selected.Values[i] = mod.Values[i];
         _mods.Add(selected);
+    }
+
+    /// <summary>Mark the mod at <paramref name="index"/> fractured (an item holds only one fractured modifier: others lose the flag) or not.</summary>
+    public void SetFractured(int index, bool fractured)
+    {
+        if (index < 0 || index >= _mods.Count) return;
+        if (fractured)
+            foreach (var other in _mods) other.Fractured = false;
+        _mods[index].Fractured = fractured;
     }
 
     public void RemoveAt(int index)
@@ -116,7 +139,7 @@ public sealed class ModSelection
     /// <summary>
     /// Build an item from a base and the selection; unset values (and the implicit) use the middle of their ranges.
     /// With a <paramref name="template"/> of the same base (an edited item), everything but its affixes is kept (implicits, quality, sockets,
-    /// runes, corruption) and re-added mods keep their fractured flag; the unrevealed mods of the selection are added as they were.
+    /// runes, corruption); the fractured flag comes from the selection; the unrevealed mods of the selection are added as they were.
     /// </summary>
     public Item BuildItem(BaseItem baseItem, Rarity rarity, int itemLevel, Item? template = null)
     {
@@ -127,7 +150,7 @@ public sealed class ModSelection
         foreach (var sm in _mods)
         {
             var mod = item.AddMod(sm.Mod, sm.Kind, sm.Values.Take(sm.Mod.Ranges.Count).Select((v, i) => v ?? ModText.MidValue(sm.Mod.Ranges[i])).ToList());
-            mod.Fractured = edit && template!.Affixes.Any(a => a.ModId == sm.Mod.Id && a.Fractured);
+            mod.Fractured = sm.Fractured;
         }
         item.Mods.AddRange(_unrevealed.Select(m => m.Clone()));
         return item;
@@ -144,5 +167,6 @@ public sealed class ModSelection
         DisplayTier = pool.DisplayTier(m.Mod, virtualItem),
         AllowBetterTiers = allowBetterTiers,
         MinValues = m.Values.Any(v => v != null) ? m.Values.ToList() : null,
+        Fractured = m.Fractured,
     }).Concat(_unrevealed.Select(m => TargetMod.UnrevealedOf(m.Affix))).ToList();
 }

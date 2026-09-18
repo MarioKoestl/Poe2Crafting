@@ -19,7 +19,7 @@ internal sealed class DivineOperation : CraftOperation
         if (!ctx.OmenIs(OmenEffects.ImplicitsOnly) && !ctx.Item.Affixes.Any(Rerollable))
             return Applicability.No("No modifier with a value range to reroll (fractured modifiers keep their values).");
         if (ctx.Item.Affixes.Any(m => m.Fractured)) ctx.Notes.Add("Fractured modifiers keep their values.");
-        if (ctx.OmenIs(OmenEffects.Sanctify)) ctx.Notes.Add("Sanctify: the item is marked Sanctified (cannot be desecrated); further effects are UNVERIFIED.");
+        if (ctx.OmenIs(OmenEffects.Sanctify)) ctx.Notes.Add("Sanctify: the item is marked Sanctified and can no longer be desecrated; no other effect is simulated.");
         if (ctx.OmenIs(OmenEffects.ImplicitsOnly)) ctx.Notes.Add("Implicit values are not tracked numerically; the omen only prevents explicit rerolls.");
         return null;
     }

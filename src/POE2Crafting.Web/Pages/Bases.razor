@@ -35,11 +35,15 @@
 
             <SearchBox @bind-Value="_search" Placeholder="@($"Search {_class} (name, implicit)...")" />
 
-            @if (SubTypes.Count > 1)
+            @{
+                var classBases = ClassBases();
+                var subTypes = SubTypes(classBases);
+            }
+            @if (subTypes.Count > 1)
             {
                 <div class="detail-tabs base-subtypes">
-                    <button class="btn btn-sm @(_subType == null ? "btn-active" : "")" @onclick="() => SelectSubType(null)">All <span class="count-pill">@ClassBases.Count</span></button>
-                    @foreach (var (subType, count) in SubTypes)
+                    <button class="btn btn-sm @(_subType == null ? "btn-active" : "")" @onclick="() => SelectSubType(null)">All <span class="count-pill">@classBases.Count</span></button>
+                    @foreach (var (subType, count) in subTypes)
                     {
                         var type = subType;
                         <button class="btn btn-sm @(_subType == type ? "btn-active" : "")" @onclick="() => SelectSubType(type)">@type <span class="count-pill">@count</span></button>
@@ -48,7 +52,7 @@
             }
 
             @{
-                var bases = ClassBases.Where(b => (_subType == null || b.SubType == _subType) && TextSearch.Matches(_search, b.Name, b.Implicit, b.SubType)).ToList();
+                var bases = classBases.Where(b => (_subType == null || b.SubType == _subType) && TextSearch.Matches(_search, b.Name, b.Implicit, b.SubType)).ToList();
                 var stats = BaseStats.For(bases);
                 var sort = _sortByName ? null : _sort != null && stats.Contains(_sort) ? _sort : stats.FirstOrDefault(s => s.Label == "Level");
                 var sorted = (sort == null ? (_descending ? bases.OrderByDescending(b => b.Name) : bases.OrderBy(b => b.Name))
@@ -68,12 +72,12 @@
                     <table class="materials-table base-table">
                         <thead>
                             <tr>
-                                <th><button class="market-sort @(sort == null ? "active" : "")" @onclick="() => SortBy(null)">Base</button></th>
+                                <th><SortHeader Label="Base" Active="@(sort == null)" Descending="_descending" OnClick="() => SortBy(null)" /></th>
                                 @foreach (var stat in stats)
                                 {
                                     var column = stat;
                                     <th title="@stat.Description">
-                                        <button class="market-sort @(sort == column ? "active" : "")" @onclick="() => SortBy(column)">@stat.Label@(sort == column ? (_descending ? " ▾" : " ▴") : "")</button>
+                                        <SortHeader Label="@stat.Label" Active="@(sort == column)" Descending="_descending" OnClick="() => SortBy(column)" />
                                     </th>
                                 }
                                 @if (hasImplicit)
@@ -108,7 +112,7 @@
                         </tbody>
                     </table>
                 </div>
-                <p class="hint market-notes">Base values without quality or modifiers (poe2db data). Highlighted: the best value of each column among the listed bases.</p>
+                <p class="hint market-notes">Base values without quality or modifiers. Highlighted: the best value of each column among the listed bases.</p>
             }
         </div>
     </section>
@@ -129,9 +133,11 @@
         if (InitialClass != null && Data.FindItemClass(InitialClass) is { } itemClass) _class = itemClass.Name;
     }
 
-    private List<BaseItem> ClassBases => Data.BasesOfClass(_class).Where(b => !b.Hidden && (_showRuneforged || !b.IsRuneforged)).ToList();
+    /// <summary>The bases of the selected class (without the hidden ones, Runeforged variants only on request).</summary>
+    private List<BaseItem> ClassBases() => Data.BasesOfClass(_class).Where(b => !b.Hidden && (_showRuneforged || !b.IsRuneforged)).ToList();
 
-    private List<(string SubType, int Count)> SubTypes => ClassBases.Where(b => b.SubType != null)
+    /// <summary>The defence types of the class with how many bases have them, plainest first ("Armour" before "Armour/Evasion").</summary>
+    private static List<(string SubType, int Count)> SubTypes(IEnumerable<BaseItem> bases) => bases.Where(b => b.SubType != null)
         .GroupBy(b => b.SubType!).Select(g => (g.Key, g.Count())).OrderBy(g => g.Key.Count(c => c == '/')).ThenBy(g => g.Key).ToList();
 
     private void SelectClass(string itemClass)

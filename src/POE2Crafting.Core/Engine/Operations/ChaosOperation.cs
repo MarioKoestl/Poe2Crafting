@@ -7,6 +7,8 @@ internal sealed class ChaosOperation : CraftOperation
 {
     public ChaosOperation(CraftingEngine engine) : base(engine, CurrencyOps.Chaos) { }
 
+    public override bool AddsRandomModifiers => true;
+
     public override Applicability? Check(CraftContext ctx) =>
         CraftingEngine.Removable(ctx.Item, ctx.Omens).Count == 0 ? Applicability.No("No modifier can be removed (all fractured or omen restriction).") : null;
 

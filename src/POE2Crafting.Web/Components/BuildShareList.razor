@@ -1,0 +1,54 @@
+@* Values of a build dimension (skills, ascendancies, items, builds) with their share of the characters as bars; optionally clickable to filter. *@
+
+<div class="share-list">
+    @foreach (var entry in Entries.Take(_showAll ? int.MaxValue : Limit))
+    {
+        var value = entry;
+        var share = Total > 0 ? (double)value.Count / Total : 0;
+        var selected = value.Name == Selected;
+        // the name alone is not unique: a skill appears once per ascendancy in the build list
+        var key = (value.Name, value.Type);
+        if (OnSelect.HasDelegate)
+        {
+            <button class="share-row @(selected ? "selected" : "")" @key="key" title="@(selected ? "Click to remove the filter" : $"Filter by {Describe(value)}")"
+                    @onclick="() => OnSelect.InvokeAsync(selected ? null : value)">
+                @Row(value, share)
+            </button>
+        }
+        else
+        {
+            <div class="share-row" @key="key">@Row(value, share)</div>
+        }
+    }
+    @if (Entries.Count > Limit)
+    {
+        <button class="btn btn-xs share-more" @onclick="() => _showAll = !_showAll">@(_showAll ? "Show less" : $"Show all {Entries.Count}")</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<NamedCount> Entries { get; set; } = Array.Empty<NamedCount>();
+    /// <summary>Characters the shares refer to.</summary>
+    [Parameter, EditorRequired] public int Total { get; set; }
+    [Parameter] public int Limit { get; set; } = 12;
+    [Parameter] public string? Selected { get; set; }
+    /// <summary>Clickable rows: the chosen entry, null to clear.</summary>
+    [Parameter] public EventCallback<NamedCount?> OnSelect { get; set; }
+    /// <summary>Show the entry's type next to its name (item type, ascendancy of a build).</summary>
+    [Parameter] public bool ShowType { get; set; }
+
+    private bool _showAll;
+
+    private string Describe(NamedCount entry) => entry.Type != null && ShowType ? $"{entry.Name} · {entry.Type}" : entry.Name;
+
+    private RenderFragment Row(NamedCount entry, double share) =>
+        @<text>
+            <span class="share-bar" style="width: @UiFormat.CssPercent(share)"></span>
+            <span class="share-name">@entry.Name</span>
+            @if (entry.Type != null && ShowType)
+            {
+                <span class="share-type">@entry.Type</span>
+            }
+            <span class="share-value">@UiFormat.Share(share)</span>
+        </text>;
+}

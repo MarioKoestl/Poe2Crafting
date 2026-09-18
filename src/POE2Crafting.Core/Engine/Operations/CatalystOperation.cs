@@ -19,9 +19,9 @@ internal sealed class CatalystOperation : CraftOperation
         int cap = Engine.MaxQuality(item);
         bool sameType = item.QualityType == catalyst.QualityType;
         if (sameType && item.Quality >= cap) return Applicability.No($"{catalyst.QualityType} quality is already at the maximum of {cap}%.");
-        ctx.Notes.Add($"Assumption: +{Assumptions.CatalystQualityPerUse}% per catalyst (config catalystQualityPerUse), maximum {cap}%.");
+        ctx.Notes.Add($"Assumption: +{Assumptions.CatalystQualityPerUse}% per catalyst, maximum {cap}%.");
         if (!sameType && item.Quality > 0)
-            ctx.Notes.Add($"Replaces the {item.QualityType ?? "current"} quality type; assumption: the {item.Quality}% quality is kept (UNVERIFIED).");
+            ctx.Notes.Add($"Replaces the {item.QualityType ?? "current"} quality type; assumption: the {item.Quality}% quality is kept.");
         return null;
     }
 

@@ -1,0 +1,18 @@
+@* Exchange buy price of a crafting item (× count) from the market data; nothing when the item has no price. *@
+@inject MarketDataService Market
+
+@if (Market.Prices is { HasPrices: true } prices && prices.Find(Name) is { } price)
+{
+    <span class="price-tag @Class" title="@Tooltip(prices, price)">@Prefix@UiFormat.Cost(price.Buy * Count, prices)</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+    [Parameter] public double Count { get; set; } = 1;
+    [Parameter] public string Class { get; set; } = "";
+    /// <summary>Text before the price, e.g. "≈ ".</summary>
+    [Parameter] public string Prefix { get; set; } = "";
+
+    public static string Tooltip(PriceBook prices, ItemPrice price) =>
+        $"Currency Exchange buy price ({prices.League}): {UiFormat.Price(price.Buy)}c each, average {UiFormat.Price(price.Average)}c · last trade {UiFormat.ClockTime(price.LastHour)}";
+}

@@ -21,26 +21,52 @@
         {
             <div class="prop">Quality: <span class="value-blue">+@Item.QualityText</span></div>
         }
-        @if (Item.Sockets > 0)
-        {
-            <div class="prop">Sockets: @Item.Sockets</div>
-        }
         <div class="prop">Item Level: <span class="value-white">@Item.ItemLevel</span></div>
     </div>
 
+    @* augment sockets: what is socketed (rune, soul core, idol) with its effect on this item, and the free ones *@
+    @if (Item.Sockets > 0 || Item.Runes.Count > 0)
+    {
+        <div class="item-sockets" aria-label="Augment sockets">
+            @for (int s = 0; s < Math.Max(Item.Sockets, Item.Runes.Count); s++)
+            {
+                var rune = s < Item.Runes.Count ? Item.Runes[s] : null;
+                var augment = rune != null ? Data.FindAugmentByEffect(rune, Item.Base, Item.ItemClass) : null;
+                <div class="item-socket @(rune == null ? "empty" : "")" @key="s">
+                    <span class="socket-slot" aria-hidden="true">
+                        @if (augment != null && Data.FindCraftItem(augment.Name)?.IconUrl is { } icon)
+                        {
+                            <CraftIcon Url="@icon" Class="socket-icon" />
+                        }
+                    </span>
+                    @if (rune == null)
+                    {
+                        <span class="socket-text">Empty socket</span>
+                    }
+                    else
+                    {
+                        <span class="socket-text">
+                            @if (augment != null)
+                            {
+                                <span class="socket-name"><CraftItemLink Name="@augment.Name" ShowIcon="false" /></span>
+                            }
+                            <span class="socket-effect">@rune</span>
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+    }
+
     <div class="item-separator"></div>
 
-    @* Runes, corruption enchantments, implicit and enchant mods *@
-    @foreach (var rune in Item.Runes)
-    {
-        <div class="mod-line implicit" title="Rune">@rune</div>
-    }
+    @* Corruption enchantments, implicit and enchant mods *@
     @foreach (var mod in ImplicitLines)
     {
         <div class="mod-line @(mod.Kind == ModKind.CorruptedImplicit ? "corrupted-implicit" : "implicit")" title="@mod.Kind">@mod.DisplayText()</div>
     }
 
-    @if ((Item.Runes.Count > 0 || ImplicitLines.Any()) && Item.Affixes.Any())
+    @if (ImplicitLines.Any() && Item.Affixes.Any())
     {
         <div class="item-separator"></div>
     }
@@ -49,7 +75,8 @@
     @foreach (var mod in Item.Affixes.OrderBy(m => m.Affix))
     {
         var modIndex = Item.Mods.IndexOf(mod);
-        var enhanced = Item.QualityEnhances(mod);
+        var factor = Item.ValueFactor(mod);
+        var enhanced = factor != 1;
         <div class="mod-line @AffixUi.Css(mod.Affix) @(mod.Kind == ModKind.Crafted ? "crafted" : "") @(mod.Fractured ? "fractured" : "") @(mod.Kind == ModKind.Desecrated ? "desecrated" : "")">
             <span class="mod-indicator" title="@ModTooltip(mod)">@AffixUi.Letter(mod.Affix)</span>
             @if (mod.Def != null && mod.Kind != ModKind.Crafted && Pool.TryDisplayTier(mod.Def, Item) is { } tier)
@@ -63,7 +90,7 @@
                 {
                     <span class="mod-range" title="Roll range of this tier: @mod.Def.Text">(@range)</span>
                 }
-                @if (enhanced) { <span class="mod-badge quality-badge" title="Values increased by @Item.QualityText quality (base: @mod.DisplayText())">+@(Item.Quality)% Q</span> }
+                @if (enhanced) { <span class="mod-badge quality-badge" title="@EnhancementTitle(mod)">@EnhancementBadge(mod)</span> }
                 @if (mod.Fractured) { <span class="mod-badge fractured-badge">Fractured</span> }
                 @if (mod.Kind == ModKind.Crafted) { <span class="mod-badge crafted-badge">Crafted</span> }
                 @if (mod.Kind == ModKind.Desecrated) { <span class="mod-badge desecrated-badge">Desecrated</span> }
@@ -82,15 +109,12 @@
         {
             var (exclusive, regular) = Engine.RevealOffers(Item, modIndex);
             <div class="reveal-pool">
-                <div class="hint">@(mod.Reveal?.Describe() is { Length: > 0 } context ? $"{context} — " : "")% = chance to be offered at the Well of Souls; counts as level 1 for Omen of Whittling until revealed (community-reported)</div>
+                <div class="hint">@(mod.Reveal?.Describe() is { Length: > 0 } context ? $"{context} — " : "")% = chance to be offered at the Well of Souls; counts as level 1 for Omen of Whittling until revealed</div>
                 @foreach (var (group, title) in new[] { (exclusive, Engine.RevealExclusiveLabel(Item, modIndex)), (regular, "Other options — regular modifiers") })
                 {
                     if (group.Count == 0) continue;
                     <div class="reveal-group-title">@title — @group.Count</div>
-                    @foreach (var c in group)
-                    {
-                        <ModOptionRow @key="c.Mod.Id" Mod="c.Mod" Item="Item" Probability="c.Probability" />
-                    }
+                    <ModOptionList Candidates="group" Item="Item" />
                 }
             </div>
         }
@@ -148,6 +172,23 @@
     }
 
     private IEnumerable<ItemMod> ImplicitLines => Item.Mods.Where(m => m.Kind.IsImplicitLine()).OrderBy(m => m.Kind == ModKind.CorruptedImplicit ? 0 : 1);
+
+    /// <summary>"+34% Q" (catalyst quality), "+17% M" (magnitude modifiers) or "+51%" (both).</summary>
+    private string EnhancementBadge(ItemMod mod)
+    {
+        int quality = Item.QualityEnhances(mod) ? Item.Quality : 0;
+        double magnitude = ModMagnitudes.BonusFor(Item, mod);
+        var total = UiFormat.Coordinate(quality + magnitude);
+        return quality > 0 && magnitude > 0 ? $"+{total}%" : quality > 0 ? $"+{total}% Q" : $"+{total}% M";
+    }
+
+    private string EnhancementTitle(ItemMod mod)
+    {
+        var parts = new List<string>();
+        if (Item.QualityEnhances(mod)) parts.Add($"{Item.QualityText} catalyst quality");
+        if (ModMagnitudes.BonusFor(Item, mod) is > 0 and var magnitude) parts.Add($"{UiFormat.Coordinate(magnitude)}% from \"increased … Modifier magnitudes\" (assumption: added to quality)");
+        return $"Values increased by {string.Join(" + ", parts)} — base: {mod.DisplayText()}";
+    }
 
     private string ModTooltip(ItemMod mod)
     {

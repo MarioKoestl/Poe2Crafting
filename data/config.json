@@ -1,7 +1,17 @@
 {
  "gameVersion": "0.5.x (data exported 2026-09-11 from poe2db.tw)",
+ "unavailableItems": [
+  "Omen of Sinistral Coronation",
+  "Omen of Dextral Coronation",
+  "Omen of Homogenising Coronation",
+  "Omen of Sinistral Alchemy",
+  "Omen of Dextral Alchemy",
+  "Omen of Homogenising Exaltation",
+  "Omen of Corruption",
+  "Omen of Greater Annulment"
+ ],
+ "unavailableItemsNote": "Not obtainable in the current patch: hidden from the omen choices and the planner. Projects and guides that already use them still load.",
  "assumptions": {
-  "weightsSource": "poe2db.tw DropChance estimates (poe2db: 'Modifier weight information cannot be obtained from game files')",
   "affixTypeSelection": "weighted",
   "magicMaxPrefixes": 1,
   "magicMaxSuffixes": 1,
@@ -10,11 +20,10 @@
   "rareMaxAffixesPerTypeByClass": {
    "Jewel": 2
   },
-  "rareMaxAffixesNote": "Rare jewels: 2 prefixes + 2 suffixes (community guides 0.5); '+1 Prefix/Suffix Modifier allowed' (Potent Liquid Contempt) raises the limit of that type",
+  "rareMaxAffixesNote": "Rare jewels hold 2 prefixes and 2 suffixes; \"+1 Prefix/Suffix Modifier allowed\" raises the limit of that type.",
   "augmentReplacesOccupiedSocket": true,
   "augmentWorksOnCorrupted": true,
   "instillReplacesExisting": true,
-  "augmentInstillNote": "ASSUMPTIONS: socketing into a full item replaces (destroys) the chosen augment; corrupted items can still be socketed; a new instill replaces the amulet's existing one",
   "alchemyModCount": 4,
   "alchemyOnMagicKeepsExistingMods": true,
   "vaalOutcomes": {
@@ -23,14 +32,17 @@
    "reroll_mods": 0.25,
    "add_socket_or_quality": 0.25
   },
-  "vaalOutcomesNote": "0.5.x community guides (maxroll, timesaver.gg): ~25% each on equipment; outcomes that cannot happen on an item are dropped and the rest renormalised",
+  "vaalOutcomesNote": "Each outcome is about equally likely on equipment; outcomes that cannot happen on this item are dropped and the rest renormalised.",
   "vaalRerollMinMods": 1,
   "vaalRerollMaxMods": 3,
   "vaalQualityCap": 23,
   "architectSuccessChance": 0.5,
   "chanceUniqueChance": 0.05,
   "fractureMinMods": 4,
-  "qualityPerUseNote": "UNVERIFIED (PoE1 convention); catalyst +5 per use from community guides; infuser corruption chance from poe2wiki (0 at 20%, +5% per point above)",
+  "runeUnlockedModWeight": 500,
+  "aldurRuneTransformsFractured": false,
+  "aldurRuneObservationNote": "Some modifiers are not transformed in game even though the equivalence table lists their tiers as equivalent (\"Modifier magnitudes\" lines, and a normal \"Gain #% of Damage as Extra … Damage\"). The simulator transforms everything the table lists.",
+  "qualityPerUseNote": "The amount per use is an assumed value.",
   "defaultMaxQuality": 20,
   "catalystQualityPerUse": 5,
   "infuserOverCap": 10,
@@ -46,8 +58,7 @@
   "revealOptionCount": 3,
   "revealGuaranteedExclusiveOptions": 1,
   "revealRegularOptionChance": 0.5,
-  "revealBossOmenOnlyLichModifiers": true,
-  "revealNote": "Well of Souls: 3 options, at least one exclusive Lich modifier (expertgamereviews.com; Mario in game: Cold Resistance + Mana Regeneration + an Amanamu mod on a ring). poe2db: reveals 'may include base modifiers'. ASSUMPTIONS (no data): each further option is a regular modifier of the same affix type with revealRegularOptionChance (by their normal weights and the bone's minimum modifier level), otherwise another Lich modifier; boss omens make every option a mod of that Lich (poe2db: 'Reveal desecrated modifiers may include base modifiers. Unless you use Omen to guarantee named modifiers'; Mario in game: 3 Kurgal options with Omen of the Blackblooded)",
+  "revealBossOmenOnlyLichModifiers": false,
   "putrefactionUnrevealedCount": 6
  }
 }

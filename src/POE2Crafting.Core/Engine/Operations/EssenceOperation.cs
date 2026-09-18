@@ -18,13 +18,16 @@ internal sealed class EssenceOperation : CraftOperation
 
     private IReadOnlyList<ModDef> GuaranteedMods(CraftContext ctx) => Engine.Data.EssenceModsFor(ctx.Currency, ctx.Item);
 
-    /// <summary>A mod of the same family is replaced; if the guaranteed mod's affix type is full, only that type can be removed.</summary>
-    private List<RemovalCandidate> Removals(Item item, ModDef mod, IReadOnlyList<OmenDef> omens)
+    /// <summary>
+    /// The removed modifier always has the affix type of the guaranteed one, whether or not that type is full (VERIFIED in game,
+    /// Mario 18.09.2026: an Essence of the Breach rolling a prefix removes a prefix; on an item with suffixes only the game refuses
+    /// the essence with "Item does not have the correct base Type"). Within that type a modifier of the same family is the one replaced.
+    /// </summary>
+    private static List<RemovalCandidate> Removals(Item item, ModDef mod, IReadOnlyList<OmenDef> omens)
     {
-        var list = CraftingEngine.Removable(item, omens);
-        if (item.HasFamily(mod.Family)) return RemovalCandidate.Uniform(list.Where(r => r.Mod.Def?.Family == mod.Family));
-        if (IsFull(item, mod)) return RemovalCandidate.Uniform(list.Where(r => r.Mod.Affix == mod.AffixType));
-        return list;
+        var list = CraftingEngine.Removable(item, omens).Where(r => r.Mod.Affix == mod.AffixType).ToList();
+        var family = mod.Family != null ? list.Where(r => r.Mod.Def?.Family == mod.Family).ToList() : new List<RemovalCandidate>();
+        return RemovalCandidate.Uniform(family.Count > 0 ? family : list);
     }
 
     private bool IsFull(Item item, ModDef mod) => Engine.FreeSlots(item, mod.AffixType, Rarity.Rare) == 0;
@@ -65,8 +68,11 @@ internal sealed class EssenceOperation : CraftOperation
         var mods = GuaranteedMods(ctx);
         if (mods.Count == 0) return Applicability.No($"{essence.Name} has no effect on {ctx.Item.ItemClass}.");
         var item = ctx.Item;
-        if (essence.RemovesRandomModifier && Assumptions.OnlyOneCraftedModPerItem && item.Affixes.Any(m => m.Kind == ModKind.Crafted))
-            return Applicability.No("The item already has a crafted modifier (config: onlyOneCraftedModPerItem).");
+        int crafted = item.Affixes.Count(m => m.Kind == ModKind.Crafted), maxCrafted = Assumptions.MaxCraftedMods(item);
+        if (essence.RemovesRandomModifier && crafted >= maxCrafted)
+            return Applicability.No(maxCrafted == 1
+                ? "The item already has a crafted modifier (only one per item; Astrid's Creativity allows one more)."
+                : $"The item already has {crafted} crafted modifiers (maximum {maxCrafted}).");
 
         var outcomes = Outcomes(ctx, item);
         if (outcomes.Count == 0)
@@ -74,21 +80,19 @@ internal sealed class EssenceOperation : CraftOperation
             var mod = mods[0];
             return Applicability.No(!essence.RemovesRandomModifier
                 ? item.HasFamily(mod.Family) ? $"The item already has a modifier of the same family as \"{mod.Text}\"." : $"No free {mod.AffixType.Lower()} slot."
-                : $"No removable modifier would make room for \"{mod.Text}\" (fractured mods or omen restriction).");
+                : $"No {string.Join(" or ", mods.Select(m => m.AffixType.Lower()).Distinct())} modifier can be removed for \"{mod.Text}\" "
+                  + "(the essence removes a modifier of the type it adds; fractured modifiers and omens can block it).");
         }
         if (outcomes.Any(o => o.Mod.Level > item.ItemLevel))
-            ctx.Notes.Add($"A guaranteed modifier has level {outcomes.Max(o => o.Mod.Level)} but the item level is {item.ItemLevel}; whether the game blocks this is UNVERIFIED (applied anyway).");
+            ctx.Notes.Add($"A guaranteed modifier has level {outcomes.Max(o => o.Mod.Level)} above the item level {item.ItemLevel}; the simulator applies it anyway.");
         if (TakesRemovedSlot(mods))
             ctx.Notes.Add($"{mods[0].Text} takes the slot of the removed modifier (prefix or suffix).");
         else if (mods.Count > 1)
             ctx.Notes.Add(outcomes.Count < mods.Count
                 ? $"Assumption: of {mods.Count} possible modifiers only those that fit the item can roll ({outcomes.Count}); each is equally likely."
                 : $"One of {mods.Count} modifiers is added, each equally likely.");
-        if (essence.RemovesRandomModifier && !TakesRemovedSlot(mods))
-        {
-            if (outcomes.Any(o => item.HasFamily(o.Mod.Family))) ctx.Notes.Add("Assumption: the existing modifier of the same family is the one that gets replaced (UNVERIFIED).");
-            else if (outcomes.Any(o => IsFull(item, o.Mod))) ctx.Notes.Add("Assumption: when the guaranteed modifier's type is full, only a modifier of that type can be removed (UNVERIFIED).");
-        }
+        if (essence.RemovesRandomModifier && !TakesRemovedSlot(mods) && outcomes.Any(o => item.HasFamily(o.Mod.Family)))
+            ctx.Notes.Add("Assumption: the existing modifier of the same family is the one that gets replaced.");
         return null;
     }
 
@@ -108,12 +112,9 @@ internal sealed class EssenceOperation : CraftOperation
             Additions = outcomes.Select(o => new ModCandidate { Mod = o.Mod, Weight = 1, Probability = o.Chance }).ToList(),
             PrefixProbability = outcomes.Where(o => o.Mod.IsPrefix).Sum(o => o.Chance),
             SuffixProbability = outcomes.Where(o => o.Mod.IsSuffix).Sum(o => o.Chance),
-            Notes =
-            {
-                essence.AddsCraftedMod
-                    ? "The guaranteed modifier is added as a Crafted modifier (shown as \"Crafted\" in the item text)."
-                    : "The item becomes Rare and gains the guaranteed modifier; its value is rolled inside the essence's range.",
-            },
+            Notes = essence.AddsCraftedMod
+                ? new List<string>()
+                : new List<string> { "The item becomes Rare and gains the guaranteed modifier; its value is rolled inside the essence's range." },
         };
     }
 

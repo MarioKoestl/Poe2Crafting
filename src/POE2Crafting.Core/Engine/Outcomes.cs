@@ -30,10 +30,8 @@ public sealed class StepPreview
     public string? OtherAdditionLabel { get; init; }
     /// <summary>For special currencies (Orb of Chance, Desecration ...): named outcomes with probabilities.</summary>
     public Dictionary<string, double> SpecialOutcomes { get; init; } = new();
-    /// <summary>Assumptions and hints about the action (without <see cref="WeightsNote"/>).</summary>
+    /// <summary>Assumptions and hints about the action.</summary>
     public List<string> Notes { get; init; } = new();
-    /// <summary>Where the mod weights come from (the same for every action).</summary>
-    public string? WeightsNote { get; init; }
     public double PrefixProbability { get; init; }
     public double SuffixProbability { get; init; }
     /// <summary>Removal and addition are separate random events (Chaos Orb): a manual choice picks the removal first, then the addition.</summary>
@@ -45,10 +43,10 @@ public sealed class StepPreview
     /// <summary>Catalysts: the quality after the use (default and allowed range); a manual choice sets it via <see cref="ManualChoice.Quality"/>.</summary>
     public QualityChoice? Quality { get; init; }
 
-    /// <summary>A copy with the engine's generic parts: the applicability, its notes in front, and the weights note.</summary>
-    internal StepPreview WithApplicability(Applicability applicability, string weightsNote) => new()
+    /// <summary>A copy with the engine's generic parts: the applicability and its notes in front.</summary>
+    internal StepPreview WithApplicability(Applicability applicability) => new()
     {
-        Applicability = applicability, WeightsNote = weightsNote,
+        Applicability = applicability,
         RemoveCount = RemoveCount, AddCount = AddCount, Removals = Removals, Additions = Additions, AdditionsChoosable = AdditionsChoosable,
         AdditionLabel = AdditionLabel, OtherAdditions = OtherAdditions, OtherAdditionLabel = OtherAdditionLabel, SpecialOutcomes = SpecialOutcomes, Notes = applicability.Notes.Concat(Notes).ToList(),
         PrefixProbability = PrefixProbability, SuffixProbability = SuffixProbability, TwoStepChoice = TwoStepChoice, RemovalLabel = RemovalLabel,

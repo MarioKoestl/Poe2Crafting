@@ -38,6 +38,10 @@
                         {
                             <span class="currency-reason" title="@app.Reason">@app.Reason</span>
                         }
+                        else if (currency.Consumed)
+                        {
+                            <PriceTag Name="@currency.Name" Class="currency-price" />
+                        }
                     </span>
                 </button>
                 @if (Selected is { } action && action.Currency.Name == currency.Name && OmensFor(currency) is { Count: > 0 } omens)
@@ -56,6 +60,7 @@
                                         @onclick="() => blocked == null ? ToggleOmen(omen) : Task.CompletedTask">
                                     <span class="omen-check">@(active ? "✓" : "+")</span>
                                     <CraftItemLink Name="@omen.Name" />
+                                    <PriceTag Name="@omen.Name" Class="omen-price" />
                                 </button>
                             }
                             @if (action.Omens.Count > 0)

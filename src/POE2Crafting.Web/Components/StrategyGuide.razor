@@ -1,5 +1,6 @@
 @* A strategy as a step-by-step crafting guide: progress, start → final item, materials, and the steps with explanation, mod changes,
    chances and notes; steps can be ticked off while crafting. Used by the planner results and the curated crafting guides. *@
+@inject MarketDataService Market
 
 @{
     var steps = Strategy.Steps;
@@ -20,18 +21,52 @@
     </div>
 </div>
 
+@{
+    var materials = steps.Materials().ToList();
+    var prices = Market.Prices;
+    var priced = prices.HasPrices;
+}
 <details class="guide-materials" open>
     <summary class="section-title">Materials required</summary>
     <table class="materials-table">
-        <thead><tr><th>Item</th><th title="One successful run">Per run</th><th title="Expected including retries of the uncertain steps">≈ with retries</th></tr></thead>
+        <thead>
+            <tr>
+                <th>Item</th><th title="One successful run">Per run</th><th title="Expected including retries of the uncertain steps">≈ with retries</th>
+                @if (priced)
+                {
+                    <th title="Currency Exchange buy price (@prices.League)">Price</th><th title="Expected cost including retries">≈ Cost</th>
+                }
+            </tr>
+        </thead>
         <tbody>
-            @foreach (var material in steps.Materials())
+            @foreach (var material in materials)
             {
+                var price = priced ? prices.Find(material.Name) : null;
                 <tr @key="material.Name">
                     <td><CraftItemLink Name="@material.Name" /></td>
                     <td>@material.PerRun</td>
                     <td>@UiFormat.Attempts(material.Expected)</td>
+                    @if (priced)
+                    {
+                        <td>@(price != null ? UiFormat.Cost(price.Buy, prices) : "–")</td>
+                        <td>@(price != null && !double.IsInfinity(material.Expected) ? UiFormat.Cost(price.Buy * material.Expected, prices) : "–")</td>
+                    }
                 </tr>
+            }
+            @if (priced && materials.Count > 0)
+            {
+                var perRun = prices.PerRunCost(materials);
+                var expected = prices.ExpectedCost(materials);
+                <tr class="materials-total">
+                    <td>Total</td>
+                    <td colspan="2">@UiFormat.Cost(perRun.Chaos, prices) per run</td>
+                    <td></td>
+                    <td>@(double.IsInfinity(expected.Chaos) ? "∞" : UiFormat.Cost(expected.Chaos, prices))</td>
+                </tr>
+                @if (!expected.IsComplete)
+                {
+                    <tr><td colspan="5" class="hint">No exchange price: @string.Join(", ", expected.Unpriced) (not included)</td></tr>
+                }
             }
         </tbody>
     </table>
@@ -53,6 +88,10 @@
                 <button type="button" class="step-header-row step-toggle" aria-expanded="@(open ? "true" : "false")" @onclick="() => _open.Toggle(index)">
                     <span class="step-number">@(index + 1)</span>
                     <span class="step-currency"><CraftText Text="@step.CurrencyName" /></span>
+                    @if (priced && prices.Cost(step.Materials.Select(m => (m.Key, (double)m.Value))) is { Chaos: > 0 } stepCost)
+                    {
+                        <span class="price-tag" title="Buy cost of one attempt">@UiFormat.Cost(stepCost.Chaos, prices)/try</span>
+                    }
                     <span class="step-prob @UiFormat.ProbabilityClass(step.SuccessProbability)">@UiFormat.Probability(step.SuccessProbability)</span>
                 </button>
                 <div class="step-desc">@step.Description</div>

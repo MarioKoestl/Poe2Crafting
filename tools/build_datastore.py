@@ -342,8 +342,14 @@ OMEN_RULES = [
     (r"Desecration attempt will add only suffix", "Desecration", "add_suffix_only"),
 ]
 omens = []
+seen_omens = set()
 for it in omens_raw:
     desc = " ".join(it.get("description", []))
+    # poe2db's list also holds nameless/duplicate rows and non-omen links (e.g. "Abyssal Depths"): only real, unique omens (and Sagas)
+    name = it.get("name") or ""
+    if not (name.startswith("Omen of") or name.endswith("Saga")) or name in seen_omens:
+        continue
+    seen_omens.add(it["name"])
     target, effect = None, None
     for pat, tgt, eff in OMEN_RULES:
         if re.search(pat, desc):

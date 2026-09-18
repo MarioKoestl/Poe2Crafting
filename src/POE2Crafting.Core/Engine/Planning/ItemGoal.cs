@@ -24,18 +24,25 @@ public sealed class ItemGoal
     public int SocketsMissing { get; private set; }
     public List<AugmentTarget> AugmentsMissing { get; } = new();
     public bool InstillMissing { get; private set; }
+    /// <summary>A kept mod the target wants fractured is not fractured yet (and the item has no other fractured modifier).</summary>
+    public (int Index, ItemMod Mod, TargetMod Target)? FractureMissing { get; private set; }
+    /// <summary>The target wants a fractured mod, but another modifier is fractured (only one per item, fractures can't be undone).</summary>
+    public bool FractureImpossible { get; private set; }
 
     private readonly HashSet<int> _keptIndices = new();
     private readonly HashSet<int> _removeIndices = new();
 
     /// <summary>Everything about prefixes and suffixes is done (only values, quality and finishing work may be left).</summary>
-    public bool AffixesDone => Missing.Count == 0 && ToRemove.Count == 0 && RarityGap == 0;
+    public bool AffixesDone => Missing.Count == 0 && ToRemove.Count == 0 && RarityGap == 0 && FractureMissing == null;
+
+    /// <summary>States the target can never be reached from: rarity above the target, or the wrong modifier fractured.</summary>
+    public bool Impossible => RarityImpossible || FractureImpossible;
 
     /// <summary>
     /// Remaining work: removals + additions + rarity steps + one value reroll if any value target is unmet + finishing steps; a quality target above
     /// the maximum quality adds the "+% to Maximum Quality" modifier and its removal, so adding that modifier counts as progress.
     /// </summary>
-    public int Distance => ToRemove.Count + Missing.Count + RarityGap + (ValuesUnmet.Count > 0 ? 1 : 0)
+    public int Distance => ToRemove.Count + Missing.Count + RarityGap + (ValuesUnmet.Count > 0 ? 1 : 0) + (FractureMissing != null ? 1 : 0)
                            + (QualityUnmet ? 1 : 0) + (MaximumQualityMissing ? 2 : 0) + SocketsMissing + AugmentsMissing.Count + (InstillMissing ? 1 : 0);
     public bool Reached => Distance == 0;
 
@@ -53,7 +60,8 @@ public sealed class ItemGoal
     public static ItemGoal Compare(Item item, TargetItemSpec target, int defaultMaxQuality)
     {
         var goal = new ItemGoal();
-        var open = target.TargetMods.Where(t => t.ResolvedMod != null || t.Unrevealed).ToList();
+        // targets that want a fractured mod first, so an already fractured modifier is matched to them
+        var open = target.TargetMods.Where(t => t.ResolvedMod != null || t.Unrevealed).OrderByDescending(t => t.Fractured).ToList();
         for (int i = 0; i < item.Mods.Count; i++)
         {
             var mod = item.Mods[i];
@@ -71,6 +79,13 @@ public sealed class ItemGoal
             if (!match.ValuesSatisfiedBy(item, mod)) goal.ValuesUnmet.Add((i, mod, match));
         }
         goal.Missing.AddRange(open);
+        if (goal.Kept.FirstOrDefault(k => k.Target.Fractured) is { Mod: not null } wantsFracture && !wantsFracture.Mod.Fractured)
+        {
+            if (item.Affixes.Any(m => m.Fractured)) goal.FractureImpossible = true;
+            else goal.FractureMissing = wantsFracture;
+        }
+        else if (target.TargetMods.Any(t => t.Fractured) && goal.Kept.All(k => !k.Target.Fractured) && item.Affixes.Any(m => m.Fractured))
+            goal.FractureImpossible = true; // the wanted mod is still missing, but the one fracture is already used
         goal.RarityImpossible = item.Rarity > target.TargetRarity;
         goal.RarityGap = Math.Max(0, (int)target.TargetRarity - (int)item.Rarity);
         goal.QualityUnmet = !QualityMet(item, target);

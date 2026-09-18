@@ -2,6 +2,7 @@
    The box is plain CSS hover (placed by site.js positionPopover), so hovering never talks to the server. Clicks pass through
    (e.g. a currency tile is still selected). Unknown names render as plain text. *@
 @inject GameData Data
+@inject MarketDataService Market
 
 @if (Data.FindCraftItem(Name) is not { } info)
 {
@@ -32,6 +33,10 @@ else
             @foreach (var fact in info.Facts)
             {
                 <span class="craft-popover-fact">@fact</span>
+            }
+            @if (Market.Prices is { HasPrices: true } prices && prices.Find(info.Name) is { } price)
+            {
+                <span class="craft-popover-fact craft-popover-price">Exchange (@prices.League): @UiFormat.Cost(price.Buy, prices) to buy · average @UiFormat.Cost(price.Average, prices)</span>
             }
         </span>
     </span>

@@ -448,32 +448,5 @@
   "targetCurrency": "Desecration",
   "effect": "add_suffix_only",
   "crafting": true
- },
- {
-  "name": "Omen of Gambling",
-  "slug": "Omen_of_Gambling",
-  "stackSize": "1 / 10",
-  "description": "While this item is active in your inventory your next Gamble purchase will have a 50% chance of costing no Gold and not consuming this Omen",
-  "targetCurrency": null,
-  "effect": null,
-  "crafting": false
- },
- {
-  "name": "",
-  "slug": "/us/Mysterious_Rites",
-  "stackSize": null,
-  "description": "",
-  "targetCurrency": null,
-  "effect": null,
-  "crafting": false
- },
- {
-  "name": "Abyssal Depths",
-  "slug": "Abyssal_Depths",
-  "stackSize": null,
-  "description": "",
-  "targetCurrency": null,
-  "effect": null,
-  "crafting": false
  }
 ]

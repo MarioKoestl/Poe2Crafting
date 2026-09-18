@@ -52,14 +52,7 @@ else
         }
         @if (recorded != null)
         {
-            @if (_confirmDelete == guide.Id)
-            {
-                <button class="btn btn-sm btn-danger" @onclick="() => Delete(guide.Id)">Delete?</button>
-            }
-            else
-            {
-                <button class="btn btn-sm" title="Delete this saved guide" @onclick="() => _confirmDelete = guide.Id">🗑 Delete</button>
-            }
+            <ConfirmButton @key="guide.Id" Label="🗑 Delete" ConfirmLabel="Delete?" Title="Delete this saved guide" OnConfirm="() => Delete(guide.Id)" />
         }
     </div>
     @if (walkthrough.Start is { } first)
@@ -76,8 +69,6 @@ else
     /// <summary>The guide's starting item was loaded into the session.</summary>
     [Parameter] public EventCallback OnStartItemLoaded { get; set; }
 
-    private string? _confirmDelete;
-
     private Task LoadStart(CraftingGuide guide, Item start)
     {
         Session.SetItem(start.Clone(), $"Guide: {guide.Name}");
@@ -87,7 +78,6 @@ else
     private void Delete(string id)
     {
         Guides.Delete(id);
-        _confirmDelete = null;
         Planner.SelectGuide(null);
     }
 }

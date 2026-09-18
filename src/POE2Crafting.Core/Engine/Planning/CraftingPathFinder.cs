@@ -14,11 +14,13 @@ public sealed class CraftingPathFinder
     public CraftingPathFinder(CraftingEngine engine) => _engine = engine;
 
     /// <summary>Find strategies from <paramref name="currentItem"/> to the target. Resolves the target's mods and augment texts for the item's base first.</summary>
-    public PlanResult FindPathsFromItem(Item currentItem, TargetItemSpec target)
+    /// <param name="prices">Buy price in Chaos Orbs per consumed item name (null for unknown items). With prices every tool set also gets its
+    /// cheapest path by expected cost (materials / chance per step), named "… · cheapest".</param>
+    public PlanResult FindPathsFromItem(Item currentItem, TargetItemSpec target, Func<string, double?>? prices = null)
     {
         if (currentItem.Base == null) return new PlanResult { Problems = { "The current item has no known base." } };
         PrepareTargets(target, currentItem);
-        return new FromItemPlanner(_engine).Plan(currentItem, target);
+        return new FromItemPlanner(_engine, prices).Plan(currentItem, target);
     }
 
     /// <summary>Resolve family/tier targets to mods of this base (all browsable categories) and recompute their display tiers and augment texts.</summary>

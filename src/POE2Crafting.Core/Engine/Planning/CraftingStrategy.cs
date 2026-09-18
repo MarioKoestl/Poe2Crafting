@@ -48,8 +48,7 @@ public sealed class CraftingStrategy
             Type = brick > CraftStep.BrickThreshold ? CraftStepType.Brick : chance >= 1 ? CraftStepType.Checkpoint : CraftStepType.Normal,
             RestartFromStepId = chance < 1 ? (Steps.Count > 0 ? Steps[^1].Id : StartStepId) : null,
             Result = result,
-            Materials = (action.Currency.Consumed ? action.Omens.Select(o => o.Name).Prepend(action.Currency.Name) : action.Omens.Select(o => o.Name))
-                .ToDictionary(n => n, _ => uses),
+            Materials = action.ConsumedItems.ToDictionary(n => n, _ => uses),
         };
         step.Notes.Add(CraftStep.HitChanceNote(chance));
         return step;

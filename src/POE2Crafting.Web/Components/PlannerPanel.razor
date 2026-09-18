@@ -1,5 +1,6 @@
 @* Planner results: strategy cards, then the chosen strategy as a step-by-step guide (StrategyGuide) or flowchart. State lives in PlannerState. *@
 @inherits PlannerStateComponentBase
+@inject MarketDataService Market
 
 <div class="planner-panel">
     <h3 class="pane-title">Crafting Paths</h3>
@@ -18,10 +19,17 @@
         <div class="planner-header">
             <h4>@UiFormat.Plural(result.Plan.Strategies.Count, "Strategy", "Strategies") Found</h4>
             <div class="source-item-info">Starting from: @result.Start</div>
+            @if (Market.Prices.HasPrices)
+            {
+                <div class="detail-tabs planner-sort" role="group" aria-label="Sort strategies">
+                    <button class="btn btn-xs @(_sortByCost ? "" : "btn-active")" @onclick="() => _sortByCost = false">Best chance</button>
+                    <button class="btn btn-xs @(_sortByCost ? "btn-active" : "")" @onclick="() => _sortByCost = true" title="Expected Currency Exchange cost including retries">Cheapest</button>
+                </div>
+            }
         </div>
 
         <div class="strategy-list">
-            @foreach (var strategy in result.Plan.Strategies)
+            @foreach (var strategy in Sorted(result.Plan.Strategies))
             {
                 <StrategyCard @key="strategy.Id" Strategy="strategy" Selected="ReferenceEquals(strategy, Planner.SelectedStrategy)" OnSelect="() => Select(strategy)">
                     <CraftText Text="@strategy.Description" />
@@ -52,6 +60,12 @@
 </div>
 
 @code {
+    private bool _sortByCost;
+
+    /// <summary>The planner's order (best chance first) or cheapest expected exchange cost first; strategies with unpriced materials keep their place after the priced ones.</summary>
+    private IEnumerable<CraftingStrategy> Sorted(IReadOnlyList<CraftingStrategy> strategies) =>
+        _sortByCost ? strategies.OrderBy(s => Market.Prices.ExpectedCost(s.Steps.Materials()) is var cost && cost.IsComplete ? cost.Chaos : double.MaxValue) : strategies;
+
     private bool _showDiagram;
 
     private void Select(CraftingStrategy strategy)

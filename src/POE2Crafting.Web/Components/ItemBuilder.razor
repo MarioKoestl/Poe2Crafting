@@ -2,6 +2,7 @@
    State lives in PlannerState. *@
 @inherits PlannerStateComponentBase
 @inject CraftingSession Session
+@inject MarketDataService Market
 
 <div class="item-builder">
     <h3 class="pane-title">Source &amp; Target</h3>
@@ -123,7 +124,10 @@
         try
         {
             // the search evaluates many item states (a few seconds for multi-step techniques): keep the page responsive
-            var plan = await Task.Run(() => new CraftingPathFinder(Session.Engine).FindPathsFromItem(snapshot, spec), _disposed.Token);
+            // with market prices the planner also searches the cheapest path of every tool set
+            var prices = Market.Prices;
+            Func<string, double?>? priceOf = prices.HasPrices ? name => prices.Find(name)?.Buy : null;
+            var plan = await Task.Run(() => new CraftingPathFinder(Session.Engine).FindPathsFromItem(snapshot, spec, priceOf), _disposed.Token);
             Planner.ShowResult(new PlannerResult(plan, snapshot));
         }
         catch (OperationCanceledException)

@@ -10,7 +10,7 @@ namespace POE2Crafting.Web.Services;
 /// checks every <see cref="MarketSettings.PollMinutes"/> minutes for the next one. Downloaded hours are kept as compact JSON files
 /// (market-cache/{hour}.json) so a restart doesn't download them again. <see cref="Changed"/> fires (on a background thread) for every new snapshot.
 /// </summary>
-public sealed class MarketDataService(IHttpClientFactory httpClients, MarketSettings settings, string cacheFolder, ILogger<MarketDataService> logger)
+public sealed class MarketDataService(IHttpClientFactory httpClients, MarketSettings settings, ExchangeCatalog catalog, string cacheFolder, ILogger<MarketDataService> logger)
     : BackgroundService
 {
     public const string HttpClientName = "currency-exchange";
@@ -21,6 +21,21 @@ public sealed class MarketDataService(IHttpClientFactory httpClients, MarketSett
     private readonly SemaphoreSlim _wake = new(0);
 
     public MarketSnapshot Snapshot { get; private set; } = MarketSnapshot.Empty;
+
+    private (MarketSnapshot For, PriceBook Book)? _prices;
+
+    /// <summary>Prices of the default league (configured or most traded) of the current snapshot, built once per snapshot; empty while nothing is loaded.</summary>
+    public PriceBook Prices
+    {
+        get
+        {
+            var snapshot = Snapshot;
+            if (_prices is { } cached && ReferenceEquals(cached.For, snapshot)) return cached.Book;
+            var book = snapshot.DefaultLeague is { } league ? PriceBook.From(snapshot.League(league), catalog, snapshot.LatestHour) : PriceBook.Empty;
+            _prices = (snapshot, book);
+            return book;
+        }
+    }
     public MarketSettings Settings => settings;
     public bool IsLoading { get; private set; } = true;
     /// <summary>"12/24 hours" while downloading.</summary>

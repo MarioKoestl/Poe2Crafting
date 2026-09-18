@@ -1,0 +1,49 @@
+@* Divine Orb / Flux: the modifiers whose values are rolled anew — pick a value inside each tier range, then apply them all. *@
+
+<div class="distribution-section">
+    <h4>Rolled values</h4>
+    <p class="hint">Set the value each modifier rolls (inside its tier range), then apply.</p>
+    <div class="reroll-list">
+        @foreach (var reroll in Rerolls)
+        {
+            var affix = Item.Mods[reroll.Index].Affix;
+            <div class="add-row reroll-row @AffixUi.Css(affix, "-row")" @key="reroll.Index">
+                <span class="add-type @AffixUi.TypeCss(affix)">@AffixUi.Letter(affix)</span>
+                <span class="add-stat">@reroll.Mod.Text</span>
+                <ModLevel Mod="reroll.Mod" />
+                <ModValueInputs Mod="reroll.Mod" Values="_values[reroll.Index]" />
+            </div>
+        }
+    </div>
+    <button class="btn btn-sm btn-primary" @onclick="Apply">Apply these values</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Item Item { get; set; } = null!;
+    [Parameter, EditorRequired] public IReadOnlyList<ValueReroll> Rerolls { get; set; } = Array.Empty<ValueReroll>();
+    /// <summary>Apply the action with these values per modifier index.</summary>
+    [Parameter] public EventCallback<Dictionary<int, List<double>>> OnApply { get; set; }
+
+    /// <summary>Values chosen per rerolled mod index, starting from the item's current values.</summary>
+    private Dictionary<int, List<double>> _values = new();
+    private Item? _valuesFor;
+    private IReadOnlyList<ValueReroll> _rerollsFor = Array.Empty<ValueReroll>();
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(Item, _valuesFor) && Rerolls.SequenceEqual(_rerollsFor)) return;
+        _valuesFor = Item;
+        _rerollsFor = Rerolls;
+        _values = Rerolls.ToDictionary(r => r.Index, r => StartValues(Item.Mods[r.Index], r.Mod));
+    }
+
+    private Task Apply() => OnApply.InvokeAsync(_values.ToDictionary(e => e.Key, e => e.Value.ToList()));
+
+    /// <summary>Input start values: the mod's current values where they fit the new ranges (a Flux may change them), otherwise the middle.</summary>
+    private static List<double> StartValues(ItemMod current, ModDef mod) =>
+        mod.Ranges.Select((range, r) =>
+        {
+            var (lo, hi) = ModText.Bounds(range);
+            return r < current.Values.Count && current.Values[r] >= lo && current.Values[r] <= hi ? current.Values[r] : ModText.MidValue(range);
+        }).ToList();
+}

@@ -135,4 +135,36 @@ public class MarketTests
         Assert.Equal(ExchangeCategories.Omens, catalog.Item(Omen).Category);
         Assert.Equal("Currency Something New", catalog.Item("Metadata/Items/Currency/CurrencySomethingNew").Name);
     }
+
+    [DataFact]
+    public void Price_book_prices_crafting_items_by_name_in_chaos()
+    {
+        var catalog = new ExchangeCatalog(TestData.Data!);
+        var market = Market(
+            Pair(Hour, Chaos, Divine, 10000, 1000, 9.5, 10.5),            // Divine: buy 10.5c, average 10c
+            Pair(Hour, Omen, Divine, 100, 50, 1.9, 2.1));                 // Omen of Whittling ≈ 0.5 Divine
+        var prices = PriceBook.From(market, catalog, Hour);
+
+        Assert.Equal(10, prices.ChaosPerDivine, 6);
+        Assert.Equal(1, prices.Find("Chaos Orb")!.Buy);
+        Assert.Equal(10.5, prices.Find("divine orb")!.Buy, 6);
+        var omen = prices.Find("Omen of Whittling")!;
+        Assert.Equal(1 / 1.9 * 10.5, omen.Buy, 6);
+
+        var cost = prices.Cost(new[] { ("Divine Orb", 2.0), ("Omen of Whittling", 1.0), ("Mirror of Kalandra", 1.0) });
+        Assert.Equal(21 + omen.Buy, cost.Chaos, 6);
+        Assert.Equal(new[] { "Mirror of Kalandra" }, cost.Unpriced);
+    }
+
+    [DataFact]
+    public void Crafting_currency_names_match_the_exchange_names()
+    {
+        var exchangeNames = TestData.Data!.ExchangeItems.Values.Select(i => i.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in new[] { "Chaos Orb", "Exalted Orb", "Greater Exalted Orb", "Divine Orb", "Orb of Annulment", "Fracturing Orb",
+                     "Omen of Greater Exaltation", "Omen of Whittling", "Perfect Essence of Battle", "Flesh Catalyst" })
+        {
+            Assert.NotNull(TestData.Data.FindCraftItem(name));
+            Assert.Contains(name, exchangeNames);
+        }
+    }
 }

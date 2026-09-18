@@ -1,0 +1,76 @@
+@* Modifier candidates of an action, grouped by tier family (all Cold Resistance tiers in one expandable row) — every tier stays selectable on its own. *@
+
+<div class="addition-list">
+    @foreach (var group in Groups)
+    {
+        if (group.Tiers.Count == 1)
+        {
+            @Row(group.Tiers[0])
+        }
+        else
+        {
+            var expanded = _expanded.Contains(group.Key) != AutoExpand;
+            <div class="add-group @AffixUi.Css(group.Type, "-row")" @key="group.Key">
+                <button type="button" class="add-group-header" aria-expanded="@(expanded ? "true" : "false")"
+                        title="@group.Tiers.Count tiers of this modifier — open to choose one"
+                        @onclick="() => _expanded.Toggle(group.Key)">
+                    <span class="add-pct">@UiFormat.Share(group.Probability)</span>
+                    <span class="add-expand">@(expanded ? "▾" : "▸")</span>
+                    <span class="add-type @AffixUi.TypeCss(group.Type)">@AffixUi.Letter(group.Type)</span>
+                    <span class="add-stat">@group.Label</span>
+                    <span class="add-group-count">@group.Tiers.Count tiers</span>
+                </button>
+                @if (expanded)
+                {
+                    <div class="add-group-tiers">
+                        @foreach (var c in group.Tiers)
+                        {
+                            @Row(c)
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ModCandidate> Candidates { get; set; } = Array.Empty<ModCandidate>();
+    /// <summary>The item the tiers are displayed for.</summary>
+    [Parameter, EditorRequired] public Item Item { get; set; } = null!;
+    /// <summary>Choosing a modifier by hand; without a delegate the list is informational.</summary>
+    [Parameter] public EventCallback<ModDef> OnChoose { get; set; }
+    /// <summary>Extra markup under a modifier's row (the value inputs of the picked one).</summary>
+    [Parameter] public RenderFragment<ModDef>? AfterRow { get; set; }
+    /// <summary>All groups start open (while a search is narrowing the list); a click still toggles a single group.</summary>
+    [Parameter] public bool AutoExpand { get; set; }
+
+    /// <summary>One tier family: its candidates (best tier first) and their summed probability.</summary>
+    private sealed record Group(string Key, string Label, AffixType Type, double Probability, List<ModCandidate> Tiers);
+
+    private readonly HashSet<string> _expanded = new();
+    private Item? _lastItem;
+
+    protected override void OnParametersSet()
+    {
+        // a different item means different candidates: start collapsed again
+        if (ReferenceEquals(Item, _lastItem)) return;
+        _lastItem = Item;
+        _expanded.Clear();
+    }
+
+    /// <summary>Groups ordered by probability (most likely first), the tiers inside from the best (highest modifier level) down.</summary>
+    private IEnumerable<Group> Groups => Candidates
+        .GroupBy(c => ModTiers.TierGroupKey(c.Mod))
+        .Select(g => new Group(g.Key, ModTiers.GroupLabel(g.Select(c => c.Mod)), g.First().Mod.AffixType,
+            g.Sum(c => c.Probability), g.OrderByDescending(c => c.Mod.Level).ToList()))
+        .OrderByDescending(g => g.Probability)
+        .ThenBy(g => g.Label);
+
+    private RenderFragment Row(ModCandidate c) =>
+        @<div @key="c.Mod.Id">
+            <ModOptionRow Mod="c.Mod" Item="Item" Probability="c.Probability"
+                          OnChoose="@(OnChoose.HasDelegate ? EventCallback.Factory.Create(this, () => OnChoose.InvokeAsync(c.Mod)) : default)" />
+            @AfterRow?.Invoke(c.Mod)
+        </div>;
+}

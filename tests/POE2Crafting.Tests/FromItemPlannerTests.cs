@@ -41,6 +41,66 @@ public class FromItemPlannerTests
     }
 
     [DataFact]
+    public void Cost_search_finds_a_cheaper_path_than_the_most_likely_one()
+    {
+        // a rare amulet that needs the best life prefix: Perfect Exalted Orbs (high minimum modifier level) hit it more often, plain Exalted Orbs are cheaper
+        var current = TestData.NewItem(TestBases.MagicAmulet, Rarity.Rare).WithAffixes(1, 1);
+        var target = TestData.Spec(Rarity.Rare, Defs(current).Append(TestData.BestMod(current, "to maximum Life", AffixType.Prefix)));
+        double? Price(string name) => name switch { "Exalted Orb" => 1, "Greater Exalted Orb" => 500, "Perfect Exalted Orb" => 5000, _ => null };
+        double ExpectedCost(CraftingStrategy s) => s.Steps.Sum(step => step.Materials.Sum(m => (Price(m.Key) ?? 0) * m.Value / step.SuccessProbability));
+
+        var plan = TestData.PathFinder.FindPathsFromItem(current, target, Price);
+
+        var likely = plan.Strategies.MaxBy(s => s.OverallProbability)!;
+        var cheapest = plan.Strategies.Where(s => s.Name.EndsWith("cheapest")).MinBy(ExpectedCost);
+        Assert.NotNull(cheapest);
+        Assert.True(ExpectedCost(cheapest) < ExpectedCost(likely), $"cheapest {ExpectedCost(cheapest)} vs likely {ExpectedCost(likely)}");
+        Assert.True(likely.OverallProbability > cheapest.OverallProbability);
+    }
+
+    [DataFact]
+    public void Without_prices_no_cheapest_strategies_are_added()
+    {
+        var current = TestData.NewItem(TestBases.Wand, Rarity.Rare).WithAffixes(3, 2);
+        var plan = Plan(current, Rarity.Rare, Defs(current).Where(m => m.AffixType == AffixType.Prefix).Append(Defs(current).First(m => m.AffixType == AffixType.Suffix)));
+        Assert.DoesNotContain(plan.Strategies, s => s.Name.EndsWith("cheapest"));
+    }
+
+    [DataFact]
+    public void Fracture_target_uses_a_desecrated_placeholder_for_one_in_three()
+    {
+        // 3 wanted mods, the suffix should end up fractured: a Fracturing Orb needs 4 mods — a desecrated placeholder can't be fractured (1/3), a normal one could (1/4)
+        var item = TestData.NewItem(TestBases.Amulet, Rarity.Rare).WithAffixes(2, 1);
+        var spec = TestData.Spec(Rarity.Rare, Defs(item));
+        var wanted = spec.TargetMods.First(t => t.AffixType == AffixType.Suffix);
+        wanted.Fractured = true;
+
+        var plan = TestData.Plan(item, spec);
+
+        var best = plan.Strategies[0];
+        Assert.Contains("placeholder", best.Steps[0].Description);
+        var fracture = best.Steps.Single(s => s.CurrencyName == "Fracturing Orb");
+        Assert.Equal(1.0 / 3, fracture.SuccessProbability, 6);
+        Assert.True(best.OverallProbability > 0.25);
+        var final = best.Steps[^1].Result!;
+        Assert.Contains(final.Affixes, m => m.Fractured && m.Def?.Id == wanted.ResolvedMod!.Id);
+        Assert.Equal(3, final.AffixCount);
+    }
+
+    [DataFact]
+    public void The_wrong_fractured_mod_makes_the_target_unreachable()
+    {
+        var item = TestData.NewItem(TestBases.Amulet, Rarity.Rare).WithAffixes(2, 2);
+        var spec = TestData.Spec(Rarity.Rare, Defs(item));
+        spec.TargetMods.First(t => t.AffixType == AffixType.Suffix).Fractured = true;
+        item.Affixes.First(m => m.Affix == AffixType.Prefix).Fractured = true;
+
+        var plan = TestData.Plan(item, spec);
+        Assert.Empty(plan.Strategies);
+        Assert.Contains(plan.Problems, p => p.Contains("fractured"));
+    }
+
+    [DataFact]
     public void Normal_item_starts_with_a_transmutation()
     {
         var current = TestData.NewItem(TestBases.Wand);
