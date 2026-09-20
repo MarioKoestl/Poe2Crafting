@@ -18,6 +18,9 @@ public sealed class CraftingSession
     /// <summary>Options rolled at the Well of Souls per unrevealed mod index (cleared whenever the item changes).</summary>
     private readonly Dictionary<int, RevealState> _reveals = new();
     private bool _projectLoaded;
+    /// <summary>The step whose retry plan is being crafted, and the states of the throwaway item (one per planned action, so undo works).</summary>
+    private int? _retryStep;
+    private readonly List<Item> _retryStates = new();
 
     public CraftingSession(GameData data, CraftingEngine engine, ProjectStore store, GuideCatalog guides)
     {
@@ -31,7 +34,8 @@ public sealed class CraftingSession
 
     public CraftingProject? Project { get { EnsureProject(); return _project; } }
     public ProjectItem? ProjectItem { get { EnsureProject(); return _projectItem; } }
-    public Item? CurrentItem { get { EnsureProject(); return _currentItem; } }
+    /// <summary>The item you are crafting on: the project item, or the throwaway copy while a retry plan is being crafted.</summary>
+    public Item? CurrentItem { get { EnsureProject(); return _retryStates.Count > 0 ? _retryStates[^1] : _currentItem; } }
     /// <summary>History of the current item (empty without an item).</summary>
     public IReadOnlyList<HistoryEntry> History => ProjectItem?.History ?? (IReadOnlyList<HistoryEntry>)Array.Empty<HistoryEntry>();
     public string? LastError { get; private set; }
@@ -105,6 +109,7 @@ public sealed class CraftingSession
 
     private void SelectItem(ProjectItem? item)
     {
+        StopRetryCrafting(restore: false);
         _projectItem = item;
         if (_project != null) _project.SelectedItemId = item?.Id;
         if (item?.Current is { } current) Restore(current);
@@ -149,6 +154,7 @@ public sealed class CraftingSession
     /// <summary>Add a new item (import, compose, guide) to the project — a new project is created when none is open — and make it the current item.</summary>
     public void SetItem(Item item, string action)
     {
+        StopRetryCrafting(restore: false);
         if (Project == null) CreateProject("");
         var projectItem = new ProjectItem();
         _project!.Items.Add(projectItem);
@@ -196,7 +202,12 @@ public sealed class CraftingSession
         {
             Name = string.IsNullOrWhiteSpace(name) ? $"{start.BaseName} → {CurrentItem!.Title}" : name.Trim(),
             Notes = notes.Trim(),
-            History = History.Select(e => new HistoryEntry { Action = e.Action, Summary = e.Summary, Note = e.Note, Item = e.Item.Clone() }).ToList(),
+            History = History.Select(e => new HistoryEntry
+            {
+                Id = e.Id, Action = e.Action, Summary = e.Summary, Note = e.Note,
+                RetryFromId = e.RetryFromId, Item = e.Item.Clone(),
+                RetrySteps = e.RetrySteps.Select(r => new RetryStep { Action = r.Action, Note = r.Note, Item = r.Item?.Clone() }).ToList(),
+            }).ToList(),
         };
         foreach (var entry in guide.History) entry.Item.Bind(_data);
         try
@@ -212,6 +223,110 @@ public sealed class CraftingSession
         }
     }
 
+    // ---- retry plans ("this step is random: here is the way back when it misses") ----
+
+    /// <summary>
+    /// Mark a step as random and say which earlier state to go back to when it misses (null = it always works, the plan is dropped).
+    /// The way back is then written down step by step with <see cref="AddRetryStep"/>.
+    /// </summary>
+    public void SetRetryTarget(int index, int? targetIndex)
+    {
+        if (ProjectItem is not { } item || index < 1 || index >= item.History.Count) return;
+        var entry = item.History[index];
+        if (targetIndex is not { } target || target < 0 || target >= index)
+        {
+            entry.RetryFromId = null;
+            entry.RetrySteps.Clear();
+        }
+        else entry.RetryFromId = item.History[target].Id;
+        LastError = null;
+        Save();
+    }
+
+    /// <summary>Whether the way back of a step is being crafted right now (on a throwaway copy of the item).</summary>
+    public bool CraftingRetry => _retryStep != null;
+
+    /// <summary>The step whose way back is being crafted, or null.</summary>
+    public HistoryEntry? RetryEntry => _retryStep is { } i && i < History.Count ? History[i] : null;
+
+    /// <summary>Its number on the path.</summary>
+    public int RetryStepNumber => _retryStep ?? 0;
+
+    /// <summary>The state the way back has to reach again, or null outside the sandbox.</summary>
+    public Item? RetryGoal =>
+        RetryEntry?.RetryFromId is { } id ? History.FirstOrDefault(e => e.Id == id)?.Item : null;
+
+    /// <summary>Which step of the path that state belongs to (0 = the starting item, -1 = none picked).</summary>
+    public int RetryGoalStep
+    {
+        get
+        {
+            if (RetryEntry?.RetryFromId is not { } id) return -1;
+            for (int i = 0; i < History.Count; i++)
+                if (History[i].Id == id) return i;
+            return -1;
+        }
+    }
+
+    /// <summary>Whether the throwaway item is back at the goal (same modifiers, same quality).</summary>
+    public bool RetryGoalReached =>
+        RetryGoal is { } goal && CurrentItem is { } now && ItemDiff.Between(goal, now).Count == 0;
+
+    /// <summary>
+    /// Craft the way back of a random step: the current item becomes a throwaway copy of the state that step left behind, and every
+    /// currency applied from now on is written into its retry plan instead of the history. <see cref="StopRetryCrafting"/> ends it.
+    /// </summary>
+    public void StartRetryCrafting(int index)
+    {
+        if (ProjectItem is not { } item || index < 1 || index >= item.History.Count) return;
+        if (!item.History[index].CanMiss) SetRetryTarget(index, index - 1);
+        _retryStep = index;
+        _retryStates.Clear();
+        var sandbox = item.History[index].Item.Clone();
+        sandbox.Bind(_data);
+        _retryStates.Add(sandbox);
+        _reveals.Clear();
+        LastError = null;
+    }
+
+    /// <summary>Leave the sandbox; the plan keeps what was crafted.</summary>
+    public void StopRetryCrafting(bool restore = true)
+    {
+        if (_retryStep == null) return;
+        _retryStep = null;
+        _retryStates.Clear();
+        _reveals.Clear();
+        if (restore && ProjectItem?.Current is { } current) Restore(current);
+    }
+
+    /// <summary>Append an action to a step's way back, e.g. "Orb of Annulment + Omen of Light".</summary>
+    public void AddRetryStep(int index, string action)
+    {
+        if (ProjectItem is not { } item || index < 1 || index >= item.History.Count) return;
+        if (item.History[index] is not { CanMiss: true } entry || string.IsNullOrWhiteSpace(action)) return;
+        entry.RetrySteps.Add(new RetryStep { Action = action.Trim() });
+        LastError = null;
+        Save();
+    }
+
+    public void RemoveRetryStep(int index, int position)
+    {
+        if (ProjectItem is not { } item || index < 1 || index >= item.History.Count) return;
+        var steps = item.History[index].RetrySteps;
+        if (position < 0 || position >= steps.Count) return;
+        steps.RemoveAt(position);
+        Save();
+    }
+
+    public void SetRetryNote(int index, int position, string? note)
+    {
+        if (ProjectItem is not { } item || index < 1 || index >= item.History.Count) return;
+        var steps = item.History[index].RetrySteps;
+        if (position < 0 || position >= steps.Count) return;
+        steps[position].Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        Save();
+    }
+
     /// <summary>Set (or clear) the free-text note of a history step of the current item; saved with the project.</summary>
     public void SetNote(int index, string? note)
     {
@@ -222,6 +337,17 @@ public sealed class CraftingSession
 
     public void Undo()
     {
+        if (_retryStep is { } planned)
+        {
+            // inside the sandbox undo takes the last planned action back off the plan
+            if (_retryStates.Count <= 1) return;
+            _retryStates.RemoveAt(_retryStates.Count - 1);
+            var plan = ProjectItem!.History[planned].RetrySteps;
+            if (plan.Count > 0) plan.RemoveAt(plan.Count - 1);
+            _reveals.Clear();
+            Save();
+            return;
+        }
         if (ProjectItem is not { History.Count: > 1 } item) return;
         item.History.RemoveAt(item.History.Count - 1);
         Restore(item.History[^1].Item);
@@ -286,9 +412,17 @@ public sealed class CraftingSession
 
     private void Commit(Item item, string action, string summary)
     {
-        _currentItem = item;
         LastError = null;
         _reveals.Clear();
+        if (_retryStep is { } planned)
+        {
+            // crafting the way back: the action joins the step's plan, the real item and its history stay untouched
+            _retryStates.Add(item);
+            ProjectItem!.History[planned].RetrySteps.Add(new RetryStep { Action = action, Item = item.Clone() });
+            Save();
+            return;
+        }
+        _currentItem = item;
         ProjectItem!.History.Add(new HistoryEntry { Action = action, Item = item.Clone(), Summary = summary });
         Save();
     }

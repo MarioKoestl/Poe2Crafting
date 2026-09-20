@@ -92,6 +92,12 @@
                     {
                         <span class="price-tag" title="Buy cost of one attempt">@UiFormat.Cost(stepCost.Chaos, prices)/try</span>
                     }
+                    @if (step.Retry is { Steps.Count: > 0 } loopBadge)
+                    {
+                        <span class="step-loop-badge" title="@($"Until this works: {loopBadge.Steps.Count} step(s) back to {step.RetryBackLabel}, then try again")">
+                            ↻ loop of @UiFormat.Plural(loopBadge.Steps.Count, "step")
+                        </span>
+                    }
                     <span class="step-prob @UiFormat.ProbabilityClass(step.SuccessProbability)">@UiFormat.Probability(step.SuccessProbability)</span>
                 </button>
                 <div class="step-desc">@step.Description</div>
@@ -109,6 +115,27 @@
                     {
                         <div class="section-title">Mod changes</div>
                         <ItemDiffList Before="before" After="step.Result" />
+                    }
+                    @if (step.Retry is { Steps.Count: > 0 } loop)
+                    {
+                        <div class="step-loop">
+                            <div class="step-loop-head">
+                                ↻ Loop until the result is valid — go back to @(step.RetryBackLabel ?? "the state before this step") and try again
+                                <span class="step-loop-count" title="Expected number of times the loop runs before the step works">≈ @UiFormat.Attempts(step.ExpectedAttempts - 1) times</span>
+                            </div>
+                            @foreach (var inner in loop.Steps)
+                            {
+                                <div class="step-loop-row @(inner.RestartLabel != null ? "step-loop-failed" : "")" @key="inner.Id">
+                                    <span class="step-loop-currency"><CraftText Text="@inner.CurrencyName" /></span>
+                                    <span class="step-loop-desc">@(inner.Explanation ?? inner.Description)</span>
+                                    @if (inner.SuccessProbability < 1)
+                                    {
+                                        <span class="step-prob @UiFormat.ProbabilityClass(inner.SuccessProbability)">@UiFormat.Probability(inner.SuccessProbability)</span>
+                                    }
+                                </div>
+                            }
+                            <div class="step-loop-foot">→ back at @(step.RetryBackLabel ?? "the starting state") — repeat step @(index + 1) until it works</div>
+                        </div>
                     }
                     @if (step.RestartLabel != null && step.SuccessProbability < 1.0)
                     {

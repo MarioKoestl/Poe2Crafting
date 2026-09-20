@@ -1,0 +1,353 @@
+@* The crafting history as ONE path — the golden path that got you there. A step that is random (an exalt that has to hit) can carry a
+   way back: which state to go back to when it misses, and the steps to get there. In the lane that way back is its own second row. *@
+@inherits ChangingComponentBase
+@inject CraftingSession Session
+@inject IJSRuntime Js
+
+@if (Session.History.Count == 0)
+{
+    <EmptyState Hint="Apply a currency and every state of the item shows up here.">Nothing crafted yet.</EmptyState>
+    return;
+}
+
+@{
+    var history = Session.History;
+    var path = GoldenPath(history);
+}
+
+<div class="flow-toolbar">
+    <span class="flow-count">Golden path · @UiFormat.Plural(path.Count, "step")</span>
+    <button class="btn btn-xs" @onclick="Undo" disabled="@(history.Count <= 1)" title="Remove the last step">↶ Undo</button>
+    <button class="btn btn-xs flow-save" @onclick="OnSaveGuide" disabled="@(!Session.CanSaveAsGuide)"
+            title="@(Session.CanSaveAsGuide ? "Save this path (base, currencies, notes, ways back) as a guide" : "Apply a currency first")">
+        Save as Guide
+    </button>
+    @Controls
+</div>
+
+@if (Horizontal)
+{
+    @* top row: the golden path, left to right. Under it a row per open way back, running the other way. *@
+    <div class="flow flow-h" id="@LaneId">
+        <div class="flow-h-path">
+            <div class="flow-h-step flow-start">@Card(StartCard(history[0]))</div>
+            @foreach (var step in path)
+            {
+                <div class="flow-h-step" @key="step.Entry.Id">
+                    <span class="flow-h-arrow">→</span>
+                    @Card(PathCard(step))
+                </div>
+            }
+        </div>
+
+        @foreach (var step in path.Where(s => s.Entry.CanMiss && _openRetry.Contains(Key(s.Index))))
+        {
+            var target = Target(step.Entry);
+            <div class="flow-h-back" @key="@($"back-{step.Index}")"
+                 style="margin-left: calc(var(--flow-pitch) * @target); width: calc(var(--flow-pitch) * @(step.Index - target) + var(--flow-card));">
+                @BackHead(step.Index, step.Entry, target)
+                <div class="flow-h-back-row">
+                    <span class="retry-chip back">✓ back at @TargetLabel(target)</span>
+                    @for (int s = step.Entry.RetrySteps.Count - 1; s >= 0; s--)
+                    {
+                        <span class="flow-h-arrow back">←</span>
+                        <div class="flow-h-step" @key="@($"p{step.Index}-{s}")">@Card(PlanCard(step, s))</div>
+                    }
+                    <span class="flow-h-arrow back">←</span>
+                    <span class="retry-chip miss">✗ step @step.Number missed</span>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="flow">
+        @* the state the craft starts from *@
+        <div class="flow-row flow-start">
+            <div class="flow-rail"><span class="flow-dot flow-dot-start">◆</span></div>
+            @Card(StartCard(history[0]))
+        </div>
+
+        @foreach (var step in path)
+        {
+            <div class="flow-row" @key="step.Entry.Id">
+                <div class="flow-rail">
+                    <span class="flow-arrow">▼</span>
+                    <span class="flow-dot @(step.Entry.CanMiss ? "flow-dot-random" : "")">@step.Number</span>
+                </div>
+                <div class="flow-cell">
+                    @Card(PathCard(step))
+                    @if (step.Entry.CanMiss && _openRetry.Contains(Key(step.Index)))
+                    {
+                        <div class="retry-plan">
+                            @BackHead(step.Index, step.Entry, Target(step.Entry))
+                            <div class="retry-chip miss">✗ step @step.Number missed</div>
+                            @for (int s = 0; s < step.Entry.RetrySteps.Count; s++)
+                            {
+                                <div class="flow-row flow-back-row" @key="@($"p{step.Index}-{s}")">
+                                    <div class="flow-rail"><span class="flow-arrow back">↩</span></div>
+                                    @Card(PlanCard(step, s))
+                                </div>
+                            }
+                            <div class="retry-chip back">✓ back at @TargetLabel(Target(step.Entry))</div>
+                            @if (step.Entry.RetrySteps.Count == 0)
+                            {
+                                <p class="hint">No steps yet — hit ⚒ Craft and everything you apply lands here.</p>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Opening the "save as guide" dialog is the page's job (it owns the modal).</summary>
+    [Parameter] public EventCallback OnSaveGuide { get; set; }
+    /// <summary>
+    /// Left to right in the lane under the working columns (always visible while crafting, so a note can be written right after a step),
+    /// instead of top to bottom in the History tab.
+    /// </summary>
+    [Parameter] public bool Horizontal { get; set; }
+    /// <summary>Extra buttons of the host at the end of the toolbar (the lane's height control).</summary>
+    [Parameter] public RenderFragment? Controls { get; set; }
+    /// <summary>Raised when a step changed the current item (undo) — notes and ways back only raise <c>OnChanged</c>.</summary>
+    [Parameter] public EventCallback OnItemChanged { get; set; }
+    /// <summary>Craft the way back of this step: the page puts the session into the sandbox and shows the simulator.</summary>
+    [Parameter] public EventCallback<int> OnCraftRetry { get; set; }
+
+    /// <summary>One step of the path: where it sits in the history, its number on the path and the state it started from.</summary>
+    private sealed record FlowStep(int Index, int Number, HistoryEntry Entry, Item Before);
+
+    /// <summary>
+    /// Everything a card needs, so the golden path and the way back are drawn by the very same markup: a key for the
+    /// open/editing state, the badge, the action, the item before and after, the note, and the buttons the card carries.
+    /// </summary>
+    private sealed record StepCard(string Key, string Badge, string Action, Item? Item, Item? Before, string? Note, Func<string?, Task> SaveNote)
+    {
+        /// <summary>Currency names are linked; the starting item's "Imported"/"Composed" is plain.</summary>
+        public bool IsAction { get; init; } = true;
+        /// <summary>Orange frame: a random step, or a step of a way back.</summary>
+        public bool Marked { get; init; }
+        public RenderFragment? Extra { get; init; }
+        public RenderFragment? Tools { get; init; }
+    }
+
+    private const string LaneId = "crafting-flow-lane";
+
+    /// <summary>Cards whose item is toggled away from the default, steps whose way back is unfolded, and the card being annotated.</summary>
+    private readonly HashSet<string> _open = new();
+    private readonly HashSet<string> _openRetry = new();
+    private string? _editingNote;
+    private string _noteText = "";
+    /// <summary>The open note box: it takes the focus, so typing starts at once and Escape gets there.</summary>
+    private ElementReference? _noteBox;
+    private string? _focusedNote;
+    private int _scrolledTo = -1;
+
+    private static string Key(int index) => $"h{index}";
+    private static string Key(int index, int position) => $"p{index}-{position}";
+
+    /// <summary>Every step of the history — the one path that got you there.</summary>
+    private static List<FlowStep> GoldenPath(IReadOnlyList<HistoryEntry> history) =>
+        Enumerable.Range(1, history.Count - 1).Select(i => new FlowStep(i, i, history[i], history[i - 1].Item)).ToList();
+
+    private StepCard StartCard(HistoryEntry entry) => new(Key(0), "◆", entry.Action, entry.Item, null, entry.Note,
+        note => Change(() => Session.SetNote(0, note))) { IsAction = false };
+
+    private StepCard PathCard(FlowStep step) => new(Key(step.Index), step.Number.ToString(), step.Entry.Action, step.Entry.Item,
+        step.Before, step.Entry.Note, note => Change(() => Session.SetNote(step.Index, note)))
+    {
+        Marked = step.Entry.CanMiss,
+        Extra = step.Entry.CanMiss ? RetryToggle(step) : null,
+        Tools = step.Entry.CanMiss ? null : CanMissButton(step.Index),
+    };
+
+    /// <summary>A planned action of a way back, drawn exactly like a step of the path (it kept the item it produced).</summary>
+    private StepCard PlanCard(FlowStep step, int position)
+    {
+        var planned = step.Entry.RetrySteps[position];
+        var before = position == 0 ? step.Entry.Item : step.Entry.RetrySteps[position - 1].Item;
+        return new StepCard(Key(step.Index, position), (position + 1).ToString(), planned.Action, planned.Item,
+            planned.Item == null ? null : before, planned.Note,
+            note => Change(() => Session.SetRetryNote(step.Index, position, note)))
+        {
+            Marked = true,
+            Tools = PlanTools(step, position),
+        };
+    }
+
+    /// <summary>A new step scrolls the lane to the right, where it appears; a freshly opened note box takes the focus.</summary>
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (_editingNote != _focusedNote)
+        {
+            _focusedNote = _editingNote;
+            if (_editingNote != null && _noteBox is { } box) await box.FocusAsync();
+        }
+        if (!Horizontal || Session.History.Count == _scrolledTo) return;
+        _scrolledTo = Session.History.Count;
+        await Js.InvokeVoidAsync("scrollToEnd", LaneId);
+    }
+
+    /// <summary>The one card of this component — used for the golden path and for every step of a way back.</summary>
+    private RenderFragment Card(StepCard card) =>
+        @<div class="flow-card @(_editingNote == card.Key ? "editing" : "") @(card.Marked ? "can-miss" : "")">
+            <div class="flow-card-head">
+                @if (Horizontal)
+                {
+                    <span class="flow-num @(card.Marked ? "flow-dot-random" : "")">@card.Badge</span>
+                }
+                @if (card.IsAction)
+                {
+                    <span class="flow-action"><CraftText Text="@card.Action" /></span>
+                }
+                else
+                {
+                    <span class="flow-action flow-action-start">@card.Action</span>
+                }
+                @if (card.Item is { } state)
+                {
+                    <span class="flow-state">@state.Title</span>
+                    <span class="flow-meta">@state.Rarity · @state.PrefixCount P / @state.SuffixCount S@(state.Quality > 0 ? $" · {state.QualityText}" : "")</span>
+                    <button type="button" class="btn btn-xs flow-expand" aria-expanded="@(ShowsItem(card.Key) ? "true" : "false")"
+                            title="@(ShowsItem(card.Key) ? "Hide the item at this point" : "Show the whole item at this point")"
+                            @onclick="() => _open.Toggle(card.Key)">@(ShowsItem(card.Key) ? "▾" : "▸")</button>
+                }
+                else
+                {
+                    <span class="flow-meta flow-no-item" title="This step was written down before the item was recorded — craft it again to get the item back">no item recorded</span>
+                }
+            </div>
+
+            @card.Extra
+
+            @if (card.Before is { } before && card.Item is { } after)
+            {
+                <div class="flow-diff"><ItemDiffList Before="before" After="after" /></div>
+            }
+
+            @if (_editingNote == card.Key)
+            {
+                <div class="flow-note-edit">
+                    <textarea rows="2" placeholder="Why this step? (shown in a saved guide)" aria-label="Note for this step" @ref="_noteBox"
+                              @bind="_noteText" @bind:event="oninput" @onkeydown="e => OnNoteKey(e, card)"></textarea>
+                    <button class="btn btn-xs btn-primary" @onclick="() => SaveNote(card)">Save</button>
+                    <button class="btn btn-xs" @onclick="() => _editingNote = null">Cancel</button>
+                </div>
+            }
+            else if (card.Note is { Length: > 0 } note)
+            {
+                <button class="flow-note" title="Edit the note" @onclick="() => EditNote(card.Key, note)">@note</button>
+            }
+            else
+            {
+                <button class="flow-note flow-note-add" title="Why did you do this step? The note is saved with the project and shown in a saved guide"
+                        @onclick="() => EditNote(card.Key, string.Empty)">＋ why</button>
+            }
+
+            @if (ShowsItem(card.Key) && card.Item is { } shown)
+            {
+                <ItemDisplay Item="shown" />
+            }
+
+            @card.Tools
+        </div>;
+
+    /// <summary>Fold-out strip on a random step of the path.</summary>
+    private RenderFragment RetryToggle(FlowStep step) =>
+        @<button type="button" class="flow-retry-toggle" aria-expanded="@(_openRetry.Contains(Key(step.Index)) ? "true" : "false")"
+                 title="This step is random: the way back when it misses" @onclick="() => _openRetry.Toggle(Key(step.Index))">
+            @(_openRetry.Contains(Key(step.Index)) ? "▾" : "▸") ↻ If this misses — @Plan(step.Entry) back to @TargetLabel(Target(step.Entry))
+        </button>;
+
+    private RenderFragment CanMissButton(int index) =>
+        @<button class="btn btn-xs flow-retry-btn" @onclick="() => StartRetry(index)"
+                 title="This step is random and can miss: write down which state to go back to and what to apply to get there">
+            ↻ can miss
+        </button>;
+
+    /// <summary>The order is the order you crafted them in, so there is nothing to sort — only dropping a step you do not want.</summary>
+    private RenderFragment PlanTools(FlowStep step, int position) =>
+        @<div class="flow-plan-tools">
+            <button class="icon-remove" title="Remove this step from the way back"
+                    @onclick="() => Change(() => Session.RemoveRetryStep(step.Index, position))">✕</button>
+        </div>;
+
+    /// <summary>Head of a way back: what it is for, where it goes back to, and how to work on it.</summary>
+    private RenderFragment BackHead(int index, HistoryEntry entry, int target) =>
+        @<div class="flow-h-back-head">
+            <span class="flow-h-back-title">↻ Way back for step @index</span>
+            <label class="visually-hidden" for="@($"back-sel-{index}")">Go back to</label>
+            <select class="input-control" id="@($"back-sel-{index}")" value="@target" @onchange="e => SetTarget(index, e.Value?.ToString())">
+                <option value="0">back to the starting item</option>
+                @for (int s = 1; s < index; s++)
+                {
+                    var number = s;
+                    <option value="@number">back to step @number — @Session.History[number].Action</option>
+                }
+            </select>
+            <button class="btn btn-xs btn-primary" @onclick="() => OnCraftRetry.InvokeAsync(index)"
+                    title="Craft the way back on a throwaway copy — every currency you apply lands in this row">⚒ Craft</button>
+            <button class="btn btn-xs retry-drop" title="This step always works: drop the way back"
+                    @onclick="() => Change(() => Session.SetRetryTarget(index, null))">✕ always works</button>
+        </div>;
+
+    /// <summary>
+    /// The full item is shown by default in the tall view (there is room for it) and hidden in the lane (a card is 17rem wide);
+    /// the toggle flips a single card either way.
+    /// </summary>
+    private bool ShowsItem(string key) => _open.Contains(key) == Horizontal;
+
+    /// <summary>Position of the step a way back returns to (0 = the starting item).</summary>
+    private int Target(HistoryEntry entry)
+    {
+        for (int i = 0; i < Session.History.Count; i++)
+            if (Session.History[i].Id == entry.RetryFromId) return i;
+        return 0;
+    }
+
+    private static string TargetLabel(int index) => index <= 0 ? "the starting item" : $"step {index}";
+
+    private static string Plan(HistoryEntry entry) =>
+        entry.RetrySteps.Count == 0 ? "no steps yet" : UiFormat.Plural(entry.RetrySteps.Count, "step");
+
+    /// <summary>Marking a step as random: the way back defaults to the state right before it.</summary>
+    private Task StartRetry(int index)
+    {
+        _openRetry.Add(Key(index));
+        return Change(() => Session.SetRetryTarget(index, index - 1));
+    }
+
+    private Task SetTarget(int index, string? value) =>
+        Change(() => Session.SetRetryTarget(index, int.TryParse(value, out var target) ? target : index - 1));
+
+    private async Task Undo()
+    {
+        Session.Undo();
+        await OnItemChanged.InvokeAsync();
+        await OnChanged.InvokeAsync();
+    }
+
+    private void EditNote(string key, string note)
+    {
+        _editingNote = key;
+        _noteText = note;
+    }
+
+    private Task SaveNote(StepCard card)
+    {
+        var note = _noteText;
+        _editingNote = null;
+        return card.SaveNote(note);
+    }
+
+    /// <summary>Ctrl+Enter saves the note, Escape drops it.</summary>
+    private Task OnNoteKey(KeyboardEventArgs e, StepCard card)
+    {
+        if (e.Key == "Escape") { _editingNote = null; return Task.CompletedTask; }
+        return e.Key == "Enter" && (e.CtrlKey || e.MetaKey) ? SaveNote(card) : Task.CompletedTask;
+    }
+}

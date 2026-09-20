@@ -79,6 +79,15 @@ public static class GuideHtmlExport
                     html.Append("</ul>");
                 }
             }
+            if (step.Retry is { Steps.Count: > 0 } loop)
+            {
+                html.Append("<div class=\"loop\"><div class=\"loop-head\">↻ Loop until the result is valid — go back to ")
+                    .Append(E(step.RetryBackLabel ?? "the state before this step")).Append(" and try again</div><ol>");
+                foreach (var inner in loop.Steps)
+                    html.Append("<li><span class=\"currency\">").Append(E(inner.CurrencyName)).Append("</span> ")
+                        .Append(E(inner.Explanation ?? inner.Description)).Append("</li>");
+                html.Append("</ol><div class=\"loop-foot\">→ back — repeat step ").Append(i + 1).Append(" until it works</div></div>");
+            }
             if (step.RestartLabel != null && step.SuccessProbability < 1) html.Append("<p class=\"note\">On fail: ").Append(E(step.RestartLabel)).Append("</p>");
             if (step.Result != null)
             {
@@ -148,6 +157,9 @@ public static class GuideHtmlExport
         .step-head{display:flex;justify-content:space-between;gap:12px;font-weight:600}.currency{color:#53b8dd}.chance{color:#e3c27e}.desc{color:#f2efe7}
         .diff{list-style:none;padding:0;margin:.4rem 0}.diff .added{color:#9ad07a}.diff .removed{color:#f08a8a}.diff .changed{color:#e3c27e}
         .note{color:#8a877c;font-size:.85rem;margin:.2rem 0}.warn{color:#d99440}.problems li{color:#d99440}
+        .loop{margin:.4rem 0;padding:.1rem .6rem;border-left:2px dashed #d99440;background:rgba(217,148,64,.06)}
+        .loop-head{color:#d99440;font-size:.8rem;font-weight:600;margin:.35rem 0}
+        .loop-foot{color:#9ad07a;font-size:.8rem;font-weight:600;margin:.35rem 0}.loop ol{margin:.2rem 0 .2rem 1rem;font-size:.85rem}
         details{margin-top:.5rem}summary{cursor:pointer;color:#8a877c;font-size:.85rem}details .item{max-width:420px;margin-top:.4rem}
         footer{margin-top:2rem;color:#8a877c;font-size:.8rem}
         """;

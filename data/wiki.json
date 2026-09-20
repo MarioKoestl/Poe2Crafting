@@ -796,6 +796,51 @@
   ]
  },
  {
+  "id": "retry-plans",
+  "title": "Retry plans (random steps)",
+  "category": "Techniques",
+  "summary": "The history is one path — the golden path that worked. A step that is random carries a retry plan: which state to go back to when it misses, and what to apply to get there.",
+  "tags": [
+   "retry",
+   "random",
+   "loop",
+   "repeat",
+   "history",
+   "guide"
+  ],
+  "sections": [
+   {
+    "heading": "Why you want this",
+    "text": [
+     "A craft is not a straight line. You spend a [[Perfect Exalted Orb]] with [[Omen of Catalysing Exaltation]], it eats your 40% quality and hands you a modifier you do not want. What matters is not that one roll — it is what you do to get back and try again, because you will do it again the next time it misses.",
+     "The plan keeps that knowledge. The guide then reads \"this step hits 1 in 6; when it misses, annul the wrong modifier and try again\" instead of pretending the craft went perfectly the first time."
+    ]
+   },
+   {
+    "heading": "Writing one",
+    "bullets": [
+     "Hit **↻ can miss** on the step that is random.",
+     "**Go back to** — pick the state you have to return to (a step of the path, or the starting item).",
+     "**⚒ Craft the way back** — the simulator switches to a throwaway copy of the item as that step left it. Craft normally: every currency you apply lands in the plan, the real item and its history stay untouched. The banner says when you are back at the state you wanted.",
+     "**Done** leaves the sandbox. ↑ ↓ reorder the planned actions, ✕ removes one, and each takes a short why.",
+     "**✕ always works** drops the plan again."
+    ]
+   },
+   {
+    "heading": "What the guide does with it",
+    "bullets": [
+     "The path shows the step once, with its real chance; the plan is folded away behind \"↻ If this misses\".",
+     "The plan's materials are not counted for a perfect run, but they are counted in the expected column: a step that hits 1 in 4 pays for three runs of its plan on average.",
+     "The HTML export carries the plan as well."
+    ]
+   }
+  ],
+  "related": [
+   "how-the-planner-searches",
+   "quality-and-catalysts"
+  ]
+ },
+ {
   "id": "what-is-assumed",
   "title": "Verified, assumed, unknown",
   "category": "About",

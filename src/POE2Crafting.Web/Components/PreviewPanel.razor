@@ -97,8 +97,8 @@
 
         var firstAdditions = _chosenAdditions.Count > 0 ? _nextAdditions : preview.Additions;
         var candidateCount = firstAdditions.Count + preview.OtherAdditions.Count;
-        @* picking a modifier by hand means finding it among hundreds of candidates *@
-        @if (preview.AdditionsChoosable && candidateCount > SearchFrom)
+        @* finding a modifier among hundreds of candidates — also when the list is only there to read (a bone's reveal pool) *@
+        @if (candidateCount > SearchFrom)
         {
             <SearchBox @bind-Value="_additionFilter" Placeholder="@($"Search {candidateCount} possible modifiers (name, text, tag)...")" />
         }

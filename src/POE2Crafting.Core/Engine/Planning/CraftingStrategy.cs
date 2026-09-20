@@ -71,6 +71,13 @@ public sealed class CraftStep
     /// <summary>If this step fails, the step to restart from (<see cref="CraftingStrategy.StartStepId"/> for the start).</summary>
     public string? RestartFromStepId { get; init; }
     public string? RestartLabel { get; set; }
+    /// <summary>
+    /// The retry plan of a random step: what to apply to get back to an earlier state when it misses, before trying it again.
+    /// Written by hand in the simulator on the step itself.
+    /// </summary>
+    public CraftingStrategy? Retry { get; set; }
+    /// <summary>Where the retry plan goes back to, e.g. "step 3".</summary>
+    public string? RetryBackLabel { get; set; }
     public CraftStepType Type { get; init; } = CraftStepType.Normal;
     public List<string> Notes { get; } = new();
     /// <summary>The item after this step succeeded.</summary>
@@ -96,10 +103,22 @@ public sealed record StrategyMaterial(string Name, int PerRun, double Expected);
 
 public static class CraftingStrategyExtensions
 {
-    /// <summary>Consumed items over all steps; a step with chance p takes 1/p attempts on average.</summary>
-    public static IEnumerable<StrategyMaterial> Materials(this IEnumerable<CraftStep> steps) =>
-        steps.SelectMany(s => s.Materials.Select(m => (m.Key, m.Value, Expected: m.Value / Math.Max(s.SuccessProbability, 1e-9))))
-            .GroupBy(x => x.Key)
-            .Select(g => new StrategyMaterial(g.Key, g.Sum(x => x.Value), g.Sum(x => x.Expected)))
+    /// <summary>
+    /// Consumed items over all steps; a step with chance p takes 1/p attempts on average. A step with a retry plan also pays for that plan
+    /// once per missed attempt (1/p - 1 times), so it costs nothing on a perfect run but shows up in the expected column.
+    /// </summary>
+    public static IEnumerable<StrategyMaterial> Materials(this IEnumerable<CraftStep> steps)
+    {
+        var list = steps.ToList();
+        var direct = list.SelectMany(s => s.Materials.Select(m => new StrategyMaterial(m.Key, m.Value, m.Value / Math.Max(s.SuccessProbability, 1e-9))));
+        var retries = list.Where(s => s.Retry != null)
+            .SelectMany(s => s.Retry!.Steps.Materials().Select(m => new StrategyMaterial(m.Name, 0, m.Expected * Misses(s))));
+        return direct.Concat(retries)
+            .GroupBy(m => m.Name)
+            .Select(g => new StrategyMaterial(g.Key, g.Sum(m => m.PerRun), g.Sum(m => m.Expected)))
             .OrderByDescending(m => m.Expected);
+    }
+
+    /// <summary>Expected number of missed attempts of a step before it succeeds.</summary>
+    private static double Misses(CraftStep step) => Math.Max(1.0 / Math.Max(step.SuccessProbability, 1e-9) - 1, 0);
 }

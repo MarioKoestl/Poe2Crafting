@@ -6,11 +6,33 @@ namespace POE2Crafting.Core.Engine.Planning;
 /// <summary>One state of an item's crafting history: the action that led to it (<see cref="CraftAction.DisplayName"/>, or e.g. "Imported"), the item after it and a summary.</summary>
 public sealed class HistoryEntry
 {
+    /// <summary>Stable id so a retry plan can point at an entry (indices shift when steps are undone).</summary>
+    public string Id { get; init; } = Guid.NewGuid().ToString("N");
     public string Action { get; init; } = "";
     public Item Item { get; init; } = null!;
     public string Summary { get; init; } = "";
     /// <summary>Why this step was done — free text the user writes in the simulator; becomes the step's explanation in a saved guide.</summary>
     public string? Note { get; set; }
+    /// <summary>
+    /// This step is random and can miss: the id of the entry to go back to when it does (null = it always works).
+    /// <see cref="RetrySteps"/> is what has to be applied to get there before trying again.
+    /// </summary>
+    public string? RetryFromId { get; set; }
+    /// <summary>The way back to <see cref="RetryFromId"/>, picked by hand — these are not crafted steps of the history.</summary>
+    public List<RetryStep> RetrySteps { get; init; } = new();
+
+    /// <summary>Whether this step has a retry plan (it is random and the way back is written down).</summary>
+    public bool CanMiss => RetryFromId != null;
+}
+
+/// <summary>One action of a step's retry plan: the currency (with its omens) to apply, the item it left behind, and why.</summary>
+public sealed class RetryStep
+{
+    /// <summary>Like <see cref="CraftAction.DisplayName"/>: "Orb of Annulment + Omen of Light".</summary>
+    public string Action { get; set; } = "";
+    public string? Note { get; set; }
+    /// <summary>The item after this action, recorded while the way back was crafted (null for plans written before that).</summary>
+    public Item? Item { get; set; }
 }
 
 /// <summary>A crafting run of the simulator saved as a guide: its recorded history, the first entry being the starting item.</summary>
@@ -79,9 +101,30 @@ public sealed class RecordedGuideRunner
             var entry = recorded.History[i];
             var step = Step(recorded.History[i - 1].Item, entry, walkthrough);
             step.Explanation = entry.Note;
+            AttachRetry(step, entry, recorded);
             walkthrough.Strategy.Add(step);
         }
         return walkthrough;
+    }
+
+    /// <summary>
+    /// A step that can miss carries its retry plan: what to apply to get back, and to which state. The plan is written by hand, so its
+    /// steps have no chance of their own — they only cost materials, once per missed attempt.
+    /// </summary>
+    private void AttachRetry(CraftStep step, HistoryEntry entry, RecordedGuide recorded)
+    {
+        if (!entry.CanMiss) return;
+        var retry = new CraftingStrategy { Id = step.Id + "-retry", Name = "Retry" };
+        foreach (var planned in entry.RetrySteps)
+        {
+            var action = ActionOf(planned.Action) ?? CraftAction.Of(new CurrencyDef { Name = planned.Action });
+            var inner = retry.NewStep(action, planned.Note ?? planned.Action, 1, step.Result!);
+            inner.Explanation = planned.Note;
+            retry.Add(inner);
+        }
+        step.Retry = retry;
+        int target = recorded.History.FindIndex(e => e.Id == entry.RetryFromId);
+        step.RetryBackLabel = target > 0 ? $"step {target}" : "the starting item";
     }
 
     private CraftStep Step(Item before, HistoryEntry entry, GuideWalkthrough walkthrough)

@@ -78,7 +78,11 @@ public sealed class GuideCatalog
     {
         if (_recorded != null) return _recorded;
         _recorded = _files.ReadAll().ToDictionary(g => g.Id);
-        foreach (var entry in _recorded.Values.SelectMany(g => g.History)) entry.Item.Bind(_engine.Data);
+        foreach (var entry in _recorded.Values.SelectMany(g => g.History))
+        {
+            entry.Item.Bind(_engine.Data);
+            foreach (var planned in entry.RetrySteps) planned.Item?.Bind(_engine.Data);
+        }
         return _recorded;
     }
 }

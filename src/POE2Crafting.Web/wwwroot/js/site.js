@@ -76,6 +76,46 @@ window.renderMermaid = async function (container, definition, id) {
     }
 };
 
+// Drag the top edge of the crafting flow lane to resize it: the drag writes --flow-lane on the page, which is the
+// height of the lane's grid row — the same knob the small/medium/tall buttons use (those clear it again).
+window.initLaneResize = function (handleId) {
+    const handle = document.getElementById(handleId);
+    if (!handle || handle.dataset.resizeBound) return;
+    handle.dataset.resizeBound = '1';
+    handle.addEventListener('pointerdown', function (down) {
+        const page = handle.closest('.crafting-page');
+        const lane = handle.parentElement;
+        if (!page || !lane) return;
+        const startY = down.clientY, startHeight = lane.getBoundingClientRect().height;
+        const move = ev => {
+            const height = Math.min(Math.max(startHeight + (startY - ev.clientY), 54), window.innerHeight - 160);
+            page.style.setProperty('--flow-lane', height + 'px');
+        };
+        const up = () => {
+            handle.removeEventListener('pointermove', move);
+            handle.removeEventListener('pointerup', up);
+            handle.removeEventListener('pointercancel', up);
+        };
+        handle.setPointerCapture(down.pointerId);
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', up);
+        handle.addEventListener('pointercancel', up);
+        down.preventDefault();
+    });
+};
+
+// Back to a preset height: drop what the drag wrote, so the size buttons take over again.
+window.clearLaneHeight = function () {
+    const page = document.querySelector('.crafting-page');
+    if (page) page.style.removeProperty('--flow-lane');
+};
+
+// Scroll a horizontal scroll container to its right end (crafting flow lane: the newest step).
+window.scrollToEnd = function (id) {
+    const element = document.getElementById(id);
+    if (element) element.scrollTo({ left: element.scrollWidth, behavior: 'smooth' });
+};
+
 // Scroll an element into view inside its scroll container (Market page: a table row's ⇄ opens the trade calculator).
 window.scrollToElement = function (id) {
     const element = document.getElementById(id);

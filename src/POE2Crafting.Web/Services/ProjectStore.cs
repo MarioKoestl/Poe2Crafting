@@ -61,7 +61,11 @@ public sealed class ProjectStore
         lock (_lock)
         {
             var project = _files.Read(id);
-            foreach (var entry in project?.Items.SelectMany(i => i.History) ?? Enumerable.Empty<HistoryEntry>()) entry.Item.Bind(_data);
+            foreach (var entry in project?.Items.SelectMany(i => i.History) ?? Enumerable.Empty<HistoryEntry>())
+            {
+                entry.Item.Bind(_data);
+                foreach (var planned in entry.RetrySteps) planned.Item?.Bind(_data);
+            }
             return project;
         }
     }

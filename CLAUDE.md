@@ -51,7 +51,7 @@ C:\Development\POE2Crafting\
 │   │       ├── ItemDiff.cs         # Mod-/Runen-/Property-Änderungen (nutzt Multiset)
 │   │       └── Multiset.cs         # Multiset-Differenz (ItemDiff + RecordedGuideRunner)
 │   └── POE2Crafting.Web/           # Blazor UI
-│       ├── Pages/Index.razor       # Hauptseite: links Item, rechts Tabs Simulator | Crafting Planner | Guides (Index besitzt das Pane-Layout)
+│       ├── Pages/Index.razor       # Hauptseite: links Item, rechts Tabs Simulator | History | Crafting Planner | Guides (Index besitzt das Pane-Layout)
 │       ├── Pages/Market.razor      # /market: Currency Exchange (Core rates, Trade calculator, Preistabelle); Top-Bar-Navigation Crafting | Bases | Builds | Market in MainLayout
 │       ├── Pages/Builds.razor      # /builds: poe.ninja-Builds (Skills, Ascendancies, Rare-Slots, Uniques, filterbar) + Rare-Item-Analyse der Top-Charaktere pro Item-Klasse (ItemClassDemandCard, BuildShareList)
 │       ├── Pages/Wiki.razor        # /wiki(/{id}): In-App-Wissensbasis aus `data/wiki.json` (links Suche + Artikelliste nach Kategorie, rechts Artikel)
@@ -59,7 +59,7 @@ C:\Development\POE2Crafting\
 │       ├── Components/             # u. a. ItemDisplay, ItemComposer, BaseItemForm, ModBrowser, CurrencySelector, PreviewPanel, RevealOptions, InstillPanel/Picker,
 │       │                           # ItemBuilder, PlannerPanel, StrategyGuide, StrategyCard, GuideList, GuideDetail, GuideBulletList, ProjectPanel,
 │       │                           # QualityChoicePanel + ValueRerollPanel (aus PreviewPanel), EmptyState, SearchBox, CraftIcon, CraftItemLink, CraftText,
-│       │                           # ItemDiffList, DistributionRow, ModOptionRow, ModOptionList, MermaidDiagram, Modal, ConfirmButton, SortHeader
+│       │                           # ItemDiffList, DistributionRow, ModOptionRow, ModOptionList, CraftingFlow, WikiText, MermaidDiagram, Modal, ConfirmButton, SortHeader
 │       ├── Services/
 │       │   ├── CraftingSession.cs  # Per-User Session: Projekt, CurrentItem, History, Reveal-State (lädt Projekt lazy)
 │       │   ├── PlannerState.cs     # Per-User State von Planner + Guides (Draft, Ergebnis, Auswahl) + Changed-Event + PlannerStateComponentBase
@@ -205,6 +205,31 @@ C:\Development\POE2Crafting\
   `SortHeader` (sortierbare Tabellenspalte mit ▾/▴), `SearchBox`, `EmptyState`, `BuildShareList` (Anteilsbalken)
 - Annahmen aus `config.json` (`*Note`) gehören in die Vorschau (`ctx.Notes`), nicht als Text ins C# kopiert — jede Note hat genau eine Quelle
 
+### Crafting-Flow & Retry-Pläne (Mario 18.09.2026)
+- Die History ist ein Ablaufdiagramm: `CraftingFlow` — Schiene mit Punkten/Pfeilen, pro Schritt eine Karte mit Currency (`CraftText`), Item-Titel/Rarity/P-S/Quality, `ItemDiffList`, Freitext-Notiz ("＋ why") und `ItemDisplay`
+- **Zweimal dieselbe Komponente, nie duplizieren** — ein `Horizontal`-Schalter, zwei Layouts:
+  - `Horizontal="true"` in der **Flow-Leiste unten über die ganze Seitenbreite** (`.flow-lane`, `grid-column: 1 / -1`; `.crafting-page.with-flow` bekommt eine zweite Grid-Zeile). Links nach rechts: Karte → Goldpfeil → Karte, neuester Schritt rechts, `scrollToEnd` in site.js scrollt automatisch hin. IMMER neben dem Simulator sichtbar (die Notiz muss direkt nach dem Craften schreibbar sein, ein Tab-Wechsel oder eine schmale Spalte reichen nicht)
+  - Höhe: Ziehgriff am oberen Rand der Leiste (`.flow-resize`, `initLaneResize` in site.js) ODER die Presets ▁/▄/█. BEIDES schreibt `--flow-lane` — die Höhe der GRID-ZEILE, nicht die eines inneren Elements (eine `auto`-Zeile lässt sich von innen nicht aufblasen, das war der Bug); `clearLaneHeight` räumt den Inline-Wert weg, damit die Presets wieder greifen. `.flow-h` füllt mit `flex: 1; min-height: 0` den Rest unter der Toolbar; `⤢` springt in den Tab **History**, der dieselbe Komponente von oben nach unten über die volle Pane-Breite zeigt (`.pane-wide`)
+  - Der Tab zeigt jeden Zustand mit AUFGEKLAPPTEM `ItemDisplay` ("immer das Bild ausklappen"), die Leiste zeigt ihn eingeklappt — `ShowsItem(index)` = `_open.Contains(index) == Horizontal`, der ▸/▾-Knopf dreht einen einzelnen Schritt um; `.flow-card > .item-box` bleibt auf 34rem begrenzt. Ist der History-Tab offen, entfällt die Leiste unten (sonst stünde derselbe Flow zweimal auf der Seite)
+  - Karten-Kopf ist im Querformat ein festes Grid (num/action/expand — state — meta), sonst frisst der umbrechende Kopf die Höhe und die Mod-Änderungen werden auf 0 gequetscht; `.flow-diff` schrumpft bis `min-height: 1.5rem` und wird dann abgeschnitten, Notiz und Buttons bleiben unten stehen
+  - Notiz-Box: die Karte bekommt beim Editieren die Klasse `editing` → `.flow-diff` wird ausgeblendet, damit Textfeld UND Save/Cancel in die Karte passen (der Save-Knopf war sonst abgeschnitten); die Box holt sich per `ElementReference.FocusAsync` den Fokus, damit man sofort tippt und Escape/Ctrl+Enter greifen
+  - `Controls` = RenderFragment des Hosts am Toolbar-Ende (die Höhen-Buttons), `OnItemChanged` (Undo, Discard) lässt Index die Currency-Auswahl zurücksetzen, `OnChanged` ist reines Rerender
+- **Retry-Plan statt Loop-Block** (Mario 18.09.2026, dritter Anlauf — der Wortlaut ist "Loop", das Modell ist ein Plan am Schritt): Es gibt IMMER NUR EINEN Pfad, den **Golden Path** = alle History-Einträge. Ein zufälliger Schritt bekommt einen Plan, was zu tun ist, wenn er nicht trifft
+  - `HistoryEntry.RetryFromId` (Zustand, zu dem man zurück muss; null = Schritt trifft immer) + `RetrySteps` (`List<RetryStep>` mit `Action` = CraftAction.DisplayName und `Note`); `CanMiss` = Plan vorhanden
+  - **Der Rückweg wird GECRAFTET, nicht aus Dropdowns geklickt** (Mario 18.09.2026: "so verwende ich das sicher nicht"): "⚒ Craft the way back" schaltet die Session in die **Retry-Sandbox** — `CurrentItem` ist eine Wegwerf-Kopie des Zustands nach dem Schritt (`_retryStep` + `_retryStates`), der komplette Simulator (CurrencySelector/PreviewPanel) arbeitet darauf, und `Commit` hängt jede Aktion an `RetrySteps` STATT an die History. `Undo` nimmt in der Sandbox den letzten Plan-Schritt zurück
+  - `StartRetryCrafting`/`StopRetryCrafting` (Item-/Projektwechsel beenden sie automatisch), `CraftingRetry`, `RetryEntry`, `RetryGoal`/`RetryGoalReached` (Ziel erreicht = `ItemDiff` leer) → orangefarbenes Banner im Item-Panel, grün sobald das Ziel steht. Session: dazu `SetRetryTarget`, `RemoveRetryStep`, `MoveRetryStep`, `SetRetryNote`
+  - **Die Leiste hat ZWEI REIHEN** (Mario 18.09.2026): oben der Golden Path, darunter pro aufgeklapptem Plan eine eigene Way-back-Reihe, die in die ANDERE Richtung läuft (Pfeile ←, grüner Chip "✓ back at step X" links, roter Chip "✗ step N missed" rechts). Die Reihe ist per `margin-left: calc(var(--flow-pitch) * target)` und `width: calc(var(--flow-pitch) * (index − target) + var(--flow-card))` genau unter die Spanne gelegt, die sie überbrückt — man SIEHT, von welchem Schritt es wohin zurückgeht
+  - Dafür sind `--flow-card` (17rem), `--flow-gap` (1.9rem, feste Pfeilbreite!) und `--flow-pitch` Tokens auf `.flow-h`; der Pfeil DARF keine variable Breite bekommen, sonst verrutscht die Ausrichtung. Plan-Karten (`.retry-card`) sind so breit wie Golden-Path-Karten
+  - Im Querformat rendert die Karte NUR den Aufklapp-Streifen, den Editor zeichnet die zweite Reihe (`!Horizontal` im Card-Fragment); im History-Tab (vertikal) steht der Plan wie gehabt unter dem Schritt
+  - **EINE Karte für beide Pfade** (Mario 18.09.2026: "zeig mir die Back steps genauso an wie die Steps im Golden Path"): `CraftingFlow.Card(StepCard)` — das Record trägt Key, Badge, Action, Item, Before, Note + Save-Callback und zwei Slots (`Extra` = Aufklapp-Streifen, `Tools` = "↻ can miss" bzw. ↑↓✕). Golden Path und Way back erzeugen nur unterschiedliche `StepCard`s, das Markup ist dasselbe → gleiche Größe, Item-Ansicht, Diff und Notiz
+  - Damit eine Plan-Karte ein Item zeigen kann, merkt sich `RetryStep.Item` den Zustand nach der Aktion (im Sandbox-`Commit` gesetzt, in ProjectStore/GuideCatalog mitgebunden). `StepCard.Item` ist NULLABLE: ältere Pläne ohne Item zeigen "no item recorded" statt ein falsches Item — NIE einen Zustand vortäuschen, der nicht aufgezeichnet wurde
+  - Keine Sortier-Pfeile an den Plan-Karten: die Reihenfolge ist die, in der gecraftet wurde (nur ✕ zum Entfernen)
+  - Selects und Notiz-Felder hängen an der gemeinsamen Form-Control-Regel in site.css (Klasse `.input-control`) — NIE ein nacktes `<select>` stehen lassen
+  - UI: "↻ can miss" auf der Karte öffnet das Untermenü (`RetryEditor`), Voreinstellung = Zustand direkt davor; gesetzt zeigt die Karte den aufklappbaren Streifen "▸ ↻ If this misses — N steps back to step X" und einen orangen Rand/Nummernkreis
+  - `RecordedGuideRunner.AttachRetry` hängt den Plan als `CraftStep.Retry` (eigene `CraftingStrategy`, Chance 1 pro Plan-Schritt) + `RetryBackLabel` an den Schritt; unbekannte Currency-Namen bleiben als Text stehen
+  - `Materials()`: Plan-Materialien mit `PerRun = 0` und `Expected = Plan-Expected × (1/p − 1)` — ein perfekter Lauf zahlt sie nicht, die Erwartung schon
+  - Angezeigt in `StrategyGuide` (Badge + Block unter dem Schritt) und im HTML-Export; Tests `RetryPlanTests`
+
 ### CraftingSession (Scoped per User)
 - Hält das offene Projekt (`Project`), das aktuelle Projekt-Item (`ProjectItem`, eigene History) + CurrentItem, Engine, RNG
 - Projekte: `ProjectStore` (Singleton) speichert jedes Projekt als `projects/{Id}.json` (Ordner neben data/, config `ProjectsFolder`, gitignored) — AUTOMATISCH bei jeder Änderung (Commit/Undo/Auswahl/Entfernen); beim Session-Start wird das zuletzt geänderte Projekt geöffnet. KEIN JSON-Download/Upload mehr
@@ -218,6 +243,7 @@ C:\Development\POE2Crafting\
 - Links: Item-Panel (Import, Compose, ItemDisplay, History); beim Composen wird die linke Spalte breiter (`.crafting-page.composing`)
 - Rechts: Segmented Tabs (Simulator | Crafting Planner) + `.workspace` mit zwei Panes
   - Simulator: [InstillPanel + CurrencySelector] | [PreviewPanel] (Reveal ist die Currency "Well of Souls")
+  - History: EINE breite Pane (`.pane-wide`, `grid-column: 1 / -1`) mit `CraftingFlow`
   - CurrencySelector: Omens der gewählten Currency als volle Zeile DIREKT unter der gewählten Kachel (im Grid, `grid-auto-flow: dense`); Hinweis "N more currencies … hidden" immer sichtbar (nicht nur beim Suchen)
   - Planner: [ItemBuilder (Target)] | [PlannerPanel (Pfade, pro Schritt aufklappbar "Item after this step")]
 - Hauptaktionen unten in der Pane fixiert (`.sticky-actions`, `.action-bar`)
@@ -231,6 +257,7 @@ C:\Development\POE2Crafting\
 - `GameData.FindCraftItem(name)` → `CraftItemInfo` (Kind, IconUrl, Description, Facts wie Min-Mod-Level) für alle Currencies, Essenzen, Alloys, Katalysatoren, Omens
 - Icons LOKAL (auch Basis-Items: Slug = `BaseItem.Id`, `GameData.BaseIconUrl`, angezeigt im ItemDisplay-Kopf und in der Projekt-Liste; Skript holt sie von den poe2db-Klassenseiten): `src/POE2Crafting.Web/wwwroot/img/icons/` + `data/icons.json` (Slug → lokaler Pfad), einmalig geladen mit `python tools/poe2db_icons.py` (Art-Pfade von poe2db, Dateien vom RePoE-fork-Mirror; poe2db-CDN blockiert z. B. Essenz-Icons außerhalb poe2db → nie direkt verlinken)
 - `CraftItemLink` = markierter Name (Icon + Name, `ShowIcon=false` in Kacheln) → Popover beim HOVER (Mario will Hover, nicht Klick): reines CSS-:hover (kein Server-Roundtrip), `onmouseenter="positionPopover(this)"` platziert es (fixed), 150 ms Schließ-Verzögerung per transition-delay; Klicks gehen durch
+- **Jede Mod-Liste ab ~10 Einträgen bekommt ein Suchfeld** — auch die, die man nur LESEN kann (Mario 19.09.2026): Knochen-Vorschau ("Possible revealed modifiers", `AdditionsChoosable = false`) und der "▸ can become"-Pool im ItemDisplay hatten keines, obwohl da 116 Mods stehen. Das `AdditionsChoosable`-Flag steuert nur, ob man wählen darf, NICHT ob gesucht werden darf
 - Alle Suchfelder (`TextSearch.Matches`): jedes Wort der Suche muss in einem der Texte vorkommen, Reihenfolge egal ("quality caster" findet Sibilant Catalyst)
 - Currency-Suche filtert Name UND Beschreibung (z. B. "life" findet Essence of the Body); versteckte, nicht nutzbare Treffer werden als Hinweis gezählt
 - `CraftText` = Text aus Namen mit " + " / " → " (CraftAction.DisplayName, Step-Currency, History) → jeder bekannte Name wird zum Link
@@ -278,7 +305,7 @@ C:\Development\POE2Crafting\
   - `RecordedGuideRunner` spielt NICHT neu, sondern zeigt den aufgezeichneten Weg (Items der History); `HistoryEntry.Action` (= `CraftAction.DisplayName`) wird zurück in Currency + Omens aufgelöst → Materialliste
   - Schritt-Chance = Chance, das Ergebnis wieder zu bekommen (gleicher entfernter/gefracturter Mod × hinzugefügter Mod gleicher Tier-Gruppe mit Tier oder besser, `ModTiers.IsSameOrBetterTier`) aus der aktuellen Preview; benannte Outcomes (Vaal, Knochen) sind nicht zuordenbar → zählt als sicher + Hinweis
   - Nicht-Currency-Schritte: Instill → Emotionen als Material (`GameData.InstillMaterials`); Edited/Well of Souls → ohne Chance/Material, als Problem gemeldet
-  - **Freitext pro Schritt** (Mario 17.09.2026): jede Zeile der Crafting History hat eine Notiz ("＋ note", warum dieser Schritt) → `HistoryEntry.Note` (mit dem Projekt gespeichert, `CraftingSession.SetNote`), landet im gespeicherten Guide als `CraftStep.Explanation` bzw. beim ersten Eintrag im `StartLabel` — also auch im HTML-Export; Ctrl+Enter speichert, Escape bricht ab
+  - **Freitext pro Schritt** (Mario 17.09.2026): jede Karte im Crafting-Flow hat eine Notiz ("＋ note", warum dieser Schritt) → `HistoryEntry.Note` (mit dem Projekt gespeichert, `CraftingSession.SetNote`), landet im gespeicherten Guide als `CraftStep.Explanation` bzw. beim ersten Eintrag im `StartLabel` — also auch im HTML-Export; Ctrl+Enter speichert, Escape bricht ab
   - GuideDetail: Basis-Item, Speicherdatum, "Craft along", Löschen (🗑 → "Delete?")
 - Export "⤓ HTML" (GuideDetail + PlannerPanel): `GuideExportButton` → `GuideHtmlExport.ToHtml` (eine eigenständige HTML-Datei, Inline-CSS, Item-Icons als Base64 eingebettet, keine Skripte: Start/Final-Item, Materialien, Schritte mit Chance, Erklärung, Mod-Änderungen, aufklappbar "Item after this step", Items mit Tier, Roll-Range und Mod-Level wie im Simulator; KEINE Notes/Annahmen — Mario will die im Export nicht) → `downloadFile` in site.js
 

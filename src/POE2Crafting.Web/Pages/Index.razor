@@ -1,9 +1,10 @@
 @page "/"
 @inject CraftingSession Session
 @inject PlannerState Planner
+@inject IJSRuntime Js
 
 @* Desktop: every column/pane is its own (single) scroll area; narrow screens stack everything and the page scrolls. *@
-<div class="crafting-page @(_composing ? "composing" : "")">
+<div class="crafting-page @(_composing ? "composing" : "") @(Session.History.Count > 0 && !_composing ? $"with-flow flow-{_flowSize}" : "")">
     @* ---- LEFT: Item Panel ---- *@
     <section class="item-panel panel">
         <div class="panel-header">
@@ -36,6 +37,27 @@
                 <div class="error-banner" role="alert">@Session.LastError</div>
             }
 
+            @if (Session.CraftingRetry && Session.RetryEntry is { } retry)
+            {
+                <div class="retry-banner @(Session.RetryGoalReached ? "reached" : "")">
+                    <div>
+                        Crafting the way back for <strong>step @Session.RetryStepNumber</strong> (<CraftText Text="@retry.Action" />).
+                        Every currency you apply lands in its plan — this is a throwaway copy, the real item is untouched.
+                    </div>
+                    <div class="retry-goal">
+                        @if (Session.RetryGoalReached)
+                        {
+                            <text>✓ The item is back at @RetryGoalText() — done.</text>
+                        }
+                        else
+                        {
+                            <text>Goal: get the item back to @RetryGoalText().</text>
+                        }
+                    </div>
+                    <button class="btn btn-sm btn-primary" @onclick="StopRetry">Done</button>
+                </div>
+            }
+
             @if (_composing)
             {
                 <ItemComposer Edit="_editing" OnComposed="OnItemReplaced" OnCancelled="OnComposeCancelled" />
@@ -51,48 +73,6 @@
                     <EmptyState Hint="Import an item from the game (Ctrl+Alt+C text) or compose one with modifiers.">No item loaded.</EmptyState>
                 }
 
-                @if (Session.History.Count > 0)
-                {
-                    <div class="history-section">
-                        <h3 class="section-title">
-                            Crafting History
-                            <button class="btn btn-xs" @onclick="Undo" disabled="@(Session.History.Count <= 1)">Undo</button>
-                        </h3>
-                        <div class="history-list">
-                            @for (int i = Session.History.Count - 1; i >= 0; i--)
-                            {
-                                var index = i;
-                                var entry = Session.History[i];
-                                <div class="history-entry" @key="entry">
-                                    <span class="history-action"><CraftText Text="@entry.Action" /></span>
-                                    <span class="history-summary" title="@entry.Summary">@entry.Summary</span>
-                                    @if (_editingNote == index)
-                                    {
-                                        <div class="history-note-edit">
-                                            <textarea rows="2" placeholder="Why this step? (shown in a saved guide)" aria-label="Note for this step"
-                                                      @bind="_noteText" @bind:event="oninput" @onkeydown="e => OnNoteKey(e, index)"></textarea>
-                                            <button class="btn btn-xs btn-primary" @onclick="() => SaveNote(index)">Save</button>
-                                            <button class="btn btn-xs" @onclick="() => _editingNote = null">Cancel</button>
-                                        </div>
-                                    }
-                                    else if (entry.Note is { Length: > 0 } note)
-                                    {
-                                        <button class="history-note" title="Edit the note" @onclick="() => EditNote(index, note)">@note</button>
-                                    }
-                                    else
-                                    {
-                                        <button class="history-note history-note-add" title="Why did you do this step? The note is saved with the project and shown in a saved guide"
-                                                @onclick="() => EditNote(index, string.Empty)">＋ note</button>
-                                    }
-                                </div>
-                            }
-                        </div>
-                        <button class="btn btn-sm history-save" @onclick="ShowSaveGuide" disabled="@(!Session.CanSaveAsGuide)"
-                                title="@(Session.CanSaveAsGuide ? "Save this crafting path (base, currencies, every step) as a guide to reuse it later" : "Apply a currency first")">
-                            Save as Guide
-                        </button>
-                    </div>
-                }
             }
         </div>
     </section>
@@ -129,6 +109,9 @@
                 case Mode.Simulator:
                     <div class="pane"><EmptyState>Load an item to see available currencies.</EmptyState></div>
                     break;
+                case Mode.History:
+                    <div class="pane pane-wide"><CraftingFlow OnSaveGuide="ShowSaveGuide" OnItemChanged="OnItemReplaced" OnCraftRetry="CraftRetry" OnChanged="StateHasChanged" /></div>
+                    break;
                 case Mode.Planner:
                     <div class="pane"><ItemBuilder /></div>
                     <div class="pane"><PlannerPanel /></div>
@@ -140,6 +123,26 @@
             }
         </div>
     </section>
+
+    @* ---- BOTTOM: the crafting flow across the full width, always visible while crafting ---- *@
+    @* the History tab already shows the same flow, top to bottom *@
+    @if (Session.History.Count > 0 && !_composing && _mode != Mode.History)
+    {
+        <section class="flow-lane panel">
+            <div id="@LaneHandleId" class="flow-resize" title="Drag to make the flow taller or shorter" aria-hidden="true"></div>
+            <CraftingFlow Horizontal="true" OnSaveGuide="ShowSaveGuide" OnItemChanged="OnItemReplaced" OnCraftRetry="CraftRetry" OnChanged="StateHasChanged">
+                <Controls>
+                    <div class="flow-size">
+                        @foreach (var (size, glyph, title) in FlowSizes)
+                        {
+                            <button class="btn btn-xs @(_flowSize == size ? "btn-active" : "")" title="@title" @onclick="() => SetFlowSize(size)">@glyph</button>
+                        }
+                        <button class="btn btn-xs" title="Show the flow top to bottom in its own tab" @onclick="() => _mode = Mode.History">⤢</button>
+                    </div>
+                </Controls>
+            </CraftingFlow>
+        </section>
+    }
 </div>
 
 @* ---- Modals ---- *@
@@ -163,13 +166,37 @@
 }
 
 @code {
-    private enum Mode { Simulator, Planner, Guides }
+    private enum Mode { Simulator, History, Planner, Guides }
 
     private static string TabLabel(Mode mode) => mode == Mode.Planner ? "Crafting Planner" : mode.ToString();
 
     /// <summary>Multi-line example of the item text (Razor would escape an entity in the attribute).</summary>
     private const string ImportPlaceholder = "Item Class: Staves\nRarity: Rare\n...";
 
+    /// <summary>Heights of the flow lane: collapsed to its toolbar, the default lane, or tall enough for the mod changes.</summary>
+    private static readonly (string Size, string Glyph, string Title)[] FlowSizes =
+    {
+        ("s", "▁", "Collapse the flow to its toolbar"),
+        ("m", "▄", "Normal height"),
+        ("l", "█", "Tall — room for the mod changes and notes"),
+    };
+
+    private const string LaneHandleId = "flow-lane-handle";
+
+    private string _flowSize = "m";
+
+    /// <summary>A preset height drops whatever a drag on the handle wrote, so the buttons take over again.</summary>
+    private async Task SetFlowSize(string size)
+    {
+        _flowSize = size;
+        await Js.InvokeVoidAsync("clearLaneHeight");
+    }
+
+    /// <summary>The lane's drag handle lives here, so it is wired up whenever the lane is on the page.</summary>
+    protected override async Task OnAfterRenderAsync(bool first)
+    {
+        if (Session.History.Count > 0 && !_composing) await Js.InvokeVoidAsync("initLaneResize", LaneHandleId);
+    }
     private Mode _mode = Mode.Simulator;
     private bool _showImport, _showSaveGuide;
     private string _guideName = "", _guideNotes = "";
@@ -214,6 +241,24 @@
 
     private void OnComposeCancelled() => _composing = false;
 
+    /// <summary>The state the way back has to reach — the step the plan points at, not the random step itself.</summary>
+    private string RetryGoalText() =>
+        Session.RetryGoalStep <= 0 ? "the starting item" : $"the state after step {Session.RetryGoalStep}";
+
+    /// <summary>Craft the way back of a random step: the simulator works on a throwaway copy until "Done".</summary>
+    private void CraftRetry(int index)
+    {
+        Session.StartRetryCrafting(index);
+        _mode = Mode.Simulator;
+        OnItemReplaced();
+    }
+
+    private void StopRetry()
+    {
+        Session.StopRetryCrafting();
+        OnItemReplaced();
+    }
+
     private void DoImport()
     {
         if (string.IsNullOrWhiteSpace(_importText)) return;
@@ -225,34 +270,6 @@
     private void OnExecute(ManualChoice? choice)
     {
         if (_selectedAction != null) Session.Execute(_selectedAction, choice);
-    }
-
-    /// <summary>The history step whose note is being edited, and the text.</summary>
-    private int? _editingNote;
-    private string _noteText = "";
-
-    private void EditNote(int index, string note)
-    {
-        _editingNote = index;
-        _noteText = note;
-    }
-
-    private void SaveNote(int index)
-    {
-        Session.SetNote(index, _noteText);
-        _editingNote = null;
-    }
-
-    private void OnNoteKey(KeyboardEventArgs e, int index)
-    {
-        if (e.Key == "Escape") _editingNote = null;
-        else if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey)) SaveNote(index);
-    }
-
-    private void Undo()
-    {
-        Session.Undo();
-        OnItemReplaced();
     }
 
     /// <summary>A guide's starting item is now the current item: craft along in the simulator.</summary>

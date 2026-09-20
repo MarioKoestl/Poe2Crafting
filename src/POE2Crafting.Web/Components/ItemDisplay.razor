@@ -110,11 +110,15 @@
             var (exclusive, regular) = Engine.RevealOffers(Item, modIndex);
             <div class="reveal-pool">
                 <div class="hint">@(mod.Reveal?.Describe() is { Length: > 0 } context ? $"{context} — " : "")% = chance to be offered at the Well of Souls; counts as level 1 for Omen of Whittling until revealed</div>
-                @foreach (var (group, title) in new[] { (exclusive, Engine.RevealExclusiveLabel(Item, modIndex)), (regular, "Other options — regular modifiers") })
+                @if (exclusive.Count + regular.Count > RevealSearchFrom)
+                {
+                    <SearchBox @bind-Value="_revealFilter" Placeholder="@($"Search {exclusive.Count + regular.Count} possible modifiers (name, text, tag)...")" />
+                }
+                @foreach (var (group, title) in new[] { (Matching(exclusive), Engine.RevealExclusiveLabel(Item, modIndex)), (Matching(regular), "Other options — regular modifiers") })
                 {
                     if (group.Count == 0) continue;
                     <div class="reveal-group-title">@title — @group.Count</div>
-                    <ModOptionList Candidates="group" Item="Item" />
+                    <ModOptionList Candidates="group" Item="Item" AutoExpand="@(_revealFilter.Length > 0)" />
                 }
             </div>
         }
@@ -160,6 +164,14 @@
 
     /// <summary>Unrevealed mods (by index) whose possible reveals are shown.</summary>
     private readonly HashSet<int> _openReveals = new();
+    /// <summary>From this many possible reveals on, the pool gets a search box.</summary>
+    private const int RevealSearchFrom = 10;
+    /// <summary>Search over what an unrevealed modifier can become (the pool runs into the hundreds).</summary>
+    private string _revealFilter = "";
+
+    /// <summary>The candidates matching the search; the shown chances stay the real ones.</summary>
+    private List<ModCandidate> Matching(IEnumerable<ModCandidate> candidates) =>
+        candidates.Where(c => TextSearch.Matches(_revealFilter, new[] { c.Mod.DisplayName, c.Mod.Text, c.Mod.Family }.Concat(c.Mod.ModTags))).ToList();
 
     /// <summary>Another item (or state) closes the lists: mod indices refer to the shown item.</summary>
     private Item? _shownItem;
@@ -169,6 +181,7 @@
         if (ReferenceEquals(_shownItem, Item)) return;
         _shownItem = Item;
         _openReveals.Clear();
+        _revealFilter = "";
     }
 
     private IEnumerable<ItemMod> ImplicitLines => Item.Mods.Where(m => m.Kind.IsImplicitLine()).OrderBy(m => m.Kind == ModKind.CorruptedImplicit ? 0 : 1);
