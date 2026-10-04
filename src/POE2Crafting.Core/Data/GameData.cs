@@ -32,6 +32,8 @@ public sealed class GameData
     public IReadOnlyList<CraftingGuide> Guides { get; }
     /// <summary>In-app knowledge base: the rules the simulator implements (data/wiki.json).</summary>
     public IReadOnlyList<WikiArticle> Wiki { get; }
+    /// <summary>Unique items with the modifiers they grant themselves (data/uniques.json).</summary>
+    public IReadOnlyList<UniqueItemDef> Uniques { get; }
     /// <summary>Items of the Currency Exchange by GGG metadata id (data/exchange_items.json, optional).</summary>
     public IReadOnlyDictionary<string, ExchangeItemDef> ExchangeItems { get; }
 
@@ -66,23 +68,25 @@ public sealed class GameData
     private readonly Dictionary<string, List<ModDef>> _essenceModsByName;
     private readonly Dictionary<string, CraftItemInfo> _craftItemByName;
     private readonly Dictionary<string, InstillRecipe> _instillByNotable;
+    private readonly Dictionary<string, UniqueItemDef> _uniqueByName;
     /// <summary>Local icon path per poe2db slug (data/icons.json): currencies, omens, augments and base items.</summary>
     private readonly Dictionary<string, string> _iconsBySlug;
 
     private GameData(string folder, List<BaseItem> bases, List<ModDef> mods, List<CurrencyDef> currencies, List<EssenceDef> essences,
         List<EssenceDef> alloys, List<OmenDef> omens, List<CatalystDef> catalysts, List<ItemClassDef> classes, SimConfig config,
         Dictionary<string, string> iconsBySlug, List<InstillRecipe> instills, List<CraftingGuide> guides, List<ExchangeItemDef> exchangeItems,
-        List<WikiArticle> wiki)
+        List<WikiArticle> wiki, List<UniqueItemDef> uniques)
     {
         DataFolder = folder;
         Bases = bases; Mods = mods; Omens = omens; Catalysts = catalysts;
-        ItemClasses = classes; Config = config; Instills = instills; Guides = guides; Wiki = wiki;
+        ItemClasses = classes; Config = config; Instills = instills; Guides = guides; Wiki = wiki; Uniques = uniques;
         ExchangeItems = exchangeItems.GroupBy(i => i.Id).ToDictionary(g => g.Key, g => g.First());
         _baseByName = ByName(bases, b => b.Name);
         _modById = mods.ToDictionary(m => m.Id);
         _omenByName = ByName(omens, o => o.Name);
         _classByName = ByName(classes, c => c.Name);
         _instillByNotable = ByName(instills, i => i.Notable);
+        _uniqueByName = ByName(uniques, u => u.Name);
         _essenceModsByName = mods.Where(m => ModCategories.EssenceResults.Contains(m.Category))
             .GroupBy(m => m.Name).ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
@@ -192,7 +196,8 @@ public sealed class GameData
             Read<List<InstillRecipe>>("instills.json", required: false),
             Read<List<CraftingGuide>>("guides.json", required: false),
             Read<List<ExchangeItemDef>>("exchange_items.json", required: false),
-            Read<List<WikiArticle>>("wiki.json", required: false));
+            Read<List<WikiArticle>>("wiki.json", required: false),
+            Read<List<UniqueItemDef>>("uniques.json", required: false));
     }
 
     /// <summary>
@@ -214,6 +219,13 @@ public sealed class GameData
     public OmenDef? FindOmen(string name) => _omenByName.TryGetValue(name.Trim(), out var o) ? o : null;
     public ItemClassDef? FindItemClass(string name) => _classByName.TryGetValue(name.Trim(), out var c) ? c : null;
     public InstillRecipe? FindInstill(string notable) => _instillByNotable.TryGetValue(notable.Trim(), out var r) ? r : null;
+
+    /// <summary>A unique item by name ("Crown of the Pale King"), or null when the data store does not have it.</summary>
+    public UniqueItemDef? FindUnique(string? name) => name != null && _uniqueByName.TryGetValue(name.Trim(), out var u) ? u : null;
+
+    /// <summary>The uniques built on a base ("Cultist Crown").</summary>
+    public IEnumerable<UniqueItemDef> UniquesOfBase(string baseType) =>
+        Uniques.Where(u => u.BaseType.Equals(baseType, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>False for items the current game no longer has (config unavailableItems); they still resolve by name so old projects and guides load.</summary>
     public bool IsAvailable(string name) => !Config.UnavailableItems.Contains(name.Trim(), StringComparer.OrdinalIgnoreCase);

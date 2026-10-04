@@ -63,9 +63,17 @@ public static class ModText
             ParseNumber(m.Groups["v"].Value),
             m.Groups["a"].Success ? new[] { ParseNumber(m.Groups["a"].Value), ParseNumber(m.Groups["b"].Value) } : null)).ToList();
 
+    /// <summary>
+    /// Each number of a template in order: with its range when it is rollable ("(41-45)"), otherwise with the fixed value the tier always
+    /// grants ("+3 to Level", "20% increased Movement Speed").
+    /// </summary>
+    public static List<RolledToken> TemplateTokens(string template) =>
+        TemplateTokenRx.Matches(template).Select(m => m.Groups["a"].Success
+            ? new RolledToken(ParseNumber(m.Groups["a"].Value), new[] { ParseNumber(m.Groups["a"].Value), ParseNumber(m.Groups["b"].Value) })
+            : new RolledToken(ParseNumber(m.Groups["v"].Value), null)).ToList();
+
     /// <summary>For each number in a template: true for a rollable range, false for a fixed number.</summary>
-    public static List<bool> TemplateTokenIsRange(string template) =>
-        TemplateTokenRx.Matches(template).Select(m => m.Groups["a"].Success).ToList();
+    public static List<bool> TemplateTokenIsRange(string template) => TemplateTokens(template).Select(t => t.Range != null).ToList();
 
     /// <summary>"+(209-248) to maximum Mana", "+238(209-248) to maximum Mana" and "+238 to maximum Mana" all become "+# to maximum Mana".</summary>
     public static string StripNumbers(string text) => WhitespaceRx.Replace(AnyNumberRx.Replace(text, "#"), " ").Trim();

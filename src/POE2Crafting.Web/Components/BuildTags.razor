@@ -1,0 +1,37 @@
+@* The builds behind something (a modifier, an item class): "Spear Stab · Shaman ×3". A click filters the page by that build. *@
+
+@if (Builds.Count == 0)
+{
+    <span class="build-tag-none">—</span>
+}
+else
+{
+    <span class="build-tags">
+        @foreach (var build in Builds.Take(Limit))
+        {
+            var entry = build;
+            <button type="button" class="build-tag" @key="(entry.Name, entry.Type)" title="@($"Show only this build: {Label(entry)}")"
+                    @onclick="() => OnSelect.InvokeAsync(entry)">
+                @Label(entry)
+                @if (entry.Count > 1)
+                {
+                    <span class="build-tag-count">×@entry.Count</span>
+                }
+            </button>
+        }
+        @if (Builds.Count > Limit)
+        {
+            <span class="build-tag-more" title="@string.Join(", ", Builds.Skip(Limit).Select(Label))">+@(Builds.Count - Limit)</span>
+        }
+    </span>
+}
+
+@code {
+    /// <summary>Main skill as the name, ascendancy as the type, with how many characters or items it stands for.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<NamedCount> Builds { get; set; } = Array.Empty<NamedCount>();
+    [Parameter] public int Limit { get; set; } = 3;
+    /// <summary>Raised with the clicked build; the page filters by it.</summary>
+    [Parameter] public EventCallback<NamedCount> OnSelect { get; set; }
+
+    private static string Label(NamedCount build) => build.Type is { Length: > 0 } type ? $"{build.Name} · {type}" : build.Name;
+}

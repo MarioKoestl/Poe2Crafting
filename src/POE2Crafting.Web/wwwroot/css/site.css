@@ -558,6 +558,8 @@ main {
 .desecrated-badge, .cat-badge-desecrated { background: color-mix(in srgb, var(--desecrated) 16%, transparent); color: var(--desecrated); }
 .cat-badge-otherworldly { background: color-mix(in srgb, var(--purple) 16%, transparent); color: var(--purple); }
 .cat-badge-genesis { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green-light); }
+.cat-badge-rune { background: color-mix(in srgb, var(--blue) 16%, transparent); color: var(--blue); }
+.cat-badge-corruption { background: color-mix(in srgb, var(--red) 14%, transparent); color: var(--red-light); }
 
 .item-footer {
     margin-top: 0.55rem;
@@ -2004,3 +2006,189 @@ button.demand-base { font: inherit; cursor: pointer; }
 .retry-banner.reached .retry-goal { color: var(--green-light); font-weight: 600; }
 .retry-banner .btn { margin-left: auto; }
 .retry-craft { width: 100%; margin-top: 0.2rem; }
+
+/* ==== Mod finder (which bases can roll a modifier) ==== */
+
+.mod-finder { grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.8fr); border-top: 1px solid var(--border); }
+
+.mod-hit .mod-hit-head { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
+.mod-hit .wiki-index-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.mod-finder-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; font-size: 0.78rem; color: var(--text-muted); }
+.mod-finder-source { margin: 0.35rem 0 0.8rem; max-width: 52rem; }
+.mod-finder-count { font-size: 0.8rem; color: var(--text-bright); margin-bottom: 0.6rem; }
+
+.mod-place { margin-bottom: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elevated); }
+.mod-place-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.mod-place-class { color: var(--text-bright); font-size: 0.85rem; font-weight: 650; }
+.mod-place-needs { color: var(--orange); }
+.mod-place-head .btn { margin-left: auto; }
+
+.mod-place-variant { padding: 0.45rem 0.6rem; }
+.mod-place-variant + .mod-place-variant { border-top: 1px dashed var(--border); }
+.mod-tier-table { margin-bottom: 0.45rem; }
+.mod-tier-cell { color: var(--accent); white-space: nowrap; }
+.mod-tier-text { display: block; color: var(--text); }
+
+.mod-base-list { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+.mod-base-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg-hover);
+    color: var(--text);
+    font-size: 0.74rem;
+    white-space: nowrap;
+}
+.mod-place-line { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.35rem; font-size: 0.76rem; color: var(--text-muted); }
+.mod-place-share { color: var(--text-bright); }
+
+/* mod finder overview of one search: item classes, crafting items, corruption, uniques */
+.overview-counts { gap: 0.8rem; margin-top: 0.2rem; }
+.ov-back { margin-bottom: 0.6rem; }
+.ov-note { margin: 0.45rem 0.6rem 0; }
+.ov-more { margin-top: 0.3rem; }
+.ov-class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 0.5rem; padding: 0.5rem 0.6rem 0.6rem; }
+.ov-class { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-panel); padding: 0.35rem 0.45rem; min-width: 0; }
+.ov-class-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem; }
+.ov-class-head .btn { margin-left: auto; }
+.ov-mod, .ov-effect {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    width: 100%;
+    min-width: 0;
+    padding: 0.18rem 0.3rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.76rem;
+    text-align: left;
+    cursor: pointer;
+}
+.ov-mod:hover, .ov-effect:hover { background: var(--bg-hover); }
+.ov-mod-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-source { padding: 0.3rem 0; border-bottom: 1px solid var(--border); }
+.ov-source:last-of-type { border-bottom: none; }
+.ov-source-head { display: flex; align-items: center; gap: 0.45rem; font-size: 0.8rem; }
+.ov-kind { color: var(--text-muted); font-size: 0.72rem; }
+.ov-effect { align-items: baseline; flex-wrap: wrap; padding-left: 1.4rem; }
+.ov-effect .mod-tier-text { display: inline; flex: 1 1 16rem; white-space: pre-line; }
+.ov-classes { color: var(--text-muted); font-size: 0.72rem; }
+
+/* search inside a list section (build shares, demand cards): tighter than a pane-level search */
+.share-list .search-filter, .demand-card .search-filter { margin-bottom: 0.4rem; }
+
+/* ==== Builds: the sampled characters and the item a search was filtered to ==== */
+
+.wanted-item {
+    margin: 0.5rem 0 0.9rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: var(--radius);
+    border-left: 3px solid var(--accent);
+    background: var(--bg-elevated);
+}
+.wanted-item .section-title { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+
+.build-card { margin-bottom: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elevated); }
+.build-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    cursor: pointer;
+}
+.build-head:hover { background: var(--bg-hover); }
+.build-card.open .build-head { border-bottom: 1px solid var(--border); }
+.build-name { color: var(--text-bright); font-size: 0.85rem; font-weight: 650; }
+.build-class { color: var(--accent-light); }
+.build-wears { color: var(--rarity-unique); }
+.build-skills { margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 22rem; }
+
+.build-gear { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.45rem 0.6rem; }
+.build-links { padding: 0 0.6rem 0.5rem; }
+
+.gear-row { border-radius: var(--radius-sm); }
+.gear-row.highlight { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.gear-line { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; padding: 0.2rem 0.3rem; font-size: 0.78rem; }
+.gear-slot { color: var(--text-muted); min-width: 6.5rem; }
+.gear-name { color: var(--rarity); font-weight: 600; }
+.gear-base { color: var(--text-muted); }
+.gear-no-item { color: var(--text-muted); width: 2.6rem; text-align: center; }
+.gear-row .item-box { max-width: 34rem; margin: 0.2rem 0 0.4rem 2.9rem; }
+
+/* which build wears something: shown at items, modifiers and item classes */
+.demand-builds { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; padding: 0.3rem 0.6rem 0; }
+.build-tags { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; }
+.build-tag {
+    padding: 0.1rem 0.35rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-hover);
+    color: var(--accent-light);
+    font-size: 0.72rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.build-tag:hover { border-color: var(--accent); }
+.build-tag-count { color: var(--text-muted); margin-left: 0.2rem; }
+.build-tag-more, .build-tag-none { color: var(--text-muted); font-size: 0.72rem; }
+.demand-build { color: var(--accent-light); font-size: 0.74rem; }
+
+/* why lines of an item carry no tier (a unique's own modifiers, text the data does not have) */
+.item-note { color: var(--text-muted); font-size: 0.7rem; line-height: 1.4; margin: 0.25rem 0 0.1rem; }
+
+/* uniques that grant a modifier themselves (mod finder) */
+.cat-badge-unique { background: color-mix(in srgb, var(--rarity-unique) 16%, transparent); color: var(--rarity-unique); }
+.mod-uniques .mod-place-class { color: var(--rarity-unique); }
+.unique-entry { border-bottom: 1px solid rgba(35, 39, 51, 0.6); }
+.unique-entry:last-child { border-bottom: none; }
+.unique-row {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    width: 100%;
+    padding: 0.2rem 0.25rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.78rem;
+    text-align: left;
+    cursor: pointer;
+}
+.unique-row:hover, .unique-entry.open .unique-row { background: var(--bg-hover); }
+.unique-caret { color: var(--text-muted); width: 0.7rem; flex-shrink: 0; }
+.unique-line { display: block; white-space: pre-line; }
+.unique-card { max-width: 30rem; margin: 0.35rem 0 0.6rem 1.2rem; font-size: 0.82rem; }
+.unique-card-line { display: block; width: 100%; text-align: center; white-space: pre-line; }
+button.unique-card-line { padding: 0.05rem 0.2rem; border: none; border-radius: var(--radius-sm); background: none; font: inherit; cursor: pointer; }
+button.unique-card-line:hover { background: var(--bg-hover); }
+.unique-card-line.hit { color: var(--text-bright); background: color-mix(in srgb, var(--rarity-unique) 14%, transparent); }
+.unique-name { color: var(--rarity-unique); font-weight: 600; min-width: 11rem; }
+.unique-base { color: var(--text-muted); min-width: 9rem; }
+.unique-row .mod-tier-text { display: inline; flex: 1 1 14rem; }
+.mod-line.unique-mod { color: var(--text); }
+.mod-line.unique-mod .mod-range { color: var(--text-muted); }

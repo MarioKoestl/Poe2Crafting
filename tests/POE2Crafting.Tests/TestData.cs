@@ -17,8 +17,11 @@ internal static class TestData
     private static readonly Lazy<ModPool?> _pool = new(() => Data == null ? null : new ModPool(Data));
     private static readonly Lazy<CraftingEngine?> _engine = new(() => Data == null ? null : new CraftingEngine(Data, Pool));
 
+    private static readonly Lazy<ModFinder?> _finder = new(() => Data == null ? null : new ModFinder(Data, Pool!));
+
     public static GameData? Data => _data.Value;
     public static ModPool? Pool => _pool.Value;
+    public static ModFinder? Finder => _finder.Value;
     public static CraftingEngine? Engine => _engine.Value;
     public static CraftingPathFinder PathFinder => new(Engine!);
 
@@ -47,6 +50,11 @@ internal static class TestData
                 item.AddMod(Pool!.Candidates(item, type).First().Mod);
         return item;
     }
+
+    /// <summary>A sampled character wearing exactly these items (no slots): enough for the rare item analysis.</summary>
+    public static SampledCharacter Wearing(CharacterRef character, params Item[] items) =>
+        new(character, "Gemling Legionnaire", 100, "Twister", new[] { "Twister" },
+            items.Select(i => new GearPiece(null, GearKind.Equipment, "", i.BaseName, i.Rarity, i)).ToList());
 
     /// <summary>A planner target with these mods (resolved) at the rarity.</summary>
     public static TargetItemSpec Spec(Rarity rarity, IEnumerable<ModDef> mods, bool better = true) => new()

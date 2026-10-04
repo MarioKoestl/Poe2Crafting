@@ -47,8 +47,14 @@ public sealed class ModDef
 
     public int WeightOn(string? page) => page != null && Weights.TryGetValue(page, out var w) ? w : 0;
 
-    /// <summary>Whether the mod exists on any of the pages (has a weight entry there).</summary>
-    public bool IsOnAnyPage(IReadOnlyList<string> pages) => Weights.Keys.Any(pages.Contains);
+    /// <summary>
+    /// Whether the mod exists on the page: with a positive weight where weights decide which modifier is drawn,
+    /// otherwise just by being listed there (essences, liquid emotions and runes grant their modifier directly).
+    /// </summary>
+    public bool IsOnPage(string page) => Weights.TryGetValue(page, out var w) && (w > 0 || !ModCategories.IsRolled(Category));
+
+    /// <summary>Whether the mod exists on any of the pages.</summary>
+    public bool IsOnAnyPage(IReadOnlyList<string> pages) => pages.Any(IsOnPage);
 
     /// <summary>Name for display: corruption enchantments only have internal codes as names in the data.</summary>
     [JsonIgnore] public string DisplayName => Category switch

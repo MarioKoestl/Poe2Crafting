@@ -1,7 +1,18 @@
 @* Values of a build dimension (skills, ascendancies, items, builds) with their share of the characters as bars; optionally clickable to filter. *@
 
 <div class="share-list">
-    @foreach (var entry in Entries.Take(_showAll ? int.MaxValue : Limit))
+    @{
+        var matching = Matching;
+    }
+    @if (Entries.Count > Limit)
+    {
+        <SearchBox @bind-Value="_search" Placeholder="@($"Search {UiFormat.Plural(Entries.Count, Label)}...")" />
+    }
+    @if (matching.Count == 0)
+    {
+        <p class="hint">No @Label matches the search.</p>
+    }
+    @foreach (var entry in matching.Take(_showAll ? int.MaxValue : Limit))
     {
         var value = entry;
         var share = Total > 0 ? (double)value.Count / Total : 0;
@@ -20,9 +31,9 @@
             <div class="share-row" @key="key">@Row(value, share)</div>
         }
     }
-    @if (Entries.Count > Limit)
+    @if (matching.Count > Limit)
     {
-        <button class="btn btn-xs share-more" @onclick="() => _showAll = !_showAll">@(_showAll ? "Show less" : $"Show all {Entries.Count}")</button>
+        <button class="btn btn-xs share-more" @onclick="() => _showAll = !_showAll">@(_showAll ? "Show less" : $"Show all {matching.Count}")</button>
     }
 </div>
 
@@ -36,8 +47,14 @@
     [Parameter] public EventCallback<NamedCount?> OnSelect { get; set; }
     /// <summary>Show the entry's type next to its name (item type, ascendancy of a build).</summary>
     [Parameter] public bool ShowType { get; set; }
+    /// <summary>What the entries are, for the search box and the empty message ("skill", "unique").</summary>
+    [Parameter] public string Label { get; set; } = "entry";
 
     private bool _showAll;
+    private string _search = "";
+
+    /// <summary>Entries matching the search; name and type both count ("bow" finds every bow base among the rare slots).</summary>
+    private List<NamedCount> Matching => Entries.Where(e => TextSearch.Matches(_search, e.Name, e.Type)).ToList();
 
     private string Describe(NamedCount entry) => entry.Type != null && ShowType ? $"{entry.Name} · {entry.Type}" : entry.Name;
 

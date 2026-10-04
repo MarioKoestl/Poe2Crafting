@@ -1,5 +1,4 @@
 using System.Text;
-using POE2Crafting.Core.Builds;
 
 namespace POE2Crafting.Tests;
 
@@ -64,6 +63,9 @@ public class NinjaBuildsTests
         Assert.Equal("Rare Gloves", Assert.Single(overview.RareSlots).Name);
         Assert.Equal("Headhunter", Assert.Single(overview.Uniques).Name);
         Assert.Equal(new[] { new BuildCount("Twister", "Gemling Legionnaire", 1), new BuildCount("Twister", "Oracle", 1) }, overview.TopBuilds);
+        // each listed character keeps their own build, that is what ties an item back to a build
+        Assert.Equal("Twister · Gemling Legionnaire", overview.BuildOf(new CharacterRef("alice-1", "Alice"))!.Label);
+        Assert.Equal("Twister · Oracle", overview.BuildOf(new CharacterRef("bob-2", "Bob"))!.Label);
     }
 
     [Fact]
@@ -115,11 +117,9 @@ public class NinjaBuildsTests
     public void Analysis_groups_rare_items_by_class_with_modifier_shares()
     {
         var character = NinjaCharacter.Parse(GlovesJson);
-        var reference = new CharacterRef(character.Account, character.Name);
-        var items = character.CraftableItems.Select(i => i.ToItem(TestData.Data!)).OfType<Item>()
-            .Select(item => new SampledItem(reference, character.Class, character.Level, item)).ToList();
+        var sampled = SampledCharacter.From(new CharacterRef(character.Account, character.Name), character, TestData.Data!);
 
-        var analysis = RareItemAnalysis.Build(items, 1, TestData.Pool!);
+        var analysis = RareItemAnalysis.Build(new[] { sampled }, TestData.Pool!);
 
         var gloves = Assert.Single(analysis.Classes); // the unique belt is not counted
         Assert.Equal(("Gloves", 1, 1), (gloves.ItemClass, gloves.Characters, gloves.Items.Count));
@@ -129,6 +129,14 @@ public class NinjaBuildsTests
         Assert.Equal(35.5, Assert.Single(damage.Values));
         Assert.NotEmpty(damage.Tiers);
         Assert.Equal(1, gloves.Desecrated);
+
+        // the analysis keeps the whole build, so the unique belt and the slots are still there
+        var build = Assert.Single(analysis.Builds);
+        Assert.Equal(("Gemling Legionnaire", 100), (build.Class, build.Level));
+        var belt = build.Gear.Single(g => g.Slot == "Belt");
+        Assert.Equal(("Headhunter", "Heavy Belt", Rarity.Unique), (belt.Name, belt.BaseType, belt.Rarity));
+        Assert.True(belt.Matches("Headhunter"));
+        Assert.True(build.Gear.Single(g => g.Slot == "Gloves").Matches("Rare Gloves"));
     }
 
     [DataFact]
@@ -141,13 +149,9 @@ public class NinjaBuildsTests
         iron.AddMod(TestData.BestMod(iron, "to maximum Life", AffixType.Prefix));
         var gold = TestData.NewItem("Gold Ring", Rarity.Rare);
         gold.AddMod(TestData.BestMod(gold, "to Fire Resistance", AffixType.Suffix));
-        var items = new[]
-        {
-            new SampledItem(alice, "Gemling Legionnaire", 100, iron),
-            new SampledItem(bob, "Gemling Legionnaire", 96, gold),
-        };
+        var characters = new[] { TestData.Wearing(alice, iron), TestData.Wearing(bob, gold) };
 
-        var ring = Assert.Single(RareItemAnalysis.Build(items, 2, TestData.Pool!).Classes);
+        var ring = Assert.Single(RareItemAnalysis.Build(characters, TestData.Pool!).Classes);
         Assert.Equal(2, ring.Items.Count);
 
         var onlyGold = ring.ForBase("Gold Ring", TestData.Pool!)!;
@@ -158,5 +162,32 @@ public class NinjaBuildsTests
         // the base list stays complete so the filter can be switched
         Assert.Equal(ring.Bases, onlyGold.Bases);
         Assert.Null(ring.ForBase("Prismatic Ring", TestData.Pool!));
+    }
+
+    [DataFact]
+    public void Every_modifier_names_the_builds_that_wear_it()
+    {
+        var alice = TestData.Wearing(new CharacterRef("alice-1", "Alice"), RingWith("to maximum Life", AffixType.Prefix)) with { MainSkill = "Twister" };
+        var bob = TestData.Wearing(new CharacterRef("bob-2", "Bob"), RingWith("to maximum Life", AffixType.Prefix)) with { MainSkill = "Twister" };
+        var carol = TestData.Wearing(new CharacterRef("carol-3", "Carol"), RingWith("to Fire Resistance", AffixType.Suffix))
+            with { MainSkill = "Frost Bomb", Class = "Oracle" };
+
+        var ring = Assert.Single(RareItemAnalysis.Build(new[] { alice, bob, carol }, TestData.Pool!).Classes);
+
+        // the class names every build that wears one
+        Assert.Equal(new (string, string?, int)[] { ("Twister", "Gemling Legionnaire", 2), ("Frost Bomb", "Oracle", 1) },
+            ring.Builds.Select(b => (b.Name, b.Type, b.Count)).ToArray());
+        // and so does each modifier
+        var life = ring.Mods.Single(m => m.Text.Contains("maximum Life"));
+        Assert.Equal(("Twister", 2), (Assert.Single(life.Builds).Name, Assert.Single(life.Builds).Count));
+        var fire = ring.Mods.Single(m => m.Text.Contains("Fire Resistance"));
+        Assert.Equal("Frost Bomb", Assert.Single(fire.Builds).Name);
+    }
+
+    private static Item RingWith(string modText, AffixType type)
+    {
+        var ring = TestData.NewItem(TestBases.Ring, Rarity.Rare);
+        ring.AddMod(TestData.BestMod(ring, modText, type));
+        return ring;
     }
 }

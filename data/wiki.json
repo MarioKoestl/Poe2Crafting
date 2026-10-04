@@ -482,6 +482,74 @@
   ]
  },
  {
+  "id": "flux",
+  "title": "Flux: changing an element",
+  "category": "Currencies",
+  "summary": "A flux turns the single-element resistance modifiers of the other elements into its own element. It touches the explicit modifiers only, and it rolls the value anew.",
+  "tags": [
+   "flux",
+   "resistance",
+   "element",
+   "cold",
+   "fire",
+   "lightning",
+   "chaos"
+  ],
+  "sections": [
+   {
+    "heading": "What each flux does",
+    "table": {
+     "columns": [
+      "Flux",
+      "Turns into"
+     ],
+     "rows": [
+      [
+       "[[Blazing Flux]]",
+       "Fire Resistance"
+      ],
+      [
+       "[[Chilling Flux]]",
+       "Cold Resistance"
+      ],
+      [
+       "[[Crackling Flux]]",
+       "Lightning Resistance"
+      ],
+      [
+       "[[Void Flux]]",
+       "Chaos Resistance"
+      ]
+     ],
+     "caption": "The source is every single-element resistance modifier of the other elements; a modifier that is already the flux's element stays."
+    }
+   },
+   {
+    "heading": "Only the explicit modifiers change",
+    "text": [
+     "A flux rewrites the prefixes and suffixes of the item. Everything above them stays exactly as it is: the base implicit, a corruption enchantment, an enchantment and the effects of socketed runes or soul cores. A ring with \"+25% to Lightning Resistance\" as its implicit and a rolled lightning resistance suffix keeps the implicit and changes the suffix."
+    ]
+   },
+   {
+    "heading": "Which tier you get",
+    "bullets": [
+     "The new modifier is the tier of the target resistance with the highest modifier level that is not above the source modifier's level.",
+     "The value is rolled anew inside the new tier's range, so a flux is also a value reroll: 41% Lightning can come back as 45% Cold.",
+     "The simulator lets you pick the new values, the same way a Divine Orb does."
+    ]
+   }
+  ],
+  "verified": [
+   "A flux changes the explicit modifiers only; implicit lines stay untouched. This holds for all four fluxes.",
+   "The value is rolled anew in the new tier instead of keeping its position in the range."
+  ],
+  "related": [
+   "modifier-weights",
+   "tiers",
+   "corruption"
+  ]
+ },
+ {
   "id": "desecration",
   "title": "Desecration and the Well of Souls",
   "category": "Desecration",
@@ -558,6 +626,113 @@
   ]
  },
  {
+  "id": "where-a-modifier-can-appear",
+  "title": "Where a modifier can appear",
+  "category": "Modifiers",
+  "summary": "A modifier belongs to item class pages, not to items in general. The Modifiers page turns that around: pick a modifier and see every base that can carry it, and what it takes there.",
+  "tags": [
+   "where",
+   "base",
+   "item class",
+   "page",
+   "rune",
+   "projectile speed",
+   "find"
+  ],
+  "sections": [
+   {
+    "heading": "What decides whether a base can have it",
+    "bullets": [
+     "Every modifier carries a weight per item class page. A base uses its own page, or all pages of its class when it has none of its own.",
+     "A base blocks a modifier when it carries the modifier's blocking tag: a cold wand never rolls fire spell modifiers, although they sit on the wand page.",
+     "The item level only limits which tier can roll. It never decides whether the modifier belongs on the base at all."
+    ],
+    "text": []
+   },
+   {
+    "heading": "How it gets onto the item",
+    "text": [
+     "The same stat can reach an item in several ways, and each way has its own pool. \"#% increased Projectile Speed\" is a prefix that rolls on quivers and on two jewel bases, and on gloves it exists only as a Marksman modifier, which needs [[Kolr's Hunt]] in a socket."
+    ],
+    "table": {
+     "columns": [
+      "Source",
+      "What it takes"
+     ],
+     "rows": [
+      [
+       "Base modifier",
+       "the currencies that add modifiers: Orb of Transmutation, Augmentation, Regal Orb, Exalted Orb, Chaos Orb and essences"
+      ],
+      [
+       "Rune-unlocked type",
+       "a rune that unlocks the type, e.g. [[Kolr's Hunt]] for Marksman; the modifier then rolls like a base modifier"
+      ],
+      [
+       "Desecrated",
+       "a bone, revealed at the [[Well of Souls]]"
+      ],
+      [
+       "Otherworldly",
+       "an [[Altered Collarbone]], revealed at the [[Well of Souls]]"
+      ],
+      [
+       "Essence, alloy or liquid emotion",
+       "the item of the same name; it grants the modifier instead of rolling it"
+      ],
+      [
+       "Rune or soul core",
+       "the rune itself, while it sits in a socket"
+      ],
+      [
+       "Corruption enchantment",
+       "a [[Vaal Orb]]"
+      ],
+      [
+       "The Genesis Tree",
+       "the Breach mechanic; rings and belts list these modifiers, but nothing in the simulator rolls them"
+      ],
+      [
+       "Unique item",
+       "the unique itself; it rolls its own line inside its own range, with no tier and no weight"
+      ]
+     ],
+     "caption": "The Modifiers page names the source of every modifier it lists."
+    }
+   },
+   {
+    "heading": "Uniques are their own pool",
+    "text": [
+     "A unique grants the modifiers printed on it. They are not part of the craftable pool, so no currency rolls them, they have no tier, and their ranges belong to that one unique. \"Thorns can Retaliate against all Hits\" exists only on \"Crown of the Pale King\"; its \"(10-15) to (20-25) Physical Thorns damage\" looks like the craftable thorns prefix but rolls in the unique's own range and sits on a helmet, where the craftable one cannot appear at all.",
+     "The Modifiers page lists the uniques that grant a stat under every modifier, and a line that exists only on uniques is searchable on its own."
+    ]
+   },
+   {
+    "heading": "Reading the table",
+    "bullets": [
+     "Bases that get the modifier in exactly the same way stand in one row: same item class, same tiers, same weights.",
+     "Share is the modifier's weight against everything of its affix type that competes with it on that base. A rune-unlocked modifier competes with the base modifiers, an otherworldly one with the desecrated pool.",
+     "Modifiers that are granted rather than rolled have no weight and no share."
+    ],
+    "text": []
+   }
+  ],
+  "verified": [
+   "Gloves can carry \"#% increased Projectile Speed\" only while a rune that unlocks Marksman modifiers is socketed.",
+   "A unique's modifiers are its own: the simulator resolves an imported unique against that unique, never against the craftable modifiers of its base."
+  ],
+  "assumptions": [
+   "The share assumes an empty item at item level 100, so every tier counts. On a real item, filled slots, families already present and the item level change it.",
+   "Weights are estimates, so a share is a size, not an exact number."
+  ],
+  "related": [
+   "modifier-weights",
+   "tiers",
+   "runes-and-magnitudes",
+   "desecration"
+  ]
+ },
+ {
   "id": "corruption",
   "title": "Corruption",
   "category": "Corruption",
@@ -622,13 +797,58 @@
   "category": "Runes",
   "summary": "Socketed augments do more than add a line: some unlock whole modifier categories, some scale the values of what is already there, and the Aldur runes convert elements.",
   "tags": [
-   "rune",
-   "soul core",
-   "socket",
    "aldur",
-   "magnitude"
+   "artificer's orb",
+   "magnitude",
+   "rune",
+   "socket",
+   "socket limit",
+   "soul core"
   ],
   "sections": [
+   {
+    "heading": "How many sockets an item can have",
+    "text": [
+     "Every base has a fixed maximum of augment sockets. [[Artificer's Orb]] adds one socket up to that maximum; only the socket outcome of a [[Vaal Orb]] goes one past it."
+    ],
+    "table": {
+     "columns": [
+      "Items",
+      "Maximum sockets"
+     ],
+     "rows": [
+      [
+       "One-handed martial weapons (spears, flails, claws, daggers, one hand swords, axes, maces)",
+       "1"
+      ],
+      [
+       "Wands, sceptres, foci",
+       "1"
+      ],
+      [
+       "Helmets, gloves, boots, shields, bucklers",
+       "1"
+      ],
+      [
+       "Two-handed martial weapons (two hand swords, axes, maces), quarterstaves",
+       "2"
+      ],
+      [
+       "Bows, crossbows",
+       "2"
+      ],
+      [
+       "Staves, talismans",
+       "2"
+      ],
+      [
+       "Body armour",
+       "2"
+      ]
+     ],
+     "caption": "Jewellery, quivers, jewels, flasks, charms and traps have no sockets."
+    }
+   },
    {
     "heading": "Runes that unlock modifiers",
     "text": [
@@ -649,6 +869,7 @@
    }
   ],
   "verified": [
+   "The socket maximum of every base: one for one-handed weapons, wands, sceptres, foci, helmets, gloves, boots and shields; two for two-handed weapons, bows, crossbows, staves, talismans and body armour.",
    "A fractured modifier is not converted by an Aldur rune; the normal ones are."
   ],
   "assumptions": [
@@ -660,7 +881,8 @@
   ],
   "related": [
    "crafted-modifiers",
-   "quality-and-catalysts"
+   "quality-and-catalysts",
+   "corruption"
   ]
  },
  {

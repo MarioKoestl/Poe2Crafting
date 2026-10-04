@@ -86,21 +86,15 @@ public sealed class NinjaBuildsService(IHttpClientFactory httpClients, GameData 
         {
             var search = await SearchAsync(snapshot, job.Filter);
             var sample = search.Characters.Take(job.SampleSize).ToList();
-            var items = new List<SampledItem>();
-            int loaded = 0;
+            var characters = new List<SampledCharacter>();
             PruneCharacterCache();
             foreach (var (reference, index) in sample.Select((c, i) => (c, i)))
             {
                 job.Report($"{index + 1}/{sample.Count} characters");
                 if (await CharacterAsync(snapshot, reference) is { } character)
-                {
-                    loaded++;
-                    items.AddRange(character.CraftableItems.Where(i => i.RarityName == "Rare")
-                        .Select(i => i.ToItem(data)).OfType<Item>()
-                        .Select(item => new SampledItem(reference, character.Class, character.Level, item)));
-                }
+                    characters.Add(SampledCharacter.From(reference, character, data, search.BuildOf(reference)?.Skill));
             }
-            job.Complete(RareItemAnalysis.Build(items, loaded, pool));
+            job.Complete(RareItemAnalysis.Build(characters, pool));
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or FormatException)
         {

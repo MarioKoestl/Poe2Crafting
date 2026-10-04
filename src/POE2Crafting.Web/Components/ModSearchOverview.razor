@@ -1,0 +1,161 @@
+@* Everything that can put a searched stat on an item: the item classes that roll it, the crafting items that add it,
+   the corruption results and the uniques that have it. Picking a modifier opens its tiers and bases (OnSelect). *@
+
+<h3 class="pane-title">Everything with “@Result.Query”</h3>
+<div class="mod-finder-meta overview-counts">
+    <span><span class="count-pill">@Result.Classes.Count</span> item classes</span>
+    <span><span class="count-pill">@_craftingItems.Count</span> crafting items</span>
+    <span><span class="count-pill">@_corruption.Count</span> corruptions</span>
+    <span><span class="count-pill">@Result.Uniques.Count</span> uniques</span>
+</div>
+<p class="hint mod-finder-source">Pick a modifier to see its tiers, weights and every base that can have it.</p>
+
+@if (Result.IsEmpty)
+{
+    <EmptyState Icon="◇" Hint="Search the stat as the game prints it, e.g. &quot;thorns&quot; or &quot;cast speed&quot;.">
+        Nothing matches the search.
+    </EmptyState>
+}
+
+@if (Result.Classes.Count > 0)
+{
+    <section class="mod-place">
+        <div class="mod-place-head">
+            <span class="mod-place-class">On bases</span>
+            <span class="count-pill">@Result.Classes.Count</span>
+            <span>rolled modifiers per item class</span>
+        </div>
+        <p class="hint ov-note">@ModCategories.SourceText(ModCategories.Normal)</p>
+        <div class="ov-class-grid">
+            @foreach (var hits in Result.Classes)
+            {
+                <div class="ov-class" @key="hits.ItemClass">
+                    <div class="ov-class-head">
+                        <span class="mod-place-class">@hits.ItemClass</span>
+                        <span class="count-pill">@hits.Mods.Count</span>
+                        <a class="btn btn-xs" href="@($"/bases?class={Uri.EscapeDataString(hits.ItemClass)}")" title="Compare the bases of this class">⚖</a>
+                    </div>
+                    @foreach (var group in Shown(hits.ItemClass, hits.Mods, ShownMods))
+                    {
+                        <button type="button" class="ov-mod" @key="group.Key" @onclick="() => OnSelect.InvokeAsync(group)" title="@group.Best.Text">
+                            <span class="add-type @AffixUi.TypeCss(group.Affix)">@AffixUi.Letter(group.Affix)</span>
+                            <span class="ov-mod-label">@group.Label</span>
+                            @if (group.Category != ModCategories.Normal)
+                            {
+                                <span class="mod-badge @ModUi.CategoryCss(group.Category)">@ModCategories.DisplayName(group.Category)</span>
+                            }
+                        </button>
+                    }
+                    @More(hits.ItemClass, hits.Mods.Count, ShownMods)
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@Sources("Crafting items", "add the modifier directly or roll it", _craftingItems)
+@Sources("Corruption", "enchantments a corruption can add", _corruption)
+
+@if (Result.Uniques.Count > 0)
+{
+    <section class="mod-place mod-uniques">
+        <div class="mod-place-head">
+            <span class="mod-place-class">Uniques</span>
+            <span class="count-pill">@Result.Uniques.Count</span>
+            <span>have a matching line themselves</span>
+        </div>
+        <div class="mod-place-variant">
+            @if (Result.Uniques.Count > UniqueSearchFrom)
+            {
+                <SearchBox @bind-Value="_uniqueSearch" Placeholder="@($"Search {UiFormat.Plural(Result.Uniques.Count, "unique")}...")" />
+            }
+            @{
+                var uniques = Result.Uniques.Where(u => TextSearch.Matches(_uniqueSearch, u.Lines.Select(l => l.Text).Append(u.Unique.Name).Append(u.Unique.BaseType))).ToList();
+            }
+            @if (uniques.Count == 0)
+            {
+                <p class="hint">No unique matches the search.</p>
+            }
+            @foreach (var hit in Shown(UniquesKey, uniques, ShownUniques))
+            {
+                <UniqueRow @key="hit.Unique.Id" Unique="hit.Unique" Lines="hit.Lines" OnSelect="OnSelect" />
+            }
+            @More(UniquesKey, uniques.Count, ShownUniques)
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public ModSearchResult Result { get; set; } = null!;
+    [Parameter] public EventCallback<ModGroup> OnSelect { get; set; }
+
+    private const int ShownMods = 8;
+    private const int ShownSources = 12;
+    private const int ShownUniques = 30;
+    /// <summary>A unique list this long gets its own search box.</summary>
+    private const int UniqueSearchFrom = 8;
+    private const string UniquesKey = "|uniques";
+
+    private ModSearchResult? _shownResult;
+    private List<SourceHit> _craftingItems = new(), _corruption = new();
+    private string _uniqueSearch = "";
+    private readonly HashSet<string> _expanded = new();
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_shownResult, Result)) return;
+        _shownResult = Result;
+        _craftingItems = Result.CraftingItems.ToList();
+        _corruption = Result.Corruption.ToList();
+        _expanded.Clear();
+        _uniqueSearch = "";
+    }
+
+    private IEnumerable<T> Shown<T>(string key, IReadOnlyList<T> items, int count) => _expanded.Contains(key) ? items : items.Take(count);
+
+    /// <summary>"+N more" / "Show fewer" under a list that is cut after <paramref name="shown"/> entries.</summary>
+    private RenderFragment More(string key, int total, int shown) => @<text>
+        @if (total > shown)
+        {
+            <button type="button" class="btn btn-xs ov-more" @onclick="() => _expanded.Toggle(key)">
+                @(_expanded.Contains(key) ? "Show fewer" : $"+{total - shown} more")
+            </button>
+        }
+    </text>;
+
+    private RenderFragment Sources(string title, string subtitle, List<SourceHit> sources) => @<text>
+        @if (sources.Count > 0)
+        {
+            <section class="mod-place">
+                <div class="mod-place-head">
+                    <span class="mod-place-class">@title</span>
+                    <span class="count-pill">@sources.Count</span>
+                    <span>@subtitle</span>
+                </div>
+                <div class="mod-place-variant">
+                    @foreach (var source in Shown(title, sources, ShownSources))
+                    {
+                        <div class="ov-source" @key="source.Name">
+                            <div class="ov-source-head">
+                                <CraftItemLink Name="@source.Name" />
+                                <span class="ov-kind">@source.KindLabel</span>
+                            </div>
+                            @foreach (var effect in source.Effects)
+                            {
+                                <button type="button" class="ov-effect" @key="effect.Group.Key" @onclick="() => OnSelect.InvokeAsync(effect.Group)">
+                                    <span class="mod-tier-text">@effect.Text</span>
+                                    @if (effect.Group.Category == ModCategories.Bonded && source.Kind != ModSourceKind.BondedEffect)
+                                    {
+                                        <span class="mod-badge @ModUi.CategoryCss(ModCategories.Bonded)">bonded</span>
+                                    }
+                                    <span class="ov-classes" title="@string.Join(", ", effect.Classes)">@ModUi.ClassSummary(effect.Classes)</span>
+                                </button>
+                            }
+                        </div>
+                    }
+                    @More(title, sources.Count, ShownSources)
+                </div>
+            </section>
+        }
+    </text>;
+}

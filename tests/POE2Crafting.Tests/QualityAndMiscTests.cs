@@ -198,6 +198,24 @@ public class QualityAndMiscTests
     }
 
     [DataFact]
+    public void A_flux_only_transforms_the_explicit_modifiers_and_leaves_every_implicit_line_alone()
+    {
+        // Tournament Mail carries "+(20-25)% to Lightning Resistance" as its base implicit
+        var armour = TestData.NewItem("Tournament Mail", Rarity.Rare, withImplicit: true);
+        var lightning = TestData.Pool!.AllForBase(armour).Where(m => m.Family == "LightningResistance").MaxBy(m => m.Level)!;
+        var fire = TestData.Pool.AllForBase(armour).Where(m => m.Family == "FireResistance").MaxBy(m => m.Level)!;
+        armour.AddMod(lightning);
+        armour.AddMod(fire, ModKind.CorruptedImplicit);
+        var implicitText = armour.Mods[0].DisplayText();
+
+        var result = TestData.Apply(armour, "Chilling Flux").Item;
+
+        Assert.Equal("ColdResistance", Assert.Single(result.Affixes).Def!.Family);
+        Assert.Equal(implicitText, result.Mods[0].DisplayText());
+        Assert.Equal("FireResistance", result.Mods.Single(m => m.Kind == ModKind.CorruptedImplicit).Def!.Family);
+    }
+
+    [DataFact]
     public void Flux_values_can_be_chosen_inside_the_new_tier()
     {
         var ring = TestData.NewItem(TestBases.Ring, Rarity.Rare);

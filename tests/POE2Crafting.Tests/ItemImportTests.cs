@@ -278,4 +278,93 @@ Item Level: 82";
         var unrevealed = Assert.Single(item.UnrevealedMods).Mod;
         Assert.Equal((ModKind.Desecrated, AffixType.Suffix), (unrevealed.Kind, unrevealed.Affix));
     }
+
+    [DataFact]
+    public void A_tier_with_a_fixed_value_is_matched_by_that_value()
+    {
+        // movement speed has one fixed value per tier (10/15/20/25/30/35%), so only the number tells them apart
+        var text = """
+            Rarity: Rare
+            Storm Trail
+            Laced Boots
+            --------
+            Item Level: 79
+            --------
+            20% increased Movement Speed
+            +53 to maximum Life
+            """;
+        var boots = ItemParser.Parse(text, TestData.Data!);
+
+        var speed = boots.Affixes.Single(m => m.DisplayText().Contains("Movement Speed"));
+        Assert.Equal("Stallion's", speed.Def!.Name);
+        Assert.Equal("20% increased Movement Speed", speed.DisplayText());
+        // the life tier is the one whose range holds 53
+        var life = boots.Affixes.Single(m => m.DisplayText().Contains("maximum Life"));
+        var (lo, hi) = ModText.Bounds(life.Def!.Ranges[0]);
+        Assert.InRange(53, lo, hi);
+    }
+
+    [DataFact]
+    public void A_unique_keeps_its_own_lines_instead_of_borrowing_rare_tiers()
+    {
+        // Crown of the Pale King: three of its lines also exist as craftable helmet modifiers, two do not
+        var text = """
+            Rarity: Unique
+            Crown of the Pale King
+            Cultist Crown
+            --------
+            Item Level: 79
+            --------
+            84% increased Armour and Energy Shield
+            +76 to maximum Life
+            10% increased Rarity of Items found
+            11 to 22 Physical Thorns damage
+            Thorns can Retaliate against all Hits
+            """;
+        var helmet = ItemParser.Parse(text, TestData.Data!);
+
+        Assert.Equal(("Cultist Crown", Rarity.Unique), (helmet.BaseName, helmet.Rarity));
+        // every line resolves against the unique itself: its own range, no tier, no prefix/suffix slot
+        Assert.Equal(5, helmet.Mods.Count);
+        Assert.All(helmet.Mods, m => Assert.Equal(ModCategories.Unique, m.Def!.Category));
+        Assert.Empty(helmet.Affixes);
+        var armour = helmet.Mods.First(m => m.DisplayText() == "84% increased Armour and Energy Shield");
+        Assert.Equal("(50-100)% increased Armour and Energy Shield", armour.Def!.Text);
+        Assert.Null(TestData.Pool!.TryDisplayTier(armour.Def, helmet));
+        // the lines that exist nowhere else are there too
+        Assert.Contains(helmet.Mods, m => m.DisplayText() == "Thorns can Retaliate against all Hits");
+        Assert.Contains(helmet.Mods, m => m.DisplayText() == "11 to 22 Physical Thorns damage");
+    }
+
+    [DataFact]
+    public void Unique_modifiers_the_data_does_not_have_stay_as_text()
+    {
+        // the data store holds the craftable modifiers; a unique's own lines have no definition and must survive as they are
+        var text = """
+            Rarity: Unique
+            Briarpatch
+            Laced Boots
+            Ezomyte Boots
+            --------
+            Requires: Level 11, 17 Dex
+            --------
+            Item Level: 79
+            --------
+            Sockets: S S
+            --------
+            20% increased Movement Speed
+            +53 to maximum Life
+            +25% to Thorns Critical Hit Chance
+            15 to 22 Physical Thorns damage
+            --------
+            Corrupted
+            """;
+        var boots = ItemParser.Parse(text, TestData.Data!);
+
+        Assert.Equal(("Laced Boots", Rarity.Unique, true), (boots.BaseName, boots.Rarity, boots.Corrupted));
+        Assert.Contains(boots.Mods, m => m.DisplayText() == "+25% to Thorns Critical Hit Chance");
+        Assert.Contains(boots.Mods, m => m.DisplayText() == "15 to 22 Physical Thorns damage");
+        // every line keeps the value the item shows
+        Assert.Contains(boots.Mods, m => m.DisplayText() == "20% increased Movement Speed");
+    }
 }

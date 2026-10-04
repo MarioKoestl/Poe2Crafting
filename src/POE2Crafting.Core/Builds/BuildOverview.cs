@@ -36,6 +36,13 @@ public sealed record BuildFilter(string? Class = null, string? Skill = null, str
 /// <summary>A build = main skill + ascendancy, with how many of the listed top characters play it.</summary>
 public sealed record BuildCount(string Skill, string Class, int Count);
 
+/// <summary>What one listed character plays: the skill poe.ninja shows the DPS of, and the ascendancy. Either can be missing.</summary>
+public sealed record CharacterBuild(CharacterRef Character, string? Skill, string? Class)
+{
+    /// <summary>"Spear Stab · Shaman", or whichever part is known.</summary>
+    public string Label => string.Join(" · ", new[] { Skill, Class }.OfType<string>()) is { Length: > 0 } text ? text : "unknown build";
+}
+
 /// <summary>A build search with names resolved: ascendancies, main skills, used items (rare/magic slots and uniques), the top characters.</summary>
 public sealed class BuildOverview
 {
@@ -48,8 +55,18 @@ public sealed class BuildOverview
     public IReadOnlyList<NamedCount> Skills { get; init; } = Array.Empty<NamedCount>();
     public IReadOnlyList<NamedCount> Items { get; init; } = Array.Empty<NamedCount>();
     public IReadOnlyList<CharacterRef> Characters { get; init; } = Array.Empty<CharacterRef>();
+    /// <summary>What each listed character plays, in the order of <see cref="Characters"/>.</summary>
+    public IReadOnlyList<CharacterBuild> CharacterBuilds { get; init; } = Array.Empty<CharacterBuild>();
+
     /// <summary>Main skill (the skill poe.ninja shows the DPS of) + ascendancy of the listed top characters, most played first.</summary>
-    public IReadOnlyList<BuildCount> TopBuilds { get; init; } = Array.Empty<BuildCount>();
+    public IReadOnlyList<BuildCount> TopBuilds => CharacterBuilds
+        .Where(b => !string.IsNullOrEmpty(b.Skill) && !string.IsNullOrEmpty(b.Class))
+        .GroupBy(b => (b.Skill, b.Class))
+        .Select(g => new BuildCount(g.Key.Skill!, g.Key.Class!, g.Count()))
+        .OrderByDescending(b => b.Count).ThenBy(b => b.Skill).ToList();
+
+    /// <summary>What a character plays, or null when poe.ninja lists no build for them.</summary>
+    public CharacterBuild? BuildOf(CharacterRef character) => CharacterBuilds.FirstOrDefault(b => b.Character == character);
 
     /// <summary>"Rare Gloves", "Rare Ring": how many characters wear a rare of the type.</summary>
     public IEnumerable<NamedCount> RareSlots => Items.Where(i => i.Name.StartsWith(RarePrefix, StringComparison.Ordinal));
@@ -69,6 +86,8 @@ public sealed class BuildOverview
                 .Select(c => new NamedCount(names[c.Key], c.Value, types != null && c.Key < types.Count ? types[c.Key] : null))
                 .OrderByDescending(c => c.Count).ToList();
         }
+        static string? At(IReadOnlyList<string?> column, int index) => index < column.Count ? column[index] : null;
+
         // per listed character: the dictionary value of an index column ("class" -> class dictionary, "dps.skill" -> gem dictionary)
         IReadOnlyList<string?> Column(string columnId)
         {
@@ -76,11 +95,11 @@ public sealed class BuildOverview
             var names = values(reference.Hash);
             return column.Values.Select(v => v is { } i && i < names.Count ? names[i] : null).ToList();
         }
-        var topBuilds = Column("class").Zip(Column("dps.skill"), (c, s) => (Class: c, Skill: s))
-            .Where(b => !string.IsNullOrEmpty(b.Class) && !string.IsNullOrEmpty(b.Skill))
-            .GroupBy(b => b)
-            .Select(g => new BuildCount(g.Key.Skill!, g.Key.Class!, g.Count()))
-            .OrderByDescending(b => b.Count).ThenBy(b => b.Skill)
+        // the columns are per listed character, in the order of search.Characters: that is what ties a character to their build
+        var classes = Column("class");
+        var skills = Column("dps.skill");
+        var builds = search.Characters
+            .Select((character, i) => new CharacterBuild(character, At(skills, i), At(classes, i)))
             .ToList();
         return new BuildOverview
         {
@@ -89,7 +108,7 @@ public sealed class BuildOverview
             Skills = Resolve("skills"),
             Items = Resolve("items", "type"),
             Characters = search.Characters,
-            TopBuilds = topBuilds,
+            CharacterBuilds = builds,
         };
     }
 }

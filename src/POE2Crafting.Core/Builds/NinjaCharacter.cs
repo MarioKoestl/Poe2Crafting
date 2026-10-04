@@ -21,6 +21,7 @@ public sealed class NinjaCharacter
     public List<NinjaItemSlot> Items { get; set; } = new();
     public List<NinjaItemSlot> Jewels { get; set; } = new();
     public List<NinjaItemSlot> Flasks { get; set; } = new();
+    public List<NinjaSkill> Skills { get; set; } = new();
 
     public static NinjaCharacter Parse(string json) => JsonSerializer.Deserialize<NinjaCharacter>(json, JsonOptions) ?? new NinjaCharacter();
 
@@ -28,11 +29,33 @@ public sealed class NinjaCharacter
 
     /// <summary>Equipment and jewels (flasks and charms are not crafted).</summary>
     [JsonIgnore] public IEnumerable<PoeItemJson> CraftableItems => Items.Concat(Jewels).Select(s => s.ItemData).OfType<PoeItemJson>();
+
+    /// <summary>Everything the character wears, flasks and charms included: what the build view shows.</summary>
+    [JsonIgnore] public IEnumerable<PoeItemJson> AllItems => Items.Concat(Jewels).Concat(Flasks).Select(s => s.ItemData).OfType<PoeItemJson>();
+
+    /// <summary>The active skill gems, without their support gems.</summary>
+    [JsonIgnore] public IEnumerable<string> SkillNames =>
+        Skills.SelectMany(s => s.AllGems).Where(g => !g.Support).Select(g => g.Name).Where(n => n.Length > 0).Distinct();
 }
 
 public sealed class NinjaItemSlot
 {
     public PoeItemJson? ItemData { get; set; }
+}
+
+/// <summary>One skill of a character: the active gem plus the gems socketed with it.</summary>
+public sealed class NinjaSkill
+{
+    public List<NinjaGem> AllGems { get; set; } = new();
+}
+
+public sealed class NinjaGem
+{
+    public string Name { get; set; } = "";
+    public PoeItemJson? ItemData { get; set; }
+
+    /// <summary>Support gems sit in the same list as the skill they support.</summary>
+    [JsonIgnore] public bool Support => ItemData?.Support == true;
 }
 
 /// <summary>GGG's item JSON (the fields needed to rebuild the in-game item text).</summary>
@@ -43,6 +66,10 @@ public sealed class PoeItemJson
     public string? Name { get; set; }
     public string? TypeLine { get; set; }
     public string? BaseType { get; set; }
+    /// <summary>Equipment slot ("Helm", "BodyArmour", "Weapon", "Ring2"); empty for jewels, flasks and gems.</summary>
+    public string? InventoryId { get; set; }
+    /// <summary>True for support gems.</summary>
+    public bool Support { get; set; }
     public int Ilvl { get; set; }
     public bool Corrupted { get; set; }
     public bool DoubleCorrupted { get; set; }

@@ -1,0 +1,62 @@
+@* One piece a sampled character wears: slot, name, base. Expands to the full item and can be opened in the simulator.
+   Used by the character builds and by the item a build search was filtered to. *@
+@inject GameData Data
+@inject CraftingSession Session
+@inject NavigationManager Navigation
+
+<div class="gear-row @(Highlight ? "highlight" : "")">
+    <div class="gear-line">
+        @if (Piece.Item is { } item)
+        {
+            <button class="btn btn-xs" @onclick="() => _open = !_open">@(_open ? "Hide" : "Show")</button>
+        }
+        else
+        {
+            <span class="gear-no-item" title="This base is not in the simulator's data">—</span>
+        }
+        <span class="gear-slot">@SlotLabel</span>
+        <CraftIcon Url="@Data.BaseIconUrl(Data.FindBase(Piece.BaseType))" Class="craft-link-icon" />
+        <span class="gear-name @UiFormat.RarityCss(Piece.Rarity)">@Piece.Title</span>
+        @if (Piece.Name.Length > 0 && Piece.BaseType.Length > 0)
+        {
+            <span class="gear-base">@Piece.BaseType</span>
+        }
+        @if (Character is { } character && LeagueSlug.Length > 0)
+        {
+            <span class="demand-build">@character.Build</span>
+            <a class="demand-character" href="@NinjaLinks.Character(LeagueSlug, character.Character)" target="_blank" rel="noopener"
+               title="Open the character on poe.ninja">@character.Character.Name @character.Level</a>
+        }
+        @if (Piece.Item is { Rarity: not Rarity.Unique } craftable)
+        {
+            <button class="btn btn-xs" title="Add this item to the current project and open it in the simulator" @onclick="() => OpenInSimulator(craftable)">Open in simulator</button>
+        }
+    </div>
+    @if (_open && Piece.Item is { } shown)
+    {
+        <ItemDisplay Item="shown" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GearPiece Piece { get; set; } = null!;
+    /// <summary>Shown next to the piece when the list mixes characters (the item a search was filtered to).</summary>
+    [Parameter] public SampledCharacter? Character { get; set; }
+    [Parameter] public string LeagueSlug { get; set; } = "";
+    /// <summary>Mark the piece the build search was filtered to.</summary>
+    [Parameter] public bool Highlight { get; set; }
+    /// <summary>Start with the item shown.</summary>
+    [Parameter] public bool StartOpen { get; set; }
+
+    private bool _open;
+
+    protected override void OnInitialized() => _open = StartOpen;
+
+    private string SlotLabel => Piece.Slot is { Length: > 0 } slot ? GearSlots.DisplayName(slot) : Piece.Kind.ToString();
+
+    private void OpenInSimulator(Item item)
+    {
+        Session.SetItem(item.Clone(), Character is { } c ? $"poe.ninja: {c.Character.Name}" : "poe.ninja");
+        Navigation.NavigateTo("");
+    }
+}

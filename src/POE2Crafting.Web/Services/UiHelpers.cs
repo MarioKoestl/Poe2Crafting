@@ -11,19 +11,12 @@ public static class CollectionExtensions
     }
 }
 
-/// <summary>The search rule of all search boxes: every word of the query is part of one of the texts (case-insensitive); an empty query matches everything.</summary>
-public static class TextSearch
+/// <summary>Links to poe.ninja, shared by everything that shows a sampled character.</summary>
+public static class NinjaLinks
 {
-    public static bool Matches(string? query, params string?[] texts) => Matches(query, (IEnumerable<string?>)texts);
-
-    /// <summary>Every word of the query appears in one of the texts, in any order ("quality caster" finds the Sibilant Catalyst).</summary>
-    public static bool Matches(string? query, IEnumerable<string?> texts)
-    {
-        if (string.IsNullOrWhiteSpace(query)) return true;
-        var candidates = texts.OfType<string>().ToList();
-        return query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
-            .All(word => candidates.Any(t => t.Contains(word, StringComparison.OrdinalIgnoreCase)));
-    }
+    /// <summary>A character's page in a league ("forbiddenrites").</summary>
+    public static string Character(string leagueSlug, POE2Crafting.Core.Builds.CharacterRef character) =>
+        $"https://poe.ninja/poe2/builds/{leagueSlug}/character/{Uri.EscapeDataString(character.Account)}/{Uri.EscapeDataString(character.Name)}";
 }
 
 /// <summary>A component that changes shared state and tells its parent afterwards (the parent re-renders the item, history, preview).</summary>

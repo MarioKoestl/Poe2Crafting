@@ -1,0 +1,45 @@
+@* One sampled character as a whole build: ascendancy, level, active skills and everything worn, slot by slot. *@
+
+<div class="build-card @(_expanded ? "open" : "")">
+    <button class="build-head" @onclick="() => _expanded = !_expanded" aria-expanded="@(_expanded ? "true" : "false")">
+        <span class="demand-toggle">@(_expanded ? "▾" : "▸")</span>
+        <span class="build-name">@Character.Character.Name</span>
+        <span class="build-class">@Character.Build</span>
+        <span>@Character.Level</span>
+        @if (Wanted.Count > 0)
+        {
+            <span class="build-wears">@string.Join(", ", Wanted.Select(p => p.Title))</span>
+        }
+        <span class="build-skills">@string.Join(" · ", Character.Skills.Where(s => s != Character.MainSkill).Take(SkillCount))</span>
+    </button>
+
+    @if (_expanded)
+    {
+        <div class="build-gear">
+            @foreach (var piece in Character.InSlotOrder)
+            {
+                <GearRow @key="piece" Piece="piece" Highlight="piece.Matches(WantedItem)" LeagueSlug="@LeagueSlug" Character="Character" />
+            }
+        </div>
+        <div class="build-links">
+            <a class="btn btn-xs" href="@NinjaLinks.Character(LeagueSlug, Character.Character)" target="_blank" rel="noopener">Character on poe.ninja ↗</a>
+        </div>
+    }
+</div>
+
+@code {
+    private const int SkillCount = 4;
+
+    [Parameter, EditorRequired] public SampledCharacter Character { get; set; } = null!;
+    [Parameter, EditorRequired] public string LeagueSlug { get; set; } = "";
+    /// <summary>The item the build search was filtered to: named in the header and highlighted in the gear.</summary>
+    [Parameter] public string? WantedItem { get; set; }
+    /// <summary>Open at start (a search with few hits).</summary>
+    [Parameter] public bool Expanded { get; set; }
+
+    private bool _expanded;
+
+    protected override void OnInitialized() => _expanded = Expanded;
+
+    private List<GearPiece> Wanted => Character.Matching(WantedItem).ToList();
+}

@@ -240,6 +240,12 @@ public static class ItemParser
         if (mod.Unrevealed || string.IsNullOrWhiteSpace(mod.RawText)) return;
         // "(enchant)" lines on corrupted items are corruption enchantments; other implicits/enchants are shown as text
         if (mod.Kind == ModKind.Implicit || mod.Kind == ModKind.Enchant && !item.Corrupted) return;
+        // a unique's lines belong to the unique, not to the craftable pool: they resolve against the unique's own modifiers
+        if (item.Rarity == Rarity.Unique && mod.Kind is not (ModKind.Enchant or ModKind.CorruptedImplicit))
+        {
+            ResolveUniqueMod(mod, item, data);
+            return;
+        }
 
         var pages = data.PagesFor(item.Base, item.ItemClass);
         var signature = ModText.StatSignature(mod.RawText);
@@ -259,7 +265,7 @@ public static class ItemParser
         var best = candidates
             // the shown (min-max) range identifies the tier exactly; the affix name can be ambiguous across classes or wrong in pasted text
             .OrderByDescending(def => itemRanges.Count > 0 && RangesEqual(def.Ranges, itemRanges))
-            .ThenByDescending(def => ValuesInside(def, mod.RawText))
+            .ThenByDescending(def => NumbersFit(def, mod.RawText))
             .ThenByDescending(def => name.Length > 0 && def.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
             .ThenBy(def => def.Category == ModCategories.Normal ? 0 : 1)
             .First();
@@ -271,6 +277,24 @@ public static class ItemParser
         mod.Values = AlignValues(best, mod.RawText);
     }
 
+    /// <summary>
+    /// Match a line of a unique item to the modifier the unique itself grants (data/uniques.json): same stat, and the value inside
+    /// the unique's own range when it has one. The line keeps its values; the definition adds the range the item rolled in.
+    /// </summary>
+    private static void ResolveUniqueMod(ItemMod mod, Item item, GameData data)
+    {
+        if (data.FindUnique(item.Name) is not { } unique) return;
+        var signature = ModText.StatSignature(mod.RawText!);
+        var best = unique.ModDefs.Concat(unique.ImplicitDefs)
+            .Where(def => def.StatSignature == signature)
+            .OrderByDescending(def => NumbersFit(def, mod.RawText!))
+            .FirstOrDefault();
+        if (best == null) return;
+        mod.ModId = best.Id;
+        mod.Def = best;
+        mod.Values = AlignValues(best, mod.RawText!);
+    }
+
     private static bool RangesEqual(List<double[]> defRanges, List<double[]> itemRanges)
     {
         var defOnly = defRanges.Where(r => r[0] != r[1]).ToList();
@@ -280,14 +304,23 @@ public static class ItemParser
         return true;
     }
 
-    private static bool ValuesInside(ModDef def, string rawText)
+    /// <summary>
+    /// Whether every number of the item line fits the template: a rolled number inside its range, a fixed number exactly.
+    /// Tiers whose value is fixed ("20% increased Movement Speed" vs. "35% …") can only be told apart by that number.
+    /// </summary>
+    private static bool NumbersFit(ModDef def, string rawText)
     {
-        var values = AlignValues(def, rawText);
-        if (values.Count != def.Ranges.Count || values.Count == 0) return false;
-        for (int i = 0; i < values.Count; i++)
+        var template = ModText.TemplateTokens(def.Text);
+        var values = ModText.RolledTokens(rawText);
+        if (template.Count == 0 || template.Count != values.Count) return false;
+        for (int i = 0; i < template.Count; i++)
         {
-            var (lo, hi) = ModText.Bounds(def.Ranges[i]);
-            if (values[i] < lo - 0.001 || values[i] > hi + 0.001) return false;
+            if (template[i].Range is { } range)
+            {
+                var (lo, hi) = ModText.Bounds(range);
+                if (values[i].Value < lo - 0.001 || values[i].Value > hi + 0.001) return false;
+            }
+            else if (Math.Abs(template[i].Value - values[i].Value) > 0.001) return false;
         }
         return true;
     }

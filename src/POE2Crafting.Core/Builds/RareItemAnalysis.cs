@@ -5,16 +5,24 @@ using POE2Crafting.Core.Items;
 namespace POE2Crafting.Core.Builds;
 
 /// <summary>A rare item a sampled character wears, parsed into the simulator's item.</summary>
-public sealed record SampledItem(CharacterRef Character, string CharacterClass, int CharacterLevel, Item Item);
+public sealed record SampledItem(SampledCharacter Owner, Item Item)
+{
+    public CharacterRef Character => Owner.Character;
+}
 
 /// <summary>A modifier (by stat text, numbers as #) seen on rare items of a class: how often, which tiers, which values.</summary>
 /// <param name="Tiers">Display tier → items (tiers of the item's own base, global tier for mods outside its pool); crafted and unresolved mods have none.</param>
 /// <param name="Values">Rolled value of each occurrence (sorted; the average of the numbers for "Adds # to #" mods).</param>
-public sealed record ModDemand(string Text, AffixType Affix, int Count, IReadOnlyDictionary<int, int> Tiers, IReadOnlyList<double> Values, int Desecrated, int Fractured, int Crafted);
+/// <param name="Builds">Which builds ("Spear Stab \u00b7 Shaman") wear the modifier, most common first.</param>
+public sealed record ModDemand(string Text, AffixType Affix, int Count, IReadOnlyDictionary<int, int> Tiers, IReadOnlyList<double> Values,
+    int Desecrated, int Fractured, int Crafted, IReadOnlyList<NamedCount> Builds);
 
 /// <summary>What the sampled characters wear as rares of one item class.</summary>
 public sealed record ItemClassDemand(string ItemClass, int Characters, IReadOnlyList<SampledItem> Items, IReadOnlyList<NamedCount> Bases, IReadOnlyList<ModDemand> Mods)
 {
+    /// <summary>The builds wearing these items, most common first.</summary>
+    public IReadOnlyList<NamedCount> Builds => RareItemAnalysis.BuildsOf(Items.Select(i => i.Owner).Distinct());
+
     public double AverageItemLevel => Items.Count == 0 ? 0 : Items.Average(i => i.Item.ItemLevel);
     public int Fractured => Items.Count(i => i.Item.Mods.Any(m => m.Fractured));
     public int Desecrated => Items.Count(i => i.Item.Mods.Any(m => m.Kind == ModKind.Desecrated));
@@ -45,22 +53,28 @@ public sealed class RareItemAnalysis
     public int Characters { get; init; }
     /// <summary>Most worn first.</summary>
     public IReadOnlyList<ItemClassDemand> Classes { get; init; } = Array.Empty<ItemClassDemand>();
+    /// <summary>The sampled characters with their whole build (gear, skills), in the order poe.ninja lists them.</summary>
+    public IReadOnlyList<SampledCharacter> Builds { get; init; } = Array.Empty<SampledCharacter>();
 
-    public static RareItemAnalysis Build(IReadOnlyCollection<SampledItem> items, int characters, ModPool pool)
+    /// <summary>The rare equipment and jewels of the sampled characters, grouped by item class.</summary>
+    public static RareItemAnalysis Build(IReadOnlyList<SampledCharacter> characters, ModPool pool)
     {
-        var classes = items.Where(i => i.Item.Rarity == Rarity.Rare)
+        var items = characters.SelectMany(c => c.Gear
+            .Where(g => g.Kind != GearKind.Flask && g.Item is { Rarity: Rarity.Rare })
+            .Select(g => new SampledItem(c, g.Item!))).ToList();
+        var classes = items
             .GroupBy(i => i.Item.ItemClass)
             .Select(g => new ItemClassDemand(g.Key, g.Select(i => i.Character).Distinct().Count(), g.ToList(),
                 g.GroupBy(i => i.Item.BaseName).Select(b => new NamedCount(b.Key, b.Count())).OrderByDescending(b => b.Count).ToList(),
                 ModsOf(g, pool)))
             .OrderByDescending(c => c.Characters).ThenByDescending(c => c.Items.Count)
             .ToList();
-        return new RareItemAnalysis { Characters = characters, Classes = classes };
+        return new RareItemAnalysis { Characters = characters.Count, Classes = classes, Builds = characters };
     }
 
     /// <summary>Affixes grouped by their stat text ("#% increased Projectile Speed"); most common first.</summary>
     public static List<ModDemand> ModsOf(IEnumerable<SampledItem> items, ModPool pool) =>
-        items.SelectMany(i => i.Item.Affixes.Select(mod => (i.Item, Mod: mod)))
+        items.SelectMany(i => i.Item.Affixes.Select(mod => (i.Item, Mod: mod, i.Owner)))
             .GroupBy(x => ModText.StatSignature(x.Mod.DisplayText()))
             .Select(g =>
             {
@@ -71,10 +85,17 @@ public sealed class RareItemAnalysis
                     g.GroupBy(x => x.Mod.Affix).OrderByDescending(a => a.Count()).First().Key,
                     g.Count(), tiers,
                     g.Select(x => RollValue(x.Mod)).OfType<double>().Order().ToList(),
-                    g.Count(x => x.Mod.Kind == ModKind.Desecrated), g.Count(x => x.Mod.Fractured), g.Count(x => x.Mod.Kind == ModKind.Crafted));
+                    g.Count(x => x.Mod.Kind == ModKind.Desecrated), g.Count(x => x.Mod.Fractured), g.Count(x => x.Mod.Kind == ModKind.Crafted),
+                    BuildsOf(g.Select(x => x.Owner)));
             })
             .OrderByDescending(m => m.Count)
             .ToList();
+
+    /// <summary>The builds of a set of characters, most common first; the same character counts once per item they wear.</summary>
+    public static List<NamedCount> BuildsOf(IEnumerable<SampledCharacter> characters) =>
+        characters.GroupBy(c => (c.MainSkill, c.Class))
+            .Select(g => new NamedCount(g.Key.MainSkill ?? g.Key.Class, g.Count(), g.Key.MainSkill == null ? null : g.Key.Class))
+            .OrderByDescending(b => b.Count).ThenBy(b => b.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
     /// <summary>The mod's number; mods with several numbers ("Adds 4 to 67") count with their average; null when the mod has none.</summary>
     private static double? RollValue(ItemMod mod) => mod.StatValues is { Count: > 0 } values ? values.Average() : null;

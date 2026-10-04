@@ -14,6 +14,15 @@ public sealed class BuildsState
     /// <summary>The search of <see cref="Snapshot"/> and <see cref="Filter"/>, or null before the first load.</summary>
     public BuildOverview? Overview { get; set; }
     public int SampleSize { get; set; } = 40;
+    /// <summary>Search over the analysed item classes and their bases.</summary>
+    public string ClassSearch { get; set; } = "";
+    /// <summary>Search over the sampled characters (name, ascendancy, skill, worn item).</summary>
+    public string CharacterSearch { get; set; } = "";
+    /// <summary>What the analysis pane shows: the item classes to craft, or the sampled builds themselves.</summary>
+    public BuildsTab Tab { get; set; } = BuildsTab.Items;
     /// <summary>Item classes whose rare item card is open.</summary>
     public HashSet<string> ExpandedClasses { get; } = new();
 }
+
+/// <summary>The two views of an analysis: what to craft, and the builds it came from.</summary>
+public enum BuildsTab { Items, Builds }

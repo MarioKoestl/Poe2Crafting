@@ -1,0 +1,275 @@
+@page "/mods"
+@inject GameData Data
+@inject ModFinder Finder
+
+<PageTitle>Modifiers · POE2 Crafting</PageTitle>
+
+<div class="single-page">
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Modifiers</h2>
+            <span class="version">Search a stat and see every base, crafting item, corruption and unique that adds it</span>
+        </div>
+
+        <div class="workspace mod-finder">
+            <div class="pane">
+                <SearchBox Value="@_search" ValueChanged="Search" Placeholder="@($"Search {Finder.Groups.Count} modifiers...")">
+                    <label class="checkbox-row" title="League variants with Ward, e.g. Runeforged Vaal Gloves">
+                        <input type="checkbox" @bind="_showRuneforged" /> Runeforged
+                    </label>
+                </SearchBox>
+
+                @{
+                    var matching = _result.Groups;
+                }
+                @if (matching.Count == 0)
+                {
+                    <EmptyState Icon="◇" Hint="Search the stat as the game prints it, e.g. \"projectile speed\" or \"cast speed\".">
+                        No modifier matches the search.
+                    </EmptyState>
+                }
+                else
+                {
+                    <div class="wiki-index">
+                        @foreach (var group in matching.Take(ResultLimit))
+                        {
+                            <button type="button" class="wiki-index-item mod-hit @(group.Key == _selected?.Key ? "active" : "")" @key="group.Key"
+                                    @onclick="() => Select(group)">
+                                <span class="mod-hit-head">
+                                    @if (group.Affix != AffixType.Other)
+                                    {
+                                        <span class="add-type @AffixUi.TypeCss(group.Affix)">@AffixUi.Letter(group.Affix)</span>
+                                    }
+                                    <span class="wiki-index-title">@group.Label</span>
+                                    @if (group.Category != ModCategories.Normal)
+                                    {
+                                        <span class="mod-badge @ModUi.CategoryCss(group.Category)">@ModCategories.DisplayName(group.Category)</span>
+                                    }
+                                </span>
+                                <span class="wiki-index-summary">@(group.GrantedBy is { } from ? $"{from} — {ModUi.ClassSummary(group.Classes)}" : ModUi.ClassSummary(group.Classes))</span>
+                            </button>
+                        }
+                    </div>
+                    @if (matching.Count > ResultLimit)
+                    {
+                        <p class="hint">@(matching.Count - ResultLimit) more modifiers match. Narrow the search to see them.</p>
+                    }
+                }
+            </div>
+
+            <div class="pane">
+                @if (_selected is not { } selected)
+                {
+                    @if (_result.Query.Length > 0)
+                    {
+                        <ModSearchOverview Result="_result" OnSelect="Select" />
+                    }
+                    else
+                    {
+                        <EmptyState Icon="🔎" Hint="Type a stat like &quot;thorns&quot; for everything that adds it: bases, essences, runes, bones, corruptions and uniques.">
+                            Search a stat or pick a modifier on the left.
+                        </EmptyState>
+                    }
+                }
+                else
+                {
+                    @if (_result.Query.Length > 0)
+                    {
+                        <button type="button" class="btn btn-xs ov-back" @onclick="() => _selected = null">← Everything with “@_result.Query”</button>
+                    }
+                    var placements = Finder.Placements(selected, _showRuneforged);
+                    var uniques = Finder.UniquesWith(selected);
+                    var bases = placements.Sum(p => p.Bases.Count);
+                    <h3 class="pane-title">@selected.Label</h3>
+                    <div class="mod-finder-meta">
+                        @if (selected.Affix != AffixType.Other)
+                        {
+                            <span class="add-type @AffixUi.TypeCss(selected.Affix)">@AffixUi.Letter(selected.Affix)</span>
+                            <span>@selected.Affix.ToString()</span>
+                        }
+                        <span class="mod-badge @ModUi.CategoryCss(selected.Category)">@ModCategories.DisplayName(selected.Category)</span>
+                        @if (selected.GrantedBy is { } grantedBy)
+                        {
+                            <CraftItemLink Name="@grantedBy" />
+                        }
+                        @foreach (var tag in selected.ModTags.Take(ShownTags))
+                        {
+                            <span class="mod-tag tag-@tag">@tag</span>
+                        }
+                    </div>
+                    <p class="hint mod-finder-source">@ModCategories.SourceText(selected.Category)</p>
+
+                    @if (placements.Count == 0 && uniques.Count == 0)
+                    {
+                        <EmptyState Icon="✕">No item can have this modifier.</EmptyState>
+                    }
+                    else if (placements.Count > 0)
+                    {
+                        <p class="mod-finder-count">
+                            @UiFormat.Plural(bases, "base") in @UiFormat.Plural(placements.Select(p => p.ItemClass).Distinct().Count(), "item class", "item classes")
+                        </p>
+
+                        @foreach (var byClass in placements.GroupBy(p => p.ItemClass))
+                        {
+                            <section class="mod-place" @key="byClass.Key">
+                                <div class="mod-place-head">
+                                    <span class="mod-place-class">@byClass.Key</span>
+                                    <span class="count-pill">@byClass.Sum(p => p.Bases.Count)</span>
+                                    <span>@byClass.First().ClassGroup</span>
+                                    <a class="btn btn-xs" href="@($"/bases?class={Uri.EscapeDataString(byClass.Key)}")">⚖ Compare bases</a>
+                                </div>
+
+                                @foreach (var placement in byClass)
+                                {
+                                    <div class="mod-place-variant" @key="placement.Bases[0].Id">
+                                        <div class="mod-place-line">
+                                            <span class="count-pill">@UiFormat.Plural(placement.Bases.Count, "base")</span>
+                                            @if (Share(placement) is { } share)
+                                            {
+                                                <span class="mod-place-share" title="Share of this modifier among everything of its affix type that competes with it on these bases (empty item, item level 100)">
+                                                    @share of all @(selected.Affix.ToString().ToLowerInvariant())es
+                                                </span>
+                                            }
+                                            @if (placement.UnlockingRunes.Count > 0)
+                                            {
+                                                <span class="mod-place-needs">
+                                                    needs
+                                                    @foreach (var rune in placement.UnlockingRunes)
+                                                    {
+                                                        <CraftItemLink Name="@rune.Name" />
+                                                    }
+                                                    socketed
+                                                </span>
+                                            }
+                                        </div>
+
+                                        <table class="materials-table mod-tier-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Tier</th>
+                                                    <th>Modifier</th>
+                                                    <th>Level</th>
+                                                    @if (placement.ChanceLow != null)
+                                                    {
+                                                        <th title="Estimated weight, not the game's own number">Weight</th>
+                                                    }
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var tier in placement.Tiers)
+                                                {
+                                                    <tr @key="tier.Mod.Id">
+                                                        <td class="mod-tier-cell">@(tier.Tier is { } t ? $"T{t}" : "—")</td>
+                                                        <td>
+                                                            <span class="base-label">@tier.Mod.DisplayName</span>
+                                                            <span class="mod-tier-text">@tier.Mod.Text</span>
+                                                        </td>
+                                                        <td><ModLevel Mod="tier.Mod" /></td>
+                                                        @if (placement.ChanceLow != null)
+                                                        {
+                                                            <td>@tier.Weight</td>
+                                                        }
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+
+                                        <div class="mod-base-list">
+                                            @foreach (var baseItem in Shown(placement))
+                                            {
+                                                <span class="mod-base-chip" @key="baseItem.Id" title="@baseItem.SubType">
+                                                    <CraftIcon Url="@Data.BaseIconUrl(baseItem)" Class="base-icon" />@baseItem.Name
+                                                </span>
+                                            }
+                                            @if (placement.Bases.Count > ShownBases)
+                                            {
+                                                <button type="button" class="btn btn-xs" @onclick="() => _expanded.Toggle(placement.Bases[0].Id)">
+                                                    @(_expanded.Contains(placement.Bases[0].Id) ? "Show fewer" : $"+{placement.Bases.Count - ShownBases} more")
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </section>
+                        }
+                    }
+
+                    @if (uniques.Count > 0)
+                    {
+                        <section class="mod-place mod-uniques">
+                            <div class="mod-place-head">
+                                <span class="mod-place-class">Uniques</span>
+                                <span class="count-pill">@uniques.Count</span>
+                                <span>granted by the item itself, no tier</span>
+                            </div>
+                            <div class="mod-place-variant">
+                                @if (uniques.Count > UniqueSearchFrom)
+                                {
+                                    <SearchBox @bind-Value="_uniqueSearch" Placeholder="@($"Search {UiFormat.Plural(uniques.Count, "unique")}...")" />
+                                }
+                                @{
+                                    var shownUniques = uniques.Where(u => TextSearch.Matches(_uniqueSearch, u.Unique.Name, u.Unique.BaseType, u.Mod.Text)).ToList();
+                                }
+                                @if (shownUniques.Count == 0)
+                                {
+                                    <p class="hint">No unique matches the search.</p>
+                                }
+                                @foreach (var entry in shownUniques)
+                                {
+                                    <UniqueRow @key="entry.Mod.Id" Unique="entry.Unique" Lines="new[] { entry.Mod }" OnSelect="Select" />
+                                }
+                            </div>
+                        </section>
+                    }
+                }
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    /// <summary>Modifiers listed per search; more than that is unreadable and slow to render.</summary>
+    private const int ResultLimit = 120;
+    private const int ShownBases = 10;
+    private const int ShownTags = 4;
+
+    /// <summary>A unique list this long gets its own search box.</summary>
+    private const int UniqueSearchFrom = 8;
+
+    private string _search = "";
+    private string _uniqueSearch = "";
+    private bool _showRuneforged;
+    private ModGroup? _selected;
+    private readonly HashSet<string> _expanded = new();
+
+    private ModSearchResult _result = null!;
+
+    protected override void OnInitialized() => _result = Finder.Search(_search);
+
+    /// <summary>A new search shows its overview: the modifier picked for the previous one no longer belongs to it.</summary>
+    private void Search(string query)
+    {
+        _search = query;
+        _result = Finder.Search(query);
+        _selected = null;
+    }
+
+    private void Select(ModGroup group)
+    {
+        _selected = group;
+        _expanded.Clear();
+        _uniqueSearch = "";
+    }
+
+    /// <summary>The share of the modifier on these bases, as a span when the pool it competes in differs between them.</summary>
+    private static string? Share(ModPlacement placement)
+    {
+        if (placement.ChanceLow is not { } low || placement.ChanceHigh is not { } high) return null;
+        var lowText = UiFormat.Probability(low);
+        var highText = UiFormat.Probability(high);
+        return lowText == highText ? lowText : $"{lowText}–{highText}";
+    }
+
+    private IEnumerable<BaseItem> Shown(ModPlacement placement) =>
+        _expanded.Contains(placement.Bases[0].Id) ? placement.Bases : placement.Bases.Take(ShownBases);
+}

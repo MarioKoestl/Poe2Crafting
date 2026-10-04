@@ -26,6 +26,8 @@ var engine = new CraftingEngine(gameData);
 builder.Services.AddSingleton(gameData);
 builder.Services.AddSingleton(engine.Pool);
 builder.Services.AddSingleton(engine);
+// "which bases can roll this modifier": grouped once from the mod data, placements cached per modifier
+builder.Services.AddSingleton(new ModFinder(gameData, engine.Pool));
 // crafting projects: saved automatically next to the data folder (or configured path)
 var projectsFolder = Path.GetFullPath(builder.Configuration["ProjectsFolder"] ?? Path.Combine(dataFolder, "..", "projects"));
 builder.Services.AddSingleton(sp => new ProjectStore(projectsFolder, gameData, sp.GetRequiredService<ILogger<ProjectStore>>()));

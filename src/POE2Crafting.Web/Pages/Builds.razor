@@ -66,28 +66,42 @@
                     else
                     {
                         <BuildShareList Entries="TopBuilds(State.Overview)" Total="State.Overview.Characters.Count" Limit="TopBuildCount" ShowType="true"
+                                        Label="build"
                                         OnSelect="build => SetFilter(State.Filter with { Skill = build?.Name, Class = build?.Type })" />
                     }
 
                     <h3 class="section-title">Main skills <span class="count-pill">click to filter</span></h3>
-                    <BuildShareList Entries="State.Overview.Skills" Total="State.Overview.Total" Selected="@State.Filter.Skill" OnSelect="skill => SetFilter(State.Filter with { Skill = skill?.Name })" />
+                    <BuildShareList Entries="State.Overview.Skills" Total="State.Overview.Total" Selected="@State.Filter.Skill" Label="skill" OnSelect="skill => SetFilter(State.Filter with { Skill = skill?.Name })" />
 
                     <h3 class="section-title">Ascendancies</h3>
-                    <BuildShareList Entries="State.Overview.Classes" Total="State.Overview.Total" Selected="@State.Filter.Class" OnSelect="c => SetFilter(State.Filter with { Class = c?.Name })" Limit="10" />
+                    <BuildShareList Entries="State.Overview.Classes" Total="State.Overview.Total" Selected="@State.Filter.Class" Label="ascendancy" OnSelect="c => SetFilter(State.Filter with { Class = c?.Name })" Limit="10" />
 
                     <h3 class="section-title">Rare item slots <span class="count-pill">characters wearing a rare</span></h3>
-                    <BuildShareList Entries="State.Overview.RareSlots.ToList()" Total="State.Overview.Total" Limit="20" Selected="@State.Filter.Item" OnSelect="item => SetFilter(State.Filter with { Item = item?.Name })" />
+                    <BuildShareList Entries="State.Overview.RareSlots.ToList()" Total="State.Overview.Total" Limit="20" Selected="@State.Filter.Item" Label="slot" OnSelect="item => SetFilter(State.Filter with { Item = item?.Name })" />
 
                     <h3 class="section-title">Uniques</h3>
-                    <BuildShareList Entries="State.Overview.Uniques.ToList()" Total="State.Overview.Total" Limit="15" ShowType="true" Selected="@State.Filter.Item" OnSelect="item => SetFilter(State.Filter with { Item = item?.Name })" />
+                    <BuildShareList Entries="State.Overview.Uniques.ToList()" Total="State.Overview.Total" Limit="15" ShowType="true" Selected="@State.Filter.Item" Label="unique" OnSelect="item => SetFilter(State.Filter with { Item = item?.Name })" />
                 }
             </div>
 
             <div class="pane">
-                <h3 class="pane-title">Rare items to craft · @State.Filter</h3>
+                <h3 class="pane-title">@State.Filter</h3>
+                <div class="detail-tabs">
+                    <button class="btn btn-sm @(State.Tab == BuildsTab.Items ? "btn-active" : "")" @onclick="() => State.Tab = BuildsTab.Items">Rare items to craft</button>
+                    <button class="btn btn-sm @(State.Tab == BuildsTab.Builds ? "btn-active" : "")" @onclick="() => State.Tab = BuildsTab.Builds">Builds</button>
+                </div>
                 <p class="hint">
-                    Downloads the top characters of this selection from poe.ninja and groups their rare equipment and jewels by item class:
-                    the bases they use, the modifiers with tiers and rolls, and the items themselves (open one in the simulator to plan it).
+                    @if (State.Tab == BuildsTab.Items)
+                    {
+                        <text>
+                            Downloads the top characters of this selection from poe.ninja and groups their rare equipment and jewels by item class:
+                            the bases they use, the modifiers with tiers and rolls, and the items themselves (open one in the simulator to plan it).
+                        </text>
+                    }
+                    else
+                    {
+                        <text>The sampled characters themselves: ascendancy, skills and every piece they wear, rares and uniques alike.</text>
+                    }
                 </p>
                 <div class="builds-analyse">
                     <label for="sample-size">Characters</label>
@@ -116,19 +130,74 @@
                 }
                 @if (_job?.Result is { } result && State.Snapshot != null)
                 {
-                    @if (result.Classes.Count == 0)
+                    var league = State.Snapshot.Url;
+                    @if (State.Filter.Item is { } wanted)
                     {
-                        <EmptyState>No rare items found.</EmptyState>
+                        var worn = result.Builds.SelectMany(c => c.Matching(wanted).Select(p => (Character: c, Piece: p))).ToList();
+                        <section class="wanted-item">
+                            <div class="section-title">
+                                @wanted
+                                <span class="count-pill">@worn.Select(w => w.Character).Distinct().Count() of @UiFormat.Plural(result.Characters, "sampled character")</span>
+                            </div>
+                            @if (worn.Count == 0)
+                            {
+                                <p class="hint">None of the sampled characters wears it. poe.ninja counts more characters than the sample, so raise the sample size and analyse again.</p>
+                            }
+                            @foreach (var (character, piece) in worn.Take(_allWanted ? int.MaxValue : WantedLimit))
+                            {
+                                <GearRow @key="piece" Piece="piece" Character="character" LeagueSlug="@league" Highlight="true" StartOpen="@(piece == worn[0].Piece)" />
+                            }
+                            @if (worn.Count > WantedLimit)
+                            {
+                                <button class="btn btn-xs" @onclick="() => _allWanted = !_allWanted">@(_allWanted ? "Fewer" : $"All {worn.Count}")</button>
+                            }
+                        </section>
                     }
-                    @foreach (var demand in result.Classes)
+
+                    @if (State.Tab == BuildsTab.Items)
                     {
-                        <ItemClassDemandCard @key="demand.ItemClass" Demand="demand" Characters="result.Characters" LeagueSlug="@State.Snapshot.Url"
-                                             Expanded="State.ExpandedClasses.Contains(demand.ItemClass)" ExpandedChanged="open => ToggleClass(demand.ItemClass, open)" />
+                        @if (result.Classes.Count == 0)
+                        {
+                            <EmptyState>No rare items found.</EmptyState>
+                        }
+                        else
+                        {
+                            <SearchBox @bind-Value="State.ClassSearch" Placeholder="@($"Search {UiFormat.Plural(result.Classes.Count, "item class", "item classes")} and their bases...")" />
+                        }
+                        var classes = result.Classes.Where(Matches).ToList();
+                        @if (result.Classes.Count > 0 && classes.Count == 0)
+                        {
+                            <p class="hint">No item class matches the search.</p>
+                        }
+                        @foreach (var demand in classes)
+                        {
+                            <ItemClassDemandCard @key="demand.ItemClass" Demand="demand" Characters="result.Characters" LeagueSlug="@league"
+                                                 Expanded="State.ExpandedClasses.Contains(demand.ItemClass)" ExpandedChanged="open => ToggleClass(demand.ItemClass, open)"
+                                                 OnSelectBuild="SelectBuild" />
+                        }
+                        <p class="hint market-notes">
+                            Sample: the first characters poe.ninja lists for this selection (highest level first), cached 6 hours. Modifiers are matched against the simulator's data like an
+                            imported item; tiers are those of each item's own base. Runes, uniques, flasks and charms are not counted.
+                        </p>
                     }
-                    <p class="hint market-notes">
-                        Sample: the first characters poe.ninja lists for this selection (highest level first), cached 6 hours. Modifiers are matched against the simulator's data like an
-                        imported item; tiers are those of each item's own base. Runes, uniques, flasks and charms are not counted.
-                    </p>
+                    else
+                    {
+                        <SearchBox @bind-Value="State.CharacterSearch" Placeholder="@($"Search {UiFormat.Plural(result.Builds.Count, "build")} (character, ascendancy, skill, item)...")" />
+                        var builds = result.Builds.Where(MatchesBuild).ToList();
+                        @if (builds.Count == 0)
+                        {
+                            <EmptyState>@(result.Builds.Count == 0 ? "No characters loaded." : "No build matches the search.")</EmptyState>
+                        }
+                        @foreach (var build in builds)
+                        {
+                            <CharacterBuildCard @key="build.Character" Character="build" LeagueSlug="@league" WantedItem="@State.Filter.Item"
+                                                Expanded="@(builds.Count == 1)" />
+                        }
+                        <p class="hint market-notes">
+                            Sample: the first characters poe.ninja lists for this selection (highest level first), cached 6 hours. Uniques whose base the simulator does not know are
+                            listed by name only.
+                        </p>
+                    }
                 }
                 else if (_job == null)
                 {
@@ -143,11 +212,27 @@
     private static readonly int[] SampleSizes = { 20, 40, 60, 100 };
     private const int TopBuildCount = 20;
 
+    /// <summary>Filter the page by a build clicked in the analysis (main skill plus ascendancy).</summary>
+    private Task SelectBuild(NamedCount build) =>
+        SetFilter(State.Filter with { Skill = build.Type is { Length: > 0 } ? build.Name : State.Filter.Skill, Class = build.Type ?? build.Name });
+
+    /// <summary>A build matches the search by character name, ascendancy, a skill or a piece it wears.</summary>
+    private bool MatchesBuild(SampledCharacter build) => TextSearch.Matches(State.CharacterSearch,
+        build.Skills.Concat(build.Gear.Select(g => g.Title)).Concat(new[] { build.Character.Name, build.Class }));
+
+    /// <summary>An item class card matches the search when its class or one of its bases does ("ring", "mnemonic").</summary>
+    private bool Matches(ItemClassDemand demand) =>
+        TextSearch.Matches(State.ClassSearch, demand.Bases.Select(b => b.Name).Prepend(demand.ItemClass));
+
     /// <summary>The most played builds as share entries: main skill with its ascendancy as the type.</summary>
     private static List<NamedCount> TopBuilds(BuildOverview overview) =>
         overview.TopBuilds.Select(b => new NamedCount(b.Skill, b.Count, b.Class)).ToList();
 
+    /// <summary>Copies of the filtered item shown before the rest is folded away.</summary>
+    private const int WantedLimit = 3;
+
     private BuildAnalysisJob? _job;
+    private bool _allWanted;
     private bool _loading;
     private string? _error;
 

@@ -124,20 +124,35 @@
         }
     }
 
-    @* Lines that could not be matched to a prefix/suffix (e.g. unique mods, simple Ctrl+C text) *@
+    @* Lines that hold no prefix/suffix slot: a unique's own modifiers, or text the data store does not have *@
     @foreach (var mod in Item.Mods.Where(m => m.Kind.OccupiesSlot() && !m.IsAffix))
     {
-        <div class="mod-line unmatched" title="Not matched to a known prefix/suffix">@mod.DisplayText()</div>
+        <div class="mod-line @(mod.Def == null ? "unmatched" : "unique-mod")" title="@LineTitle(mod)">
+            <span class="mod-body">
+                <span class="mod-text">@Item.EffectiveText(mod)</span>
+                @if (mod.Def is { } def && ModText.RangesText(def.Ranges) is { } range)
+                {
+                    <span class="mod-range" title="Range of this unique: @def.Text">(@range)</span>
+                }
+            </span>
+        </div>
+    }
+    @if (Item.Mods.Any(m => m.Kind.OccupiesSlot() && !m.IsAffix && m.Def == null))
+    {
+        <div class="item-note">Lines without a range are not part of the modifier data.</div>
     }
 
     <div class="item-footer">
-        <div class="affix-count">
-            Affixes: @Item.PrefixCount P / @Item.SuffixCount S
-            @if (Item.Rarity is Rarity.Magic or Rarity.Rare)
-            {
-                <span class="max-info">(max @Rules.MaxAffixes(Item, Item.Rarity, AffixType.Prefix)/@Rules.MaxAffixes(Item, Item.Rarity, AffixType.Suffix))</span>
-            }
-        </div>
+        @if (Item.Rarity != Rarity.Unique)
+        {
+            <div class="affix-count">
+                Affixes: @Item.PrefixCount P / @Item.SuffixCount S
+                @if (Item.Rarity is Rarity.Magic or Rarity.Rare)
+                {
+                    <span class="max-info">(max @Rules.MaxAffixes(Item, Item.Rarity, AffixType.Prefix)/@Rules.MaxAffixes(Item, Item.Rarity, AffixType.Suffix))</span>
+                }
+            </div>
+        }
         @if (Item.Corrupted) { <div class="flag corrupted">@(Item.TwiceCorrupted ? "Twice Corrupted" : "Corrupted")</div> }
         @if (Item.Mirrored) { <div class="flag mirrored">Mirrored</div> }
         @if (Item.Sanctified) { <div class="flag sanctified">Sanctified</div> }
@@ -202,6 +217,11 @@
         if (ModMagnitudes.BonusFor(Item, mod) is > 0 and var magnitude) parts.Add($"{UiFormat.Coordinate(magnitude)}% from \"increased … Modifier magnitudes\" (assumption: added to quality)");
         return $"Values increased by {string.Join(" + ", parts)} — base: {mod.DisplayText()}";
     }
+
+    /// <summary>Why a line has no tier: a unique rolls its own modifiers, everything else is simply not in the modifier data.</summary>
+    private static string LineTitle(ItemMod mod) => mod.Def != null
+        ? "The unique grants this modifier itself: it rolls in the unique's own range and has no tier."
+        : "Not part of the modifier data, so it has no range and no tier.";
 
     private string ModTooltip(ItemMod mod)
     {

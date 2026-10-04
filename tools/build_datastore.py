@@ -107,6 +107,12 @@ def classify_base(name, b, fname):
     return None, None
 
 
+# Maximum augment sockets per base from poe2db (tools/poe2db_sockets.py); the PoB value is wrong.
+SOCKETS_FILE = ROOT.parent / "data" / "sockets.json" if (ROOT.parent / "data" / "sockets.json").exists() else ROOT / "sockets.json"
+poe2db_sockets = json.loads(SOCKETS_FILE.read_text(encoding="utf-8")) if SOCKETS_FILE.exists() else {}
+if not poe2db_sockets:
+    print("WARNING: no sockets.json - socket limits fall back to the PoB values (known to be wrong)")
+
 bases = []
 for f in sorted((ROOT / "pob" / "Bases").glob("*.json")):
     data = json.loads(f.read_text(encoding="utf-8"))
@@ -124,7 +130,7 @@ for f in sorted((ROOT / "pob" / "Bases").glob("*.json")):
             tags=sorted(k for k, v in tags.items() if v),
             implicit=b.get("implicit"),
             implicitModTypes=b.get("implicitModTypes") or [],
-            socketLimit=b.get("socketLimit"),
+            socketLimit=poe2db_sockets.get(re.sub(r"[^A-Za-z0-9]+", "_", name).strip("_"), b.get("socketLimit")),
             quality=b.get("quality"),
             hidden=bool(b.get("hidden")),
             requirements=b.get("req") or {},

@@ -1,0 +1,83 @@
+@* One unique in a list: name, base and the lines that matter here; a click opens the whole unique with every line and its range.
+   A line of the opened unique opens that modifier (OnSelect), which lists the other uniques and the craftable versions of the stat. *@
+@inject GameData Data
+@inject ModFinder Finder
+
+<div class="unique-entry @(_open ? "open" : "")">
+    <button type="button" class="unique-row" @onclick="() => _open = !_open" aria-expanded="@(_open ? "true" : "false")">
+        <span class="unique-caret" aria-hidden="true">@(_open ? "▾" : "▸")</span>
+        <span class="unique-name">@Unique.Name</span>
+        <span class="unique-base">@Unique.BaseType</span>
+        <span class="mod-tier-text">
+            @foreach (var line in Lines)
+            {
+                <span class="unique-line">@line.Text</span>
+            }
+        </span>
+        @if (Level is > 0 and var level)
+        {
+            <span class="mod-level">Level @level</span>
+        }
+    </button>
+
+    @if (_open)
+    {
+        <div class="item-box rarity-unique unique-card">
+            <div class="item-header">
+                <CraftIcon Url="@Data.BaseIconUrl(Data.FindBase(Unique.BaseType))" Class="item-base-icon" />
+                <div class="item-name">@Unique.Name</div>
+                <div class="item-base">@Unique.BaseType</div>
+            </div>
+            @if (Requirements is { Length: > 0 } requirements)
+            {
+                <div class="item-props"><div class="prop">Requires @requirements</div></div>
+            }
+            @if (Unique.ImplicitDefs.Count > 0)
+            {
+                <div class="item-separator"></div>
+                @foreach (var mod in Unique.ImplicitDefs)
+                {
+                    @Line(mod, "implicit")
+                }
+            }
+            <div class="item-separator"></div>
+            @foreach (var mod in Unique.ModDefs)
+            {
+                @Line(mod, "unique-mod")
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public UniqueItemDef Unique { get; set; } = null!;
+    /// <summary>The lines this list is about (the search hit, the selected modifier); they are highlighted in the opened unique.</summary>
+    [Parameter] public IReadOnlyList<ModDef> Lines { get; set; } = Array.Empty<ModDef>();
+    [Parameter] public EventCallback<ModGroup> OnSelect { get; set; }
+
+    private bool _open;
+
+    private int Level => Unique.Requirements.GetValueOrDefault("level");
+
+    /// <summary>"Level 16, 15 Str, 15 Int" as the game lists requirements.</summary>
+    private string Requirements => string.Join(", ", Unique.Requirements.Where(r => r.Value > 0)
+        .OrderBy(r => r.Key == "level" ? 0 : 1)
+        .Select(r => r.Key == "level" ? $"Level {r.Value}" : $"{r.Value} {char.ToUpperInvariant(r.Key[0])}{r.Key[1..]}"));
+
+    /// <summary>The modifier type of a unique line: every unique that grants the same stat.</summary>
+    private ModGroup? GroupOf(ModDef mod) => Finder.Find($"unique|{mod.StatSignature}");
+
+    private RenderFragment Line(ModDef mod, string css) => __builder =>
+    {
+        var hit = Lines.Any(l => l.Id == mod.Id);
+        if (GroupOf(mod) is { } group && OnSelect.HasDelegate)
+        {
+            <button type="button" class="mod-line @css unique-card-line @(hit ? "hit" : "")" title="Every unique and base with this modifier"
+                    @onclick="() => OnSelect.InvokeAsync(group)">@mod.Text</button>
+        }
+        else
+        {
+            <div class="mod-line @css unique-card-line @(hit ? "hit" : "")">@mod.Text</div>
+        }
+    };
+}

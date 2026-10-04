@@ -23,6 +23,11 @@
         <span class="demand-toggle">@(_expanded ? "▾" : "▸")</span>
     </button>
 
+    <div class="demand-builds">
+        <span class="stat-label">Builds</span>
+        <BuildTags Builds="view.Builds" OnSelect="OnSelectBuild" />
+    </div>
+
     @* all bases of the class stay listed so the filter can be switched or cleared *@
     <div class="demand-bases">
         @foreach (var baseCount in Demand.Bases.Take(_expanded ? 12 : 4))
@@ -40,6 +45,15 @@
 
     @if (_expanded)
     {
+        var mods = view.Mods.Where(m => TextSearch.Matches(_modSearch, m.Text)).ToList();
+        @if (view.Mods.Count > ModLimit)
+        {
+            <SearchBox @bind-Value="_modSearch" Placeholder="@($"Search {UiFormat.Plural(view.Mods.Count, "modifier")}...")" />
+        }
+        @if (mods.Count == 0)
+        {
+            <p class="hint">No modifier matches the search.</p>
+        }
         <div class="table-scroll">
             <table class="materials-table demand-mods">
                 <thead>
@@ -49,10 +63,11 @@
                         <th title="Tiers of the item's base (T1 = best)">Tiers</th>
                         <th title="Lowest – median – highest rolled value (average of both numbers for 'Adds # to #')">Rolls</th>
                         <th title="Desecrated / fractured / crafted (essence) occurrences">Source</th>
+                        <th title="The builds wearing the modifier">Builds</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var mod in view.Mods.Take(_allMods ? int.MaxValue : ModLimit))
+                    @foreach (var mod in mods.Take(_allMods ? int.MaxValue : ModLimit))
                     {
                         <tr @key="mod.Text">
                             <td class="demand-mod-text"><span class="mod-indicator @AffixUi.TypeCss(mod.Affix)">@AffixUi.Letter(mod.Affix)</span> @mod.Text</td>
@@ -60,26 +75,37 @@
                             <td class="demand-tiers">@string.Join(" ", mod.Tiers.Select(t => $"T{t.Key}·{UiFormat.WholeShare((double)t.Value / mod.Count)}"))</td>
                             <td>@RollText(mod.Values)</td>
                             <td class="demand-source">@SourceText(mod)</td>
+                            <td><BuildTags Builds="mod.Builds" Limit="2" OnSelect="OnSelectBuild" /></td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
-        @if (view.Mods.Count > ModLimit)
+        @if (mods.Count > ModLimit)
         {
-            <button class="btn btn-xs" @onclick="() => _allMods = !_allMods">@(_allMods ? "Fewer modifiers" : $"All {view.Mods.Count} modifiers")</button>
+            <button class="btn btn-xs" @onclick="() => _allMods = !_allMods">@(_allMods ? "Fewer modifiers" : $"All {mods.Count} modifiers")</button>
         }
 
         <h4 class="section-title demand-examples-title">Items of the sampled characters</h4>
+        var items = view.Items.Where(Matches).ToList();
+        @if (view.Items.Count > ExampleLimit)
+        {
+            <SearchBox @bind-Value="_itemSearch" Placeholder="@($"Search {UiFormat.Plural(view.Items.Count, "item")} (name, modifier, character)...")" />
+        }
+        @if (items.Count == 0)
+        {
+            <p class="hint">No item matches the search.</p>
+        }
         <div class="demand-examples">
-            @foreach (var sample in view.Items.Take(_allItems ? int.MaxValue : ExampleLimit))
+            @foreach (var sample in items.Take(_allItems ? int.MaxValue : ExampleLimit))
             {
                 var shown = _shownItems.Contains(sample);
                 <div class="demand-example" @key="sample">
                     <div class="demand-example-row">
                         <button class="btn btn-xs" @onclick="() => _shownItems.Toggle(sample)">@(shown ? "Hide" : "Show")</button>
                         <span class="demand-example-title">@sample.Item.Title</span>
-                        <a class="demand-character" href="@CharacterLink(sample)" target="_blank" rel="noopener" title="Open the character on poe.ninja">@sample.Character.Name · @sample.CharacterClass @sample.CharacterLevel</a>
+                        <span class="demand-build">@sample.Owner.Build</span>
+                        <a class="demand-character" href="@NinjaLinks.Character(LeagueSlug, sample.Character)" target="_blank" rel="noopener" title="Open the character on poe.ninja">@sample.Character.Name @sample.Owner.Level</a>
                         <button class="btn btn-xs" title="Add this item to the current project and open it in the simulator (e.g. as a planner target)" @onclick="() => Open(sample)">Open in simulator</button>
                     </div>
                     @if (shown)
@@ -89,9 +115,9 @@
                 </div>
             }
         </div>
-        @if (view.Items.Count > ExampleLimit)
+        @if (items.Count > ExampleLimit)
         {
-            <button class="btn btn-xs" @onclick="() => _allItems = !_allItems">@(_allItems ? "Fewer items" : $"All {view.Items.Count} items")</button>
+            <button class="btn btn-xs" @onclick="() => _allItems = !_allItems">@(_allItems ? "Fewer items" : $"All {items.Count} items")</button>
         }
     }
 </div>
@@ -107,9 +133,16 @@
     /// <summary>Opened at start (the page remembers opened cards).</summary>
     [Parameter] public bool Expanded { get; set; }
     [Parameter] public EventCallback<bool> ExpandedChanged { get; set; }
+    /// <summary>A build clicked in the card (main skill as the name, ascendancy as the type): the page filters by it.</summary>
+    [Parameter] public EventCallback<NamedCount> OnSelectBuild { get; set; }
 
     private bool _expanded, _allMods, _allItems;
+    private string _modSearch = "", _itemSearch = "";
     private readonly HashSet<SampledItem> _shownItems = new();
+
+    /// <summary>An example item matches the search by its name, one of its modifier lines or the character wearing it.</summary>
+    private bool Matches(SampledItem sample) => TextSearch.Matches(_itemSearch,
+        sample.Item.Mods.Select(m => m.DisplayText()).Concat(new[] { sample.Item.Title, sample.Character.Name, sample.Owner.Build }));
 
     /// <summary>The base the card is narrowed to, or null for the whole item class.</summary>
     private string? _baseFilter;
@@ -163,9 +196,6 @@
 
     private string BasesLink() =>
         $"bases?class={Uri.EscapeDataString(Data.FindBase(Demand.Bases.FirstOrDefault()?.Name ?? "")?.ItemClass ?? Demand.ItemClass)}";
-
-    private string CharacterLink(SampledItem sample) =>
-        $"https://poe.ninja/poe2/builds/{LeagueSlug}/character/{Uri.EscapeDataString(sample.Character.Account)}/{Uri.EscapeDataString(sample.Character.Name)}";
 
     private void Open(SampledItem sample)
     {

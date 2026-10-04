@@ -16,6 +16,8 @@ public static class ModCategories
     public const string CorruptionUpgrade = "corruption_upgrade";
     public const string Socketable = "socketable";
     public const string Bonded = "bonded";
+    /// <summary>A modifier a unique item grants itself (data/uniques.json); nothing rolls it.</summary>
+    public const string Unique = "unique";
 
     /// <summary>Jewel crafting with Liquid Emotions (guaranteed crafted modifier per jewel type).</summary>
     public const string Liquid = "liquid";
@@ -39,6 +41,49 @@ public static class ModCategories
 
     /// <summary>Categories unlocked by the item's socketed runes.</summary>
     public static IEnumerable<string> UnlockedFor(Item item) => item.Runes.Select(UnlockedBy).OfType<string>().Distinct();
+
+    /// <summary>
+    /// Whether modifiers of this category are drawn at random by weight. The others are granted directly (essences, runes, liquid emotions)
+    /// and carry no weights in the data, so a base offers them as soon as they exist on its page.
+    /// </summary>
+    public static bool IsRolled(string category) => category is not (Essence or PerfectEssence or Liquid or Socketable or Bonded or Unique);
+
+    /// <summary>Name of a category for display.</summary>
+    public static string DisplayName(string category) => category switch
+    {
+        Normal => "Base modifier",
+        Desecrated => "Desecrated",
+        Otherworldly => "Otherworldly",
+        GenesisCaster => "Genesis Tree · Caster",
+        GenesisMinion => "Genesis Tree · Minion",
+        Essence => "Essence",
+        PerfectEssence => "Perfect essence",
+        Liquid => "Liquid Emotion",
+        Socketable => "Rune or Soul Core",
+        Bonded => "Bonded rune effect",
+        Unique => "Unique modifier",
+        Corrupted => "Corruption enchantment",
+        CorruptionUpgrade => "Upgraded corruption enchantment",
+        _ => char.ToUpperInvariant(category[0]) + category[1..],
+    };
+
+    /// <summary>How a modifier of this category gets onto an item.</summary>
+    public static string SourceText(string category) => category switch
+    {
+        Normal => "Rolls with the currencies that add modifiers: Orb of Transmutation, Augmentation, Regal Orb, Exalted Orb, Chaos Orb and essences.",
+        Desecrated => "Added unrevealed by a bone, then revealed at the Well of Souls.",
+        Otherworldly => "Added unrevealed by an Altered Collarbone, then revealed at the Well of Souls.",
+        GenesisCaster or GenesisMinion => "Granted by The Genesis Tree. The mechanic itself is not simulated.",
+        Essence or PerfectEssence => "Guaranteed by the essence or alloy of the same name.",
+        Liquid => "Guaranteed by the Liquid Emotion of the same name.",
+        Unique => "Granted by the unique item itself; it rolls inside the unique's own range and has no tier.",
+        Socketable => "Granted while the rune or soul core sits in a socket.",
+        Bonded => "Bonded effect of a rune, for a Shaman's companion. Not simulated.",
+        Corrupted => "Added as an enchantment by a Vaal Orb.",
+        CorruptionUpgrade => "An Orb of Sacrifice upgrades a corruption enchantment to this one.",
+        _ when RuneUnlocked.Contains(category) => "Rolls like a base modifier while a rune that unlocks this modifier type is socketed.",
+        _ => "",
+    };
 
     /// <summary>How a mod of this category appears on an item.</summary>
     public static ModKind KindFor(string category) => category switch
